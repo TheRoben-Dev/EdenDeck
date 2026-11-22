@@ -68,6 +68,9 @@ public sealed class AppHost
     public IReadOnlyList<LibraryGame> Library { get; private set; } = [];
     public AppUpdater Updater { get; }
 
+    /// <summary>Add to Steam: per-game shortcuts and one for the app.</summary>
+    public SteamService Steam { get; }
+
     public AppHost(AppPaths? paths = null, HttpClient? http = null)
     {
         if (paths == null)
@@ -89,6 +92,9 @@ public sealed class AppHost
         Library = LoadJson<List<LibraryGame>>(Paths.LibraryCacheFile) ?? [];
         _misnamed = LoadJson<List<MisnamedFile>>(MisnamedCacheFile) ?? [];
         Updater = new AppUpdater();
+        Steam = new SteamService(Paths,
+            Environment.GetEnvironmentVariable("HOME") ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.ProcessPath is { } exe ? Path.GetDirectoryName(exe) : null);
     }
 
     public IEmulatorBackend Backend(string id) =>

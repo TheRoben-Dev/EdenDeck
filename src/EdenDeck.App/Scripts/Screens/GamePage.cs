@@ -128,6 +128,16 @@ public partial class GamePage : Screen
 
         Add(new ActionButton("Open Eden", App.OpenEden,
             "Opens Eden's own window (controller mapping, anything not here yet). Close it to come back."));
+        var inSteam = Try(() => Host.Steam.Has(_game.GameId), false, "Steam shortcuts", col);
+        Add(new ActionButton(inSteam ? "Update Steam shortcut" : "Add to Steam", () =>
+        {
+            if (Host.Steam.Unavailable is { } why)
+            {
+                App.Error(why);
+                return;
+            }
+            App.AddToSteam(_game.GameId, Host.Steam.ForGame(_game));
+        }, "Puts this game in your Steam library. Starting it there opens it straight in Eden with everything on this page applied."));
 
         col.AddChild(Section("Launch setup"));
         var p = Profile;
