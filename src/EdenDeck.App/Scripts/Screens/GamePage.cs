@@ -15,7 +15,18 @@ public partial class GamePage : Screen
     private Button? _play;
     private Label? _frameGenNote;
 
-    public GamePage(LibraryGame game) => _game = game;
+    private readonly Rect2? _origin;
+    private PanelContainer? _card;
+    private bool _opened;
+
+    /// <param name="origin">Global rect of the tile it was opened from; the card grows out of it.</param>
+    public GamePage(LibraryGame game, Rect2? origin = null)
+    {
+        _game = game;
+        _origin = origin;
+    }
+
+    public override bool IsOverlay => true;
 
     private GameProfile Profile => Host.Profiles.Get(_game.GameId);
 
@@ -24,9 +35,27 @@ public partial class GamePage : Screen
 
     protected override void Build()
     {
+        // A large card over the (blurred) library. Clicks outside the card reach the backdrop.
+        MouseFilter = MouseFilterEnum.Ignore;
+        var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(center);
+        var view = GetViewportRect().Size;
+        _card = new PanelContainer
+        {
+            CustomMinimumSize = new Vector2(Mathf.Min(1180, view.X - 72), Mathf.Min(660, view.Y - 120)),
+            MouseFilter = MouseFilterEnum.Stop,
+        };
+        var cardBox = UiTheme.Box(UiTheme.Panel, 1, 22, UiTheme.Line);
+        cardBox.ShadowColor = new Color(0, 0, 0, 0.55f);
+        cardBox.ShadowSize = 28;
+        cardBox.ShadowOffset = new Vector2(0, 10);
+        cardBox.ContentMarginLeft = cardBox.ContentMarginRight = 30;
+        cardBox.ContentMarginTop = cardBox.ContentMarginBottom = 26;
+        _card.AddThemeStyleboxOverride("panel", cardBox);
+        center.AddChild(_card);
         var split = new HBoxContainer();
         split.AddThemeConstantOverride("separation", 36);
-        AddChild(split);
+        _card.AddChild(split);
 
         // Left: what the game is.
         var info = Column(8);
@@ -167,4 +196,61 @@ public partial class GamePage : Screen
     }
 
     public override void FocusDefault() => _play?.GrabFocus();
+
+    public override void AnimateOpen()
+    {
+        if (_card == null || _opened)
+        {
+            return;
+        }
+        _opened = true;
+        if (!Anim.Enabled)
+        {
+            return;
+        }
+        // Grow the card out of the tile it came from. Only scale and pivot are animated, so the
+        // container keeps full control of the card's position.
+        _card.Modulate = _card.Modulate with { A = 0f };
+        GrowIn();
+    }
+
+    private async void GrowIn()
+    {
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        if (_card == null || !IsInstanceValid(_card))
+        {
+            return;
+        }
+        var rect = _card.GetGlobalRect();
+        var start = 0.9f;
+        _card.PivotOffset = rect.Size / 2;
+        if (_origin is { } o && rect.Size.X > 0)
+        {
+            start = Mathf.Clamp(o.Size.X / rect.Size.X, 0.25f, 0.95f);
+            // Pivot p stays fixed while scaling, so put it where the tile's centre maps.
+            var pivot = (o.GetCenter() - rect.Position - start * (rect.Size / 2)) / (1 - start);
+            _card.PivotOffset = pivot.Clamp(Vector2.Zero, rect.Size);
+        }
+        _card.Scale = new Vector2(start, start);
+        _card.Modulate = _card.Modulate with { A = 0.25f };
+        var t = _card.CreateTween().SetParallel().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        t.TweenProperty(_card, "scale", Vector2.One, 0.26);
+        t.TweenProperty(_card, "modulate:a", 1f, 0.18);
+    }
+
+    public override void AnimateClose(Action done)
+    {
+        if (_card == null || !Anim.Enabled || !IsInsideTree())
+        {
+            done();
+            return;
+        }
+        MouseFilter = MouseFilterEnum.Ignore;
+        _card.PivotOffset = _card.Size / 2;
+        var t = _card.CreateTween().SetParallel().SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
+        t.TweenProperty(_card, "scale", new Vector2(0.94f, 0.94f), Anim.Normal);
+        t.TweenProperty(_card, "modulate:a", 0f, Anim.Normal);
+        t.Chain().TweenCallback(Callable.From(done));
+    }
 }

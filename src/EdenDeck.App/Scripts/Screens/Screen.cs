@@ -17,6 +17,17 @@ public abstract partial class Screen : MarginContainer
     protected static Main App => Main.Instance;
     protected static AppHost Host => Main.Instance.Host!;
 
+    /// <summary>Overlay screens open as a card above the page behind, which stays visible but dimmed and blurred.</summary>
+    public virtual bool IsOverlay => false;
+
+    /// <summary>Plays the open animation (overlays). Origin is the rect the card grows from, if any.</summary>
+    public virtual void AnimateOpen()
+    {
+    }
+
+    /// <summary>Plays the close animation, then calls done (overlays).</summary>
+    public virtual void AnimateClose(Action done) => done();
+
     /// <summary>Context hints shown in the bottom bar (Accept/Back are added by Main).</summary>
     public virtual IEnumerable<(string Action, string Label)> Hints => [];
 
@@ -123,11 +134,20 @@ public abstract partial class Screen : MarginContainer
         {
             FollowFocus = true,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            // No visible bar: lists scroll with focus, the stick, the wheel or a finger drag.
+            VerticalScrollMode = ScrollContainer.ScrollMode.ShowNever,
             SizeFlagsVertical = SizeFlags.ExpandFill,
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
         };
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        s.AddChild(content);
+        // Small inset so the focus border of edge rows is never clipped.
+        var gutter = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        gutter.AddThemeConstantOverride("margin_right", 6);
+        gutter.AddThemeConstantOverride("margin_left", 4);
+        gutter.AddThemeConstantOverride("margin_top", 4);
+        gutter.AddThemeConstantOverride("margin_bottom", 4);
+        gutter.AddChild(content);
+        s.AddChild(gutter);
         return s;
     }
 

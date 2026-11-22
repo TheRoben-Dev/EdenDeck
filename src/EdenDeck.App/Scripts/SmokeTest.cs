@@ -55,6 +55,16 @@ public partial class SmokeTest : Node
         Step("returned", () => { }, wait: 3.0);
         Step("eden", () => Press(Pad.TabNext));
         Step("settings", () => Press(Pad.TabNext));
+        // Finger drag over the list scrolls it and must not press the row it started on.
+        Step("touch-drag-scroll", () =>
+        {
+            Mouse(new Vector2(640, 600), true);
+            for (var y = 580; y >= 260; y -= 40)
+            {
+                Input.ParseInputEvent(new InputEventMouseMotion { Position = new Vector2(640, y), GlobalPosition = new Vector2(640, y), ButtonMask = MouseButtonMask.Left, Relative = new Vector2(0, -40) });
+            }
+            Mouse(new Vector2(640, 260), false);
+        }, expect: "Games/Switch");
         Step("settings-scrolled", () =>
         {
             for (var i = 0; i < 8; i++)
@@ -80,6 +90,9 @@ public partial class SmokeTest : Node
 
     private static void Joy(JoyButton b, bool pressed) =>
         Input.ParseInputEvent(new InputEventJoypadButton { Device = 0, ButtonIndex = b, Pressed = pressed });
+
+    private static void Mouse(Vector2 at, bool pressed) =>
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = pressed, Position = at, GlobalPosition = at });
 
     private static void Tap(JoyButton b)
     {
