@@ -187,6 +187,48 @@ public sealed class EdenBackend : IEmulatorBackend
         }
     }
 
+    /// <summary>
+    /// The game's own square icon (JPEG), read from its control data with the user's keys and cached
+    /// under &lt;data&gt;/icons. Null when the keys can't open it (tried again after new keys are imported).
+    /// </summary>
+    public string? GameIcon(Core.Library.GameEntry game)
+    {
+        if (string.IsNullOrEmpty(game.TitleId) || !File.Exists(game.Path))
+        {
+            return null;
+        }
+        var dir = Path.Combine(_app.Data, "icons");
+        var icon = Path.Combine(dir, game.TitleId + ".jpg");
+        if (File.Exists(icon))
+        {
+            return icon;
+        }
+        var none = Path.Combine(dir, game.TitleId + ".none");
+        var prod = Path.Combine(Paths.KeysDir, "prod.keys");
+        if (!File.Exists(prod) || (File.Exists(none) && File.GetLastWriteTimeUtc(none) > File.GetLastWriteTimeUtc(prod)))
+        {
+            return null;
+        }
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var title = Path.Combine(Paths.KeysDir, "title.keys");
+            var control = SwitchControl.Read(game.Path, KeyFile.Parse(File.ReadAllText(prod)),
+                File.Exists(title) ? KeyFile.Parse(File.ReadAllText(title)) : null);
+            if (control?.IconJpeg is { Length: > 0 } jpeg)
+            {
+                File.WriteAllBytes(icon + ".tmp", jpeg);
+                File.Move(icon + ".tmp", icon, overwrite: true);
+                return icon;
+            }
+        }
+        catch (Exception e) when (e is InvalidDataException or EndOfStreamException or IOException or ArgumentException or System.Security.Cryptography.CryptographicException)
+        {
+        }
+        File.WriteAllText(none, "");
+        return null;
+    }
+
     private byte[]? LoadHeaderKey()
     {
         var prod = Path.Combine(Paths.KeysDir, "prod.keys");

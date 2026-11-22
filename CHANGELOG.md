@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.7
+- Steam artwork now puts **the game's own square icon** on the cartridge label, pixelated to match the 32-bit look. Scanline reads the icon from the game file with your own keys (prod.keys, plus title.keys or the game's own ticket where needed); nothing is downloaded. Games without a readable icon keep the generated label. Art for games you already added is drawn again with their icons the next time Scanline starts.
+
 ## 0.4.6
 - **Steam artwork, made by Scanline.** Shortcuts now come with a cover, wide banner, hero, logo and icon in the 32-bit 3D theme's style: a 3D cartridge with the game's own label over the fogged grid floor, and the title in the theme's lettering. Scanline's own shortcut uses a set that ships with the app. Each game's set is drawn on your device when you add it (games you already added get theirs the next time Scanline starts). Nothing is downloaded, and art you pick yourself in Steam is never replaced.
 

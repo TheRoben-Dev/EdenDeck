@@ -51,11 +51,12 @@ public partial class CartStage : PolyStage
     }
 
     /// <summary>Single mode: one cart filling this control, turning slowly.</summary>
-    public CartStage(string title, Font? labelFont = null) : this([title], single: true, labelFont)
+    /// <param name="icon">The game's own square icon: shown pixelated on the label instead of the generated art.</param>
+    public CartStage(string title, Font? labelFont = null, Image? icon = null) : this([title], single: true, labelFont, icon)
     {
     }
 
-    private CartStage(List<string> titles, bool single, Font? labelFont = null) : base(transparent: true)
+    private CartStage(List<string> titles, bool single, Font? labelFont = null, Image? icon = null) : base(transparent: true)
     {
         _single = single;
         Resolution = 0.5f;
@@ -74,7 +75,7 @@ public partial class CartStage : PolyStage
             RenderTargetUpdateMode = SubViewport.UpdateMode.Once,
             Disable3D = true,
         };
-        _atlas.AddChild(new LabelArt(titles, labelFont));
+        _atlas.AddChild(new LabelArt(titles, labelFont, icon));
         AddChild(_atlas);
         var atlasTex = _atlas.GetTexture();
 
@@ -241,11 +242,20 @@ public partial class CartStage : PolyStage
     {
         private readonly List<string> _titles;
         private readonly Font? _font;
+        private readonly ImageTexture? _icon;
 
-        public LabelArt(List<string> titles, Font? font)
+        public LabelArt(List<string> titles, Font? font, Image? icon = null)
         {
             _titles = titles;
             _font = font;
+            if (icon != null && !icon.IsEmpty())
+            {
+                // 32x32, drawn with nearest filtering: chunky pixels that suit the era.
+                var small = (Image)icon.Duplicate();
+                small.Resize(32, 32, Image.Interpolation.Bilinear);
+                _icon = ImageTexture.CreateFromImage(small);
+                TextureFilter = TextureFilterEnum.Nearest;
+            }
             Size = new Vector2(AtlasCols * CellW, Math.Max(1, (titles.Count + AtlasCols - 1) / AtlasCols) * CellH);
         }
 
@@ -271,6 +281,14 @@ public partial class CartStage : PolyStage
 
         private void Paint(Vector2 o, string title, Font font)
         {
+            if (_icon != null)
+            {
+                // The label quad is wider than the cell is tall, so a square on it covers 58x80 cell pixels.
+                DrawRect(new Rect2(o, new Vector2(CellW, CellH)), Colors.Black);
+                const float iconW = CellW * 0.56f / 0.62f;  // label quad is 0.62 x 0.56 over a 64 x 80 cell
+                DrawTextureRect(_icon, new Rect2(o.X + (CellW - iconW) / 2, o.Y, iconW, CellH), false);
+                return;
+            }
             var h = Hash(title);
             var hue = h % 360 / 360f;
             var top = Color.FromHsv(hue, 0.55f, 0.85f);

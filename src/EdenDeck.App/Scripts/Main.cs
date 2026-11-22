@@ -202,7 +202,7 @@ public partial class Main : Control
         var art = Array.IndexOf(args, "--render-steam-art");
         if (art >= 0 && art + 1 < args.Length)
         {
-            AddChild(art + 2 < args.Length ? new SteamArtRenderer(args[art + 1], args[art + 2]) : new SteamArtRenderer(args[art + 1]));
+            AddChild(new SteamArtRenderer(args[art + 1], art + 2 < args.Length ? args[art + 2] : "Scanline", art + 3 < args.Length ? args[art + 3] : null));
         }
         else if (smoke >= 0 && smoke + 1 < args.Length)
         {
@@ -931,13 +931,16 @@ public partial class Main : Control
         {
             foreach (var e in host.Steam.Wanted().Where(e => !e.Remove && e.Key != EdenDeck.Host.SteamService.AppKey).ToList())
             {
-                if (!host.Steam.HasArt(e.Key) && host.Steam.ArtDirFor(e.Key) is { } dir)
+                if (host.Steam.ArtDirFor(e.Key) is { } dir && !SteamArt.IsCurrent(dir))
                 {
                     while (GameRunning)
                     {
                         await ToSignal(GetTree().CreateTimer(5), SceneTreeTimer.SignalName.Timeout);
                     }
-                    await SteamArt.Render(this, e.Shortcut.AppName, dir);
+                    // The game's own square icon goes on the cartridge label (read off the main thread).
+                    var game = host.FindGame(e.Key);
+                    var icon = game == null ? null : await Task.Run(() => host.Eden.GameIcon(game.Base));
+                    await SteamArt.Render(this, e.Shortcut.AppName, dir, icon);
                     AppLog.Info($"steam: rendered artwork for {e.Key}");
                 }
                 host.Steam.InstallArt(e.Key);
