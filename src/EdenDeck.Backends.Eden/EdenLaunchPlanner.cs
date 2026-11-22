@@ -82,7 +82,7 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
                     var dll = _backend.EnsureLosslessDll();
                     notes.Add(dll.Installed
                         ? $"frame gen: {decision.Reason} (Lossless.dll ready)"
-                        : $"warning: frame gen is on but won't run. {dll.Message}");
+                        : $"warning: frame gen ({decision.Reason}) won't run. {dll.Message}");
                     if (!dll.Installed)
                     {
                         notes.Add("frame gen check: with the Steam performance overlay on, the FPS reads 60 when frame gen runs");

@@ -401,7 +401,7 @@ public class LaunchTests : IDisposable
     public void FrameGenCopiesUsersLosslessDllFromSteamLibrary()
     {
         var b = Backend("nightly");
-        b.Home = _env.Home;
+        b.Env = _env.Env;
         var noDll = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
         Assert.Contains(noDll.Notes, n => n.Contains("won't run") && n.Contains("Lossless.dll not found"));
         Assert.False(b.LosslessDllAvailable());
