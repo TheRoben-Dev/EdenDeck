@@ -124,6 +124,29 @@ public partial class SmokeTest : Node
         {
             Step($"theme-{i}", () => Press("ui_right"), wait: 0.8, expect: "Changes apply right away");
         }
+        // The 32-bit 3D theme: 3D carts over the same grid, a prop scene behind, era rendering.
+        Step("poly-settings", () => SetTheme("polygon"), wait: 1.5);
+        // A tap on empty space bops the prop there (bottom-right slot) and touches no UI.
+        Step("poly-tap-prop", () =>
+        {
+            Mouse(new Vector2(1216, 672), true);
+            Mouse(new Vector2(1216, 672), false);
+        }, wait: 0.45, expect: "Changes apply right away");
+        Step("poly-library", () =>
+        {
+            Tap(JoyButton.LeftShoulder);
+            Tap(JoyButton.LeftShoulder);
+        }, wait: 1.5, expect: "Castle Defenders");
+        Step("poly-focus-next", () => Press("ui_right"), wait: 0.8, expect: "Mountain Climb");
+        Step("poly-open", () => Press(Pad.Accept), wait: 1.5, expect: "Play");
+        Step("poly-back", () => Press(Pad.Back), wait: 1.0, expect: "Mountain Climb");
+        Step("poly-restore", () =>
+        {
+            Tap(JoyButton.RightShoulder);
+            Tap(JoyButton.RightShoulder);
+            SetTheme("dark");
+        });
+        Step("poly-restore-appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         Step("crt-strong", () =>
         {
             FindFocusable(GetTree().Root, "Makes the whole screen")?.GrabFocus();
@@ -152,6 +175,15 @@ public partial class SmokeTest : Node
             Press("ui_down");
             Press(Pad.Accept);   // Add folder -> picker
         });
+    }
+
+    private static void SetTheme(string id)
+    {
+        if (Main.Instance.Host is { } host)
+        {
+            host.SaveSettings(host.Settings with { Theme = id });
+            Main.Instance.ApplyTheme(id);
+        }
     }
 
     private static void SetAnimatedBackground(bool on)

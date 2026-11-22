@@ -107,6 +107,14 @@ public static class UiTheme
             Good = new("47c27a"), Warn = new("ff8a1f"), Bad = new("f0524f"), Info = new("ff8a1f"),
             Shell = new("3d414b"), Radius = 5, Hairline = 1, Bevel = 3, Glow = 0.12f, Tiles = (0.5f, 0.36f, 0, 360),
         },
+        new("polygon", "32-bit 3D", "Late-90s polygons: wobbly 3D cartridges, dithered colour, fog and era toys you can poke.")
+        {
+            Bg = new("0b0c1d"), Panel = new("1a1c36"), PanelHi = new("272a50"), Line = new("3b4176"),
+            Accent = new("ffc23d"), Text = new("eef0ff"), Dim = new("9095c4"),
+            Good = new("5ce08c"), Warn = new("ff9a3d"), Bad = new("ff5a6a"), Info = new("4fc3ff"),
+            Shell = new("6c6f80"), Radius = 3, Hairline = 1, Bevel = 3, FontKind = "chakra", Upper = true,
+            Glow = 0f, Wordmark = "EDEN DECK", Tiles = (0.55f, 0.42f, 0, 360),
+        },
     ];
 
     public static ThemeSpec Spec { get; private set; } = Themes[0];
@@ -125,6 +133,9 @@ public static class UiTheme
     public static string Name => Spec.Id;
     public static bool Terminal => Name == "terminal";
     public static bool Nightgrid => Name == "nightgrid";
+
+    /// <summary>The 32-bit 3D theme: the library draws real 3D cartridges.</summary>
+    public static bool Poly3D => Name == "polygon";
 
     /// <summary>Themes with uppercase labels (terminal, pixel and grid looks).</summary>
     public static bool Mono => Spec.Upper;
@@ -150,6 +161,7 @@ public static class UiTheme
         {
             "mono" => new FontVariation { BaseFont = new SystemFont { FontNames = MonoFonts }, SpacingGlyph = Nightgrid ? 1 : 0 },
             "pixel" => PixelFont(),
+            "chakra" => ChakraFont(),
             _ => null,
         };
     }
@@ -177,6 +189,21 @@ public static class UiTheme
                 };
         }
         return _pixel;
+    }
+
+    private static Font? _chakra;
+
+    /// <summary>Chakra Petch SemiBold (SIL OFL 1.1, bundled under Assets/Fonts): squared-off, late-90s menu lettering.</summary>
+    private static Font ChakraFont()
+    {
+        if (_chakra == null)
+        {
+            var file = ResourceLoader.Exists("res://Assets/Fonts/ChakraPetch-SemiBold.ttf") ? GD.Load<FontFile>("res://Assets/Fonts/ChakraPetch-SemiBold.ttf") : null;
+            _chakra = file == null
+                ? new SystemFont { FontNames = MonoFonts }
+                : new FontVariation { BaseFont = file, SpacingGlyph = 1, Fallbacks = [new SystemFont { FontNames = MonoFonts }] };
+        }
+        return _chakra;
     }
 
     public const int FontSize = 20;

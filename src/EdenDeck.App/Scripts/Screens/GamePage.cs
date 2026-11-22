@@ -64,11 +64,11 @@ public partial class GamePage : Screen
         info.ClipContents = true;
         info.SizeFlagsHorizontal = SizeFlags.Fill;
         split.AddChild(info);
-        var cart = new Cartridge(_game.Base.Title, LibraryScreen.Monogram(_game.Base.Title), large: true)
-        {
-            CustomMinimumSize = new Vector2(220, 300),
-            SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
-        };
+        Control cart = UiTheme.Poly3D
+            ? new EdenDeck.App.Ui.Poly.CartStage(_game.Base.Title)
+            : new Cartridge(_game.Base.Title, LibraryScreen.Monogram(_game.Base.Title), large: true);
+        cart.CustomMinimumSize = new Vector2(220, 300);
+        cart.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         info.AddChild(cart);
         info.AddChild(UiTheme.Label(_game.Base.Title, UiTheme.TitleSize - 8, wrap: true));
         var b = _game.Base;
