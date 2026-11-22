@@ -19,11 +19,12 @@ internal static class FakeNsp
 {
     public static readonly byte[] HeaderKey = RandomNumberGenerator.GetBytes(32);
 
-    public static byte[] NcaHeader(byte contentType, ulong programId)
+    public static byte[] NcaHeader(byte contentType, ulong programId, byte keyGeneration = 0)
     {
         var plain = new byte[0xC00];
         Encoding.ASCII.GetBytes("NCA3").CopyTo(plain, 0x200);
         plain[0x205] = contentType;
+        plain[0x220] = keyGeneration;
         BinaryPrimitives.WriteUInt64LittleEndian(plain.AsSpan(0x210), programId);
         return NcaHeaderReader.XtsEncrypt(plain, HeaderKey, 0x200);
     }
@@ -189,6 +190,36 @@ public class LibraryTests : IDisposable
         Assert.Equal("0100ABCD00000000", g.Base.TitleId);
         Assert.Single(g.Updates);
         Assert.Equal(2, service.LastSkippedInProgress);
+    }
+
+    [Fact]
+    public void KeysTooOldForGameAreReportedBeforeLaunch()
+    {
+        var game = Path.Combine(_env.Home, "new.nsp");
+        FakeNsp.Write(game, ("m.cnmt.nca", FakeNsp.NcaHeader(1, 0x0100ABCD00000000, keyGeneration: 0x13)),
+                            ("p.nca", FakeNsp.NcaHeader(0, 0x0100ABCD00000000, keyGeneration: 0x14)));
+        Assert.Equal(0x13, KeyRequirements.Required(game, FakeNsp.HeaderKey));
+
+        string Keys(int maxMaster)
+        {
+            var lines = new List<string> { "header_key = " + Convert.ToHexString(FakeNsp.HeaderKey) };
+            for (var i = 0; i <= maxMaster; i++)
+            {
+                lines.Add($"master_key_{i:x2} = {new string('1', 32)}");
+            }
+            lines.Add("master_key_14 = " + new string('0', 32));  // all-zero placeholder doesn't count
+            var path = Path.Combine(_env.Home, $"prod{maxMaster}.keys");
+            File.WriteAllLines(path, lines);
+            return path;
+        }
+
+        var e = Assert.Throws<KeysTooOldException>(() => KeyRequirements.Check("New Game", [game], Keys(0x11), "Your keys"));
+        Assert.Equal(0x13, e.Needed);
+        Assert.Equal(0x11, e.Have);
+        Assert.Contains("firmware 20.0.0", e.Message);
+        Assert.Contains("firmware 18.0.0", e.Message);
+        KeyRequirements.Check("New Game", [game], Keys(0x13), "Your keys");  // new enough: no throw
+        KeyRequirements.Check("New Game", [game], Path.Combine(_env.Home, "missing.keys"), "Your keys");
     }
 
     private sealed class FakeBackend(ILibraryScanner scanner) : IEmulatorBackend

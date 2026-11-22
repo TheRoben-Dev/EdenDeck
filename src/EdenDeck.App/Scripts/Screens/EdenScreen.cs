@@ -1,3 +1,5 @@
+using EdenDeck.Backends.Eden.SystemFiles;
+using EdenDeck.Backends.Eden;
 using EdenDeck.App.Ui;
 using EdenDeck.Backends.Eden.Install;
 using EdenDeck.Core.Backends;
@@ -64,6 +66,12 @@ public partial class EdenScreen : Screen
             var row = UiTheme.Label($"{(s.Present ? "✓" : s.Kind == "title.keys" ? "·" : "✗")}  {s.Kind}   {s.Detail}", UiTheme.SmallSize + 2, s.Present ? UiTheme.Good : s.Kind == "title.keys" ? UiTheme.Dim : UiTheme.Warn, wrap: true);
             col.AddChild(row);
         }
+        var defaultMax = EdenBackend.MaxMasterKeyOf(Path.Combine(Host.Eden.Paths.KeysDir, "prod.keys"));
+        if (defaultMax >= 0)
+        {
+            col.AddChild(UiTheme.Label($"Your keys cover games up to firmware {KeyRequirements.FirmwareFor(defaultMax)} (master key {defaultMax:x2}).",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
         Add(new ActionButton("Import prod.keys", ImportKeys,
             "Copies your own prod.keys (and title.keys from the same folder, if present) into Eden."));
         Add(new ActionButton("Import firmware folder", ImportFirmware,
@@ -75,7 +83,9 @@ public partial class EdenScreen : Screen
         foreach (var k in Host.Eden.KeySets.List())
         {
             var set = k;
-            Add(new ActionButton($"{set.Label}{(set.HasFirmware ? "  ·  firmware" : "")}{(set.HasTitleKeys ? "  ·  title.keys" : "")}",
+            var max = EdenBackend.MaxMasterKeyOf(Path.Combine(set.Directory, "prod.keys"));
+            var upTo = max >= 0 ? $"  ·  up to fw {KeyRequirements.FirmwareFor(max)}" : "";
+            Add(new ActionButton($"{set.Label}{upTo}{(set.HasFirmware ? "  ·  firmware" : "")}{(set.HasTitleKeys ? "  ·  title.keys" : "")}",
                 () => App.Push(new ChoicePage($"Key set \"{set.Label}\"",
                     ("Keep", () => { }),
                     ("Delete this set", () => App.Guard(() =>

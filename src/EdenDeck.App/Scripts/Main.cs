@@ -527,6 +527,12 @@ public partial class Main : Control
         {
             plan = Host.PlanLaunch(game);
         }
+        catch (EdenDeck.Backends.Eden.SystemFiles.KeysTooOldException e)
+        {
+            // Our own controller-friendly explanation instead of Eden's desktop error dialog.
+            Push(new ChoicePage(e.Message, ("OK", () => { })));
+            return;
+        }
         catch (Exception e) when (IsUserFacing(e))
         {
             Error(e.Message);

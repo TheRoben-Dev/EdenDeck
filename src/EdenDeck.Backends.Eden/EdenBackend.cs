@@ -57,6 +57,27 @@ public sealed class EdenBackend : IEmulatorBackend
 
     public void ReloadPaths() => _paths = null;
 
+    /// <summary>Pre-launch check that the keys the game will run with are new enough (see <see cref="KeyRequirements"/>).</summary>
+    public void CheckKeys(string title, IEnumerable<string> gameFiles, string? keySetId)
+    {
+        var set = keySetId != null ? KeySets.Get(keySetId) : null;
+        var prod = set != null ? Path.Combine(set.Directory, "prod.keys") : Path.Combine(Paths.KeysDir, "prod.keys");
+        KeyRequirements.Check(title, gameFiles, prod, set != null ? $"The keys in set \"{set.Label}\"" : "Your keys");
+    }
+
+    /// <summary>Highest master key index in a prod.keys file, or -1 if unreadable.</summary>
+    public static int MaxMasterKeyOf(string prodKeys)
+    {
+        try
+        {
+            return File.Exists(prodKeys) ? KeyRequirements.MaxMasterKey(KeyFile.Parse(File.ReadAllText(prodKeys))) : -1;
+        }
+        catch (IOException)
+        {
+            return -1;
+        }
+    }
+
     private byte[]? LoadHeaderKey()
     {
         var prod = Path.Combine(Paths.KeysDir, "prod.keys");
