@@ -32,9 +32,18 @@ public partial class SmokeTest : Node
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
         Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Starlight Saga");
-        Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Install or update");
+        Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Emulator");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
-        Step("key-tab", () => Key(Godot.Key.Tab), expect: "Install or update");
+        Step("key-tab", () => Key(Godot.Key.Tab), expect: "Emulator");
+        // The Eden tab has the same two panes as Settings.
+        Step("eden-keys", () => Press("ui_down"), expect: "Keys and firmware");
+        Step("eden-framegen", () =>
+        {
+            Press("ui_down");
+            Press("ui_down");
+        }, expect: "Frame generation");
+        Step("eden-framegen-pane", () => Press(Pad.Accept), expect: "Check again");
+        Step("eden-back", () => Press(Pad.Back), expect: "Frame generation");
         Step("key-shift-tab", () => Key(Godot.Key.Tab, shift: true), expect: "Castle Defenders");
         Step("joy-a-open", () => Tap(JoyButton.A), expect: "Play");
         Step("joy-b-back", () => Tap(JoyButton.B), expect: "Castle Defenders");

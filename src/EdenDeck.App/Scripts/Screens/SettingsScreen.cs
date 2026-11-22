@@ -7,13 +7,10 @@ using Godot;
 
 namespace EdenDeck.App.Screens;
 
-/// <summary>Settings in two panes: categories on the left, the selected category on the right.</summary>
-public partial class SettingsScreen : Screen
+/// <summary>Settings in two panes (see <see cref="TwoPaneScreen"/>).</summary>
+public partial class SettingsScreen : TwoPaneScreen
 {
-    // Two panes, console style: categories on the left, the selected category's options on the
-    // right. Focusing a category shows its options; A or right moves into them, B or left on a
-    // plain row goes back to the category.
-    private static readonly (string Name, string Summary)[] Categories =
+    private static readonly (string Name, string Summary)[] CategoryList =
     [
         ("Controller", "Controller style, rumble, motion and button mapping."),
         ("Graphics", "Resolution, upscaling, anti-aliasing and VSync for all games."),
@@ -28,93 +25,13 @@ public partial class SettingsScreen : Screen
     private static readonly HashSet<string> AdvancedOptions =
         ["backend", "gpu_accuracy", "use_disk_shader_cache", "use_asynchronous_shaders", "cpu_accuracy", "use_multi_core"];
 
-    private int _category;
-    private readonly List<Button> _cats = new();
-    private VBoxContainer? _pane;
-    private ScrollContainer? _paneScroll;
-    private readonly List<Control> _paneItems = new();
+    protected override string Heading => "Settings";
 
-    protected override void Build()
+    protected override IReadOnlyList<(string Name, string Summary)> Categories => CategoryList;
+
+    protected override void BuildCategory(string name, VBoxContainer col, Action<Control> Add)
     {
-        _cats.Clear();
-        var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
-        row.AddThemeConstantOverride("separation", 28);
-        AddChild(row);
-
-        var left = Column(6);
-        left.SizeFlagsHorizontal = SizeFlags.Fill;
-        left.CustomMinimumSize = new Vector2(280, 0);
-        row.AddChild(left);
-        left.AddChild(Section("Settings"));
-        for (var i = 0; i < Categories.Length; i++)
-        {
-            var index = i;
-            var b = new ActionButton(Categories[i].Name, () => EnterPane(), Categories[i].Summary);
-            b.FocusEntered += () => SelectCategory(index);
-            left.AddChild(b);
-            _cats.Add(b);
-        }
-
-        _pane = Column(8);
-        _paneScroll = Scroller(_pane);
-        row.AddChild(_paneScroll);
-        BuildPane();
-    }
-
-    private void SelectCategory(int index)
-    {
-        if (index == _category && _paneItems.Count > 0)
-        {
-            return;
-        }
-        _category = index;
-        BuildPane();
-        if (_paneScroll != null)
-        {
-            _paneScroll.ScrollVertical = 0;
-        }
-    }
-
-    private void EnterPane()
-    {
-        if (_paneItems.Count > 0)
-        {
-            _paneItems[0].GrabFocus();
-        }
-    }
-
-    public override bool OnBack()
-    {
-        var f = GetViewport()?.GuiGetFocusOwner();
-        if (f != null && _pane != null && _pane.IsAncestorOf(f) && _category < _cats.Count)
-        {
-            _cats[_category].GrabFocus();
-            return true;
-        }
-        return false;
-    }
-
-    private void BuildPane()
-    {
-        if (_pane == null)
-        {
-            return;
-        }
-        foreach (var c in _pane.GetChildren())
-        {
-            _pane.RemoveChild(c);
-            c.QueueFree();
-        }
-        _paneItems.Clear();
-        var col = _pane;
-        var items = _paneItems;
-        void Add(Control c)
-        {
-            col.AddChild(c);
-            items.Add(c);
-        }
-        col.AddChild(UiTheme.Label(Categories[_category].Name, UiTheme.TitleSize));
-        switch (Categories[_category].Name)
+        switch (name)
         {
             case "Controller":
                 BuildController(col, Add);
@@ -138,16 +55,6 @@ public partial class SettingsScreen : Screen
                 BuildAdvanced(col, Add);
                 break;
         }
-
-        for (var i = 0; i < _cats.Count; i++)
-        {
-            _cats[i].AddThemeColorOverride("font_color", i == _category ? UiTheme.AccentText : UiTheme.Text);
-        }
-        var cat = _cats[_category];
-        Focus.Column(_cats, right: items.FirstOrDefault());
-        Focus.Column(items, left: cat);
-        // Steppers and toggles use left/right for their value; B still goes back to the category.
-        Anim.Stagger(items, 0.015);
     }
 
     private void BuildEdenOptions(VBoxContainer col, Action<Control> Add, Func<OptionDefinition, bool> filter, bool showGroups = false, bool note = true)
@@ -315,8 +222,6 @@ public partial class SettingsScreen : Screen
         col.AddChild(Section("Expert Eden options"));
         BuildEdenOptions(col, Add, o => AdvancedOptions.Contains(o.Id), showGroups: true);
     }
-
-    public override void FocusDefault() => (_category < _cats.Count ? _cats[_category] : null)?.GrabFocus();
 
     private void Rescan() =>
         App.Busy("Scanning library…", (_, ct) => Task.FromResult(Host.Rescan(ct)), games =>

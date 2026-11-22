@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.3.2
+- The Eden tab is reorganised into two panes like Settings: Emulator, Keys and firmware, Key sets, Frame generation and Advanced. A dot marks anything that needs attention.
+- New Frame generation page: shows whether lsfg-vk and your Lossless.dll are found, and what's missing.
+
 ## 0.3.1
 - Every theme has its own slow animated background: drifting lights, a pulsing grid, phosphor rain, pixel clouds, a scrolling 16-bit floor, an LCD shimmer or spinning low-poly shapes. It stops while a game runs, and you can turn it off under Settings → Appearance.
 - The CRT effect looks like a real TV now: the picture wobbles and curves, a band rolls down the screen, colours fringe and the edges darken. Pick Subtle, Medium or Strong.
