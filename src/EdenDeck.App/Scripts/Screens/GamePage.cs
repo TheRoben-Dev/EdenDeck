@@ -1,3 +1,5 @@
+using EdenDeck.Core.Settings;
+using EdenDeck.Backends.Eden.Config;
 using EdenDeck.App.Ui;
 using EdenDeck.Core.Library;
 using EdenDeck.Core.Profiles;
@@ -334,6 +336,7 @@ public partial class GamePage : Screen
             var settings = Host.Eden.Settings;
             var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "Eden's settings", col);
             var overrides = Try(() => settings.ReadPerGame(b.TitleId), new Dictionary<string, string>(), "this game's Eden settings", col);
+            Add(PresetRow(b.TitleId, overrides, settings.Options));
             foreach (var o in settings.Options.Where(o => o.PerGame))
             {
                 var row = OptionRows.PerGame(o, overrides.GetValueOrDefault(o.Id), global.GetValueOrDefault(o.Id), v =>
@@ -345,6 +348,36 @@ public partial class GamePage : Screen
         Focus.Column(items);
         Anim.Stagger(items, 0.02);
         Anim.Stagger(info.GetChildren().OfType<Control>().ToList(), 0.04);
+    }
+
+    /// <summary>One press for a whole set of the settings below; shows which set the game is on.</summary>
+    private Control PresetRow(string titleId, IReadOnlyDictionary<string, string> overrides, IReadOnlyList<OptionDefinition> options)
+    {
+        var current = PerformancePresets.Current(overrides, options);
+        var choices = new List<(string, string)>();
+        if (current == PerformancePresets.Custom)
+        {
+            choices.Add((PerformancePresets.Custom, "Your own mix"));
+        }
+        choices.Add((PerformancePresets.Global, "Eden's settings"));
+        choices.AddRange(PerformancePresets.All.Select(p => (p.Id, p.Label)));
+        var row = new Stepper("Performance preset", choices, current,
+            PerformancePresets.All.FirstOrDefault(p => p.Id == current)?.Detail
+            ?? (current == PerformancePresets.Global
+                ? "Presets set console mode, resolution, upscaling, anti-aliasing and GPU accuracy for this game in one go."
+                : "You've changed the settings below by hand. Pick a preset to replace them."));
+        row.Changed += v =>
+        {
+            if (v == PerformancePresets.Custom)
+            {
+                return;
+            }
+            if (App.Guard(() => PerformancePresets.Apply(Host.Eden.Settings, titleId, v)))
+            {
+                Rebuild();
+            }
+        };
+        return row;
     }
 
     private void UpdateFrameGenNote()

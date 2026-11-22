@@ -72,6 +72,10 @@ public partial class SmokeTest : Node
             Press("ui_right");
             Press("ui_left");
         }, expect: "CRT effect");
+        // Performance presets: one press sets a group of Eden's per-game settings, and back.
+        Step("game-preset", () => FindFocusable(GetTree().Root, "Presets set console mode")?.GrabFocus(), expect: "Presets set console mode");
+        Step("game-preset-battery", () => Press("ui_right"), expect: "Longest battery life");
+        Step("game-preset-global", () => Press("ui_left"), expect: "Presets set console mode");
         // Add to Steam: the button is there (CI has no Steam, so pressing it only explains why).
         Step("game-steam", () => FindFocusable(GetTree().Root, "Puts this game in your Steam library")?.GrabFocus(), expect: "Add to Steam");
         // Mods & cheats: the smoke home has two mods for this game that replace the same file.
