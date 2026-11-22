@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.2
+- **lsfg-vk now comes with Scanline.** Frame generation works without installing anything besides your own Lossless Scaling from Steam. If you already have lsfg-vk 2.x installed, yours is used instead, and your lsfg-vk settings are never changed. Frames made by frame generation also get the game's CRT effect.
+- The Eden tab's Frame generation page says when the included lsfg-vk is in use.
+
 ## 0.4.1
 - New: **CRT effect for games.** Each game's card has a CRT effect setting with the same levels as the app's (Off, Subtle, Medium, Strong): scanlines, a wobbling picture, a rolling band, colour fringes, tube curve and dark edges, drawn over the game by Scanline's Vulkan layer. It's off by default, holds still when Animations is off, and also covers frames made by frame generation. If the layer can't run, the game just plays without it.
 

@@ -164,11 +164,12 @@ public partial class EdenScreen : TwoPaneScreen
 
     private void BuildFrameGen(VBoxContainer col, Action<Control> Add)
     {
-        col.AddChild(Note("Eden's own frame generation only exists on Android, so Scanline uses lsfg-vk with your copy of Lossless Scaling. " +
+        col.AddChild(Note("Eden's own frame generation only exists on Android, so Scanline uses lsfg-vk (included, or your own install if you have one) with your copy of Lossless Scaling. " +
                           "It doubles 30 fps games to 60 and never goes above 60. Turn it on per game on the game's page."));
         var lsfg = Host.Eden.FindLsfgVk();
         var (lsfgText, lsfgColor) = lsfg.Kind switch
         {
+            LsfgVk.Kind.V2 when lsfg.Bundled => ("✓  lsfg-vk   included with Scanline", UiTheme.Good),
             LsfgVk.Kind.V2 => ($"✓  lsfg-vk   {lsfg.Manifest}", UiTheme.Good),
             LsfgVk.Kind.Legacy => ($"✗  lsfg-vk   version 1.x found ({lsfg.Manifest}); Scanline needs 2.x", UiTheme.Warn),
             _ => ("✗  lsfg-vk   not installed", UiTheme.Warn),
@@ -183,7 +184,7 @@ public partial class EdenScreen : TwoPaneScreen
         }
         if (lsfg.Kind != LsfgVk.Kind.V2)
         {
-            col.AddChild(Note("lsfg-vk 2.x isn't installed yet. Bundling it inside Scanline is coming in a later update."));
+            col.AddChild(Note("lsfg-vk 2.x isn't installed, and this copy of Scanline doesn't include it. Update Scanline, or install lsfg-vk 2.x yourself."));
         }
         if (lsfg.Kind == LsfgVk.Kind.V2 && dll != null)
         {
