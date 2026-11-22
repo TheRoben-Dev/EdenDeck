@@ -5,8 +5,9 @@ namespace EdenDeck.App.Screens;
 
 /// <summary>
 /// Two panes, console style: categories on the left, the selected category on the right.
-/// Focusing a category shows its contents; A or right moves into them, B (or left on a plain row)
-/// goes back to the category. Used by Settings and the Eden tab.
+/// Focusing a category shows its contents; A or right moves into them, and only B goes back to the
+/// category (left inside the pane never leaves it). While the pane has focus the category list
+/// narrows a little and dims every category but the selected one. Used by Settings and the Eden tab.
 /// </summary>
 public abstract partial class TwoPaneScreen : Screen
 {
@@ -16,6 +17,13 @@ public abstract partial class TwoPaneScreen : Screen
     private ScrollContainer? _paneScroll;
     private readonly List<Control> _paneItems = new();
     private IReadOnlyList<(string Name, string Summary)> _list = [];
+    private VBoxContainer? _left;
+    private bool _inPane;
+    private float _away;  // 0 = category list active, 1 = pane active
+    private Tween? _awayTween;
+
+    private const float ListWidth = 280;
+    private const float ListNarrowBy = 44;
 
     /// <summary>Heading over the category list.</summary>
     protected abstract string Heading { get; }
@@ -40,8 +48,9 @@ public abstract partial class TwoPaneScreen : Screen
 
         var left = Column(6);
         left.SizeFlagsHorizontal = SizeFlags.Fill;
-        left.CustomMinimumSize = new Vector2(280, 0);
+        left.CustomMinimumSize = new Vector2(ListWidth, 0);
         row.AddChild(left);
+        _left = left;
         left.AddChild(Section(Heading));
         for (var i = 0; i < _list.Count; i++)
         {
@@ -49,7 +58,11 @@ public abstract partial class TwoPaneScreen : Screen
             var name = _list[i].Name;
             var badge = Badge(name);
             var b = new ActionButton(badge != null ? $"{name}  {badge}" : name, EnterPane, _list[i].Summary);
-            b.FocusEntered += () => SelectCategory(index);
+            b.FocusEntered += () =>
+            {
+                SetInPane(false);
+                SelectCategory(index);
+            };
             left.AddChild(b);
             _cats.Add(b);
         }
@@ -58,6 +71,48 @@ public abstract partial class TwoPaneScreen : Screen
         _paneScroll = Scroller(_pane);
         row.AddChild(_paneScroll);
         BuildPane();
+        _awayTween = null;
+        ApplyAway(_inPane ? 1 : 0);
+    }
+
+    /// <summary>Slides the category list aside (and dims it) while the pane has focus, and back.</summary>
+    private void SetInPane(bool on)
+    {
+        if (on == _inPane)
+        {
+            return;
+        }
+        _inPane = on;
+        _awayTween?.Kill();
+        var target = on ? 1f : 0f;
+        if (!Anim.Enabled || !IsInsideTree())
+        {
+            ApplyAway(target);
+            return;
+        }
+        _awayTween = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        _awayTween.TweenMethod(Callable.From<float>(ApplyAway), _away, target, Anim.Slow);
+    }
+
+    private void ApplyAway(float v)
+    {
+        _away = v;
+        if (_left == null)
+        {
+            return;
+        }
+        _left.CustomMinimumSize = new Vector2(ListWidth - ListNarrowBy * v, 0);
+        for (var i = 0; i < _cats.Count; i++)
+        {
+            var selected = i == _category;
+            // Selected stays fully lit; the rest fade to a grey ghost.
+            _cats[i].Modulate = selected ? Colors.White : new Color(1, 1, 1, 1 - 0.65f * v);
+            _cats[i].Scale = Vector2.One * (1 - 0.06f * v * (selected ? 0 : 1));
+        }
+        if (_left.GetChildCount() > 0 && _left.GetChild(0) is Control heading)
+        {
+            heading.Modulate = new Color(1, 1, 1, 1 - 0.5f * v);
+        }
     }
 
     private void SelectCategory(int index)
@@ -119,10 +174,13 @@ public abstract partial class TwoPaneScreen : Screen
         {
             _cats[i].AddThemeColorOverride("font_color", i == _category ? UiTheme.AccentText : UiTheme.Text);
         }
-        var cat = _cats[_category];
         Focus.Column(_cats, right: items.FirstOrDefault());
-        // Steppers and toggles use left/right for their value; B still goes back to the category.
-        Focus.Column(items, left: cat);
+        // Left never leaves the pane (steppers use left/right for their value); only B goes back.
+        Focus.Column(items);
+        foreach (var item in items)
+        {
+            item.FocusEntered += () => SetInPane(true);
+        }
         Anim.Stagger(items, 0.015);
     }
 
