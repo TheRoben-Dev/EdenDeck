@@ -117,12 +117,13 @@ public sealed class AppHost
     public void MarkPlayed(LibraryGame game) =>
         Profiles.Set(game.GameId, Profiles.Get(game.GameId) with { LastPlayed = DateTimeOffset.Now });
 
-    /// <summary>The layer ships next to the app: &lt;app dir&gt;/vulkan/ or $APPDIR/usr/share/edendeck/vulkan.</summary>
+    /// <summary>The layer ships next to the app binary: &lt;app dir&gt;/vulkan/ (tarball), $APPDIR/usr/share/edendeck/vulkan (AppImage) or /app/share/edendeck/vulkan (Flatpak).</summary>
     private static string? AutoLayerDirectory()
     {
         string?[] candidates =
         [
             Environment.GetEnvironmentVariable("APPDIR") is { } appdir ? Path.Combine(appdir, "usr/share/edendeck/vulkan") : null,
+            Environment.ProcessPath is { } exe ? Path.Combine(Path.GetDirectoryName(exe)!, "vulkan") : null,
             Path.Combine(AppContext.BaseDirectory, "vulkan"),
             "/app/share/edendeck/vulkan",
         ];
