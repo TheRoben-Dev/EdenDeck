@@ -398,6 +398,39 @@ public class LaunchTests : IDisposable
     }
 
     [Fact]
+    public void FrameGenCopiesUsersLosslessDllFromSteamLibrary()
+    {
+        var b = Backend("nightly");
+        b.Home = _env.Home;
+        var noDll = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
+        Assert.Contains(noDll.Notes, n => n.Contains("won't run") && n.Contains("Lossless.dll not found"));
+        Assert.False(b.LosslessDllAvailable());
+
+        // Lossless Scaling in a second Steam library (e.g. the SD card), listed in libraryfolders.vdf.
+        var steam = Path.Combine(_env.Home, ".local", "share", "Steam");
+        var sd = Path.Combine(_env.Home, "sdcard");
+        var app = Path.Combine(sd, "steamapps", "common", "Lossless Scaling");
+        Directory.CreateDirectory(app);
+        Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
+        File.WriteAllText(Path.Combine(steam, "steamapps", "libraryfolders.vdf"),
+            $"\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{steam}\"\n\t}}\n\t\"1\"\n\t{{\n\t\t\"path\"\t\t\"{sd}\"\n\t}}\n}}\n");
+        File.WriteAllBytes(Path.Combine(app, "Lossless.dll"), [(byte)'M', (byte)'Z', 1, 2, 3]);
+        Assert.True(b.LosslessDllAvailable());
+
+        var plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
+        Assert.Contains(plan.Notes, n => n.Contains("Lossless.dll ready"));
+        var copied = Path.Combine(b.Paths.LosslessDir, "Lossless.dll");
+        Assert.Equal(new byte[] { (byte)'M', (byte)'Z', 1, 2, 3 }, File.ReadAllBytes(copied));
+
+        // An updated DLL replaces the copy and drops Eden's stale shader cache.
+        File.WriteAllText(Path.Combine(b.Paths.LosslessDir, "lsfg_spirv.cache"), "old");
+        File.WriteAllBytes(Path.Combine(app, "Lossless.dll"), [(byte)'M', (byte)'Z', 9]);
+        Assert.True(b.EnsureLosslessDll().Installed);
+        Assert.Equal(new byte[] { (byte)'M', (byte)'Z', 9 }, File.ReadAllBytes(copied));
+        Assert.False(File.Exists(Path.Combine(b.Paths.LosslessDir, "lsfg_spirv.cache")));
+    }
+
+    [Fact]
     public void NoFrameGenForNative60Titles()
     {
         var b = Backend("nightly");

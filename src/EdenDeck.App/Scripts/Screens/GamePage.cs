@@ -187,7 +187,7 @@ public partial class GamePage : Screen
             Expands = true,
             DetailFor = v => v switch
             {
-                "" => "Frame generation stays off until you set this.",
+                "" => "Frame generation still runs, capped at 60. Set 60 for games that already run at 60.",
                 "60" => "Already 60: frame generation is skipped for this game.",
                 _ => $"Frame generation targets 60 fps from {v}.",
             },
@@ -204,6 +204,10 @@ public partial class GamePage : Screen
         if (!nightly)
         {
             col.AddChild(UiTheme.Label("Frame generation needs Eden Nightly and your own Lossless Scaling files.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        else if (!Host.Eden.LosslessDllAvailable())
+        {
+            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and EdenDeck copies it into Eden for you.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
 
         col.AddChild(Section("Eden settings for this game"));

@@ -57,6 +57,15 @@ public sealed class EdenBackend : IEmulatorBackend
 
     public void ReloadPaths() => _paths = null;
 
+    /// <summary>Home dir for finding the user's Steam install (tests override it).</summary>
+    public string Home { get; set; } = Environment.GetEnvironmentVariable("HOME") ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    /// <summary>Copies the user's own Lossless.dll from Steam into Eden's lossless/ dir when needed.</summary>
+    public LosslessDll.Status EnsureLosslessDll() => LosslessDll.Ensure(Paths.LosslessDir, Home);
+
+    /// <summary>Read-only check for the game page: is frame gen going to find Lossless.dll?</summary>
+    public bool LosslessDllAvailable() => LosslessDll.IsInstalled(Paths.LosslessDir) || LosslessDll.FindInSteam(Home) != null;
+
     /// <summary>Pre-launch check that the keys the game will run with are new enough (see <see cref="KeyRequirements"/>).</summary>
     public void CheckKeys(string title, IEnumerable<string> gameFiles, string? keySetId)
     {
