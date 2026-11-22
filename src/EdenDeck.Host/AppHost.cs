@@ -121,6 +121,11 @@ public sealed class AppHost
     public LaunchPlan PlanLaunch(LibraryGame game)
     {
         var profile = Profiles.Get(game.GameId);
+        if (game.Base.BackendId == Eden.Id)
+        {
+            // The base and its newest update decide which keys are needed (Eden loads both).
+            Eden.CheckKeys(game.Base.Title, [game.Base.Path, .. game.Updates.Take(1).Select(u => u.Path)], profile.KeySet);
+        }
         return Backend(game.Base.BackendId).Launch.Plan(game.Base, profile, DefaultLaunchOptions());
     }
 

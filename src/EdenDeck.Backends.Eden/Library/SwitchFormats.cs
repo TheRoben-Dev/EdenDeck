@@ -78,7 +78,13 @@ public enum NcaContentType : byte
     PublicData = 5,
 }
 
-public sealed record NcaHeader(NcaContentType ContentType, ulong ProgramId, string Magic);
+/// <param name="KeyGeneration">Effective key generation: max of the old (0x206) and new (0x220) fields.</param>
+/// <param name="HasRightsId">Title-key crypto (needs the title key from a ticket or title.keys).</param>
+public sealed record NcaHeader(NcaContentType ContentType, ulong ProgramId, string Magic, byte KeyGeneration = 0, bool HasRightsId = false)
+{
+    /// <summary>Index of the master key this NCA needs (master_key_XX / key_area_key_*_XX).</summary>
+    public int MasterKeyIndex => Math.Max(0, KeyGeneration - 1);
+}
 
 /// <summary>
 /// Decrypts the first 0xC00 bytes of an NCA (AES-128-XTS, 0x200-byte sectors, big-endian
@@ -100,7 +106,9 @@ public static class NcaHeaderReader
         }
         var type = (NcaContentType)dec[0x205];
         var programId = BinaryPrimitives.ReadUInt64LittleEndian(dec.AsSpan(0x210));
-        return new NcaHeader(type, programId, magic);
+        var keyGen = Math.Max(dec[0x206], dec[0x220]);
+        var hasRights = dec.AsSpan(0x230, 16).IndexOfAnyExcept((byte)0) >= 0;
+        return new NcaHeader(type, programId, magic, keyGen, hasRights);
     }
 
     internal static byte[] XtsDecrypt(byte[] data, byte[] key, int sectorSize)
