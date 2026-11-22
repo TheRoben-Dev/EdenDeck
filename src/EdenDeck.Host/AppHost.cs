@@ -45,6 +45,9 @@ public sealed record AppSettings
     /// <summary>A light rumble on the pad for menu moves, presses and errors.</summary>
     public bool Haptics { get; init; } = true;
 
+    /// <summary>Zip a game's saves before each play (the last few are kept per game).</summary>
+    public bool BackupSavesOnLaunch { get; init; } = true;
+
     /// <summary>Check GitHub Releases for a new Scanline version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
 
@@ -172,6 +175,17 @@ public sealed class AppHost
             var updates = profile.LoadAddOns ? game.Updates.Take(1).Select(u => u.Path) : [];
             Eden.CheckKeys(game.Base.Title, [game.Base.Path, .. updates], profile.KeySet);
             Eden.PrepareAddOns(game, profile.LoadAddOns, Settings.LibraryFolders.Select(f => f.Path));
+            if (Settings.BackupSavesOnLaunch && !string.IsNullOrEmpty(game.Base.TitleId))
+            {
+                try
+                {
+                    Eden.BackupSaves(game.Base.TitleId, automatic: true);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    AppLog.Warn($"saves: automatic backup failed: {e.Message}");  // never blocks playing
+                }
+            }
         }
         return Backend(game.Base.BackendId).Launch.Plan(game.Base, profile, DefaultLaunchOptions());
     }

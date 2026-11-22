@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.5.3
+- New: **Saves** on every game card. See how big your save is and when it last changed, back it up with one press, and go back to any backup. Restoring or deleting always backs up what it replaces first, so nothing is lost. By default Scanline also makes a backup right before each play and keeps the last 5 of those per game (turn it off on the Saves page). Manual backups are never deleted automatically.
+
 ## 0.5.2
 - New: **menu sounds and controller rumble**, like a console. Moving, pressing, going back, switching tabs, changing a value, errors and starting a game each get a short sound and a light buzz. Every theme has its own set: soft blips for Dark and CD era, chiptune chirps for the pixel themes, a neon buzz for Nightgrid and an echoing chime for 32-bit 3D. All made by Scanline itself, nothing downloaded. Set the volume or turn rumble off under Settings → Sound & feel. Games keep their own sound and rumble.
 

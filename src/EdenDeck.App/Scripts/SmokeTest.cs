@@ -79,6 +79,11 @@ public partial class SmokeTest : Node
         Step("mods-page", () => Press(Pad.Accept), expect: "LayeredFS");
         Step("mods-toggle", () => Press(Pad.Accept), expect: "LayeredFS");
         Step("mods-back", () => Press(Pad.Back), expect: "Mods & cheats  ·  1 of 2 mods on");
+        // Saves: the smoke home has a save for this game; back it up from its page.
+        Step("game-saves", () => FindFocusable(GetTree().Root, "Back up, restore or delete")?.GrabFocus(), expect: "Saves  ·  not backed up");
+        Step("saves-page", () => Press(Pad.Accept), expect: "Back up now");
+        Step("saves-backup", () => Press(Pad.Accept), expect: "Back up now");
+        Step("saves-back", () => Press(Pad.Back), expect: "Saves  ·  backed up");
         Step("back-to-library", () => Press(Pad.Back));
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
