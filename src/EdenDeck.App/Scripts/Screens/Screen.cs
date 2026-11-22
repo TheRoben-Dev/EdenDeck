@@ -131,11 +131,24 @@ public abstract partial class Screen : MarginContainer
         return s;
     }
 
-    protected static Label Section(string text)
+    protected static Control Section(string text)
     {
         var l = UiTheme.Label(text.ToUpperInvariant(), UiTheme.SmallSize, UiTheme.Dim);
         l.CustomMinimumSize = new Vector2(0, 34);
         l.VerticalAlignment = VerticalAlignment.Bottom;
+        if (UiTheme.Nightgrid)
+        {
+            // "// SECTION" headers with a magenta slash pair.
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 10);
+            var slash = UiTheme.Label("//", UiTheme.SmallSize, UiTheme.Accent);
+            slash.CustomMinimumSize = l.CustomMinimumSize;
+            slash.VerticalAlignment = VerticalAlignment.Bottom;
+            l.AddThemeColorOverride("font_color", UiTheme.Text);
+            row.AddChild(slash);
+            row.AddChild(l);
+            return row;
+        }
         return l;
     }
 }

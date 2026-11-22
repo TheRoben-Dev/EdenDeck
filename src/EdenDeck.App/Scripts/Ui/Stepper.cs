@@ -41,6 +41,7 @@ public partial class Stepper : Button
         AddChild(row);
 
         Pressed += () => Step(1);
+        Anim.PressFlash(this);
         Refresh();
     }
 
@@ -74,7 +75,23 @@ public partial class Stepper : Button
         }
         _index = next;
         Refresh();
+        Bump(d);
         Changed?.Invoke(Value);
+    }
+
+    /// <summary>The value nudges in the direction it changed and settles.</summary>
+    private void Bump(int d)
+    {
+        if (!Anim.Enabled)
+        {
+            return;
+        }
+        _value.PivotOffset = _value.Size / 2;
+        _value.Scale = new Vector2(1.12f, 1.12f);
+        _value.Modulate = Colors.White with { A = 0.4f };
+        var t = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back).SetParallel();
+        t.TweenProperty(_value, "scale", Vector2.One, Anim.Normal);
+        t.TweenProperty(_value, "modulate:a", 1f, Anim.Fast);
     }
 
     public void SetValue(string value, bool notify = false)

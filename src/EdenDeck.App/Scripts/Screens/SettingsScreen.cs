@@ -1,4 +1,4 @@
-using System.Reflection;
+using EdenDeck.Host.Updates;
 using EdenDeck.App.Ui;
 using EdenDeck.Core.Library;
 using Godot;
@@ -61,25 +61,67 @@ public partial class SettingsScreen : Screen
                 App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
         }
 
+        col.AddChild(Section("Appearance"));
+        var theme = new Stepper("Theme", [("dark", "Dark"), ("terminal", "Retro terminal"), ("nightgrid", "Nightgrid")], Host.Settings.Theme,
+            "Dark is the default. Retro terminal: phosphor green and scanlines. Nightgrid: void black, dot grid, magenta highlights.");
+        theme.Changed += v =>
+        {
+            Host.SaveSettings(Host.Settings with { Theme = v });
+            App.Reload();
+        };
+        Add(theme);
+        Add(Toggle.Create("Animations", !Host.Settings.ReduceMotion, on =>
+        {
+            Host.SaveSettings(Host.Settings with { ReduceMotion = !on });
+            Anim.Enabled = on;
+        }, "Short transitions and focus effects. Turn off for a static UI."));
+
         col.AddChild(Section("Eden Deck"));
         Add(Toggle.Create("Performance overlay layer", !Host.Settings.LayerKillSwitch,
             on => Host.SaveSettings(Host.Settings with { LayerKillSwitch = !on }),
             "Eden Deck's Vulkan layer (FPS and frame-time stats). Turn off if a game misbehaves with it."));
 
-        var version = typeof(SettingsScreen).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "dev";
-        col.AddChild(UiTheme.Label($"Eden Deck {version.Split('+')[0]}", UiTheme.SmallSize + 1, UiTheme.Dim));
+        col.AddChild(Section("Updates"));
+        var updater = Host.Updater;
+        col.AddChild(UiTheme.Label($"Eden Deck {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
+        if (updater.CanSelfUpdate)
+        {
+            Add(new ActionButton("Check for updates", () => App.CheckForAppUpdate(silent: false),
+                "Looks for a newer Eden Deck on GitHub. Updates install in place and keep your games, keys and settings."));
+            Add(Toggle.Create("Check at startup", Host.Settings.CheckForUpdates,
+                on => Host.SaveSettings(Host.Settings with { CheckForUpdates = on }),
+                "Asks when a new version is out. Never interrupts a game."));
+            if (updater.CanRollback)
+            {
+                var prev = updater.PreviousVersion is { } pv ? $" ({pv})" : "";
+                Add(new ActionButton($"Roll back to previous version{prev}", () => App.Confirm(
+                    $"Go back to the previous Eden Deck{prev}? The app restarts.", "Roll back", App.RollbackApp)));
+            }
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("This copy can't update itself (development build or package). Use the installer to update.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
         col.AddChild(UiTheme.Label("Eden Deck never downloads keys, firmware or games. Use your own dumps.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
 
         Focus.Column(items);
+        Anim.Stagger(items, 0.015);
         _first = items.FirstOrDefault();
     }
 
     private void Rescan() =>
         App.Busy("Scanning library…", (_, ct) => Task.FromResult(Host.Rescan(ct)), games =>
         {
-            App.Success($"{games.Count} games");
+            LibraryToast(games.Count);
             Rebuild();
         });
+
+    private void LibraryToast(int count)
+    {
+        var copying = Host.LibraryService.LastSkippedInProgress;
+        App.Success(copying > 0 ? $"{count} games ({copying} still copying, rescan when done)" : $"{count} games");
+    }
 
     public override void FocusDefault() => _first?.GrabFocus();
 }

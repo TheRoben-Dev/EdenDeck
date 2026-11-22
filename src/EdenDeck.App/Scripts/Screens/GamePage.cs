@@ -33,8 +33,18 @@ public partial class GamePage : Screen
         info.CustomMinimumSize = new Vector2(380, 0);
         info.SizeFlagsHorizontal = SizeFlags.Fill;
         split.AddChild(info);
-        var art = new Panel { CustomMinimumSize = new Vector2(380, 214) };
-        art.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.TileColor(_game.Base.Title), 0, 14));
+        var color = UiTheme.TileColor(_game.Base.Title);
+        var art = new Panel { CustomMinimumSize = new Vector2(380, 214), ClipContents = true };
+        var artBox = UiTheme.Box(color, 0, 16);
+        artBox.ShadowColor = new Color(0, 0, 0, 0.4f);
+        artBox.ShadowSize = 10;
+        artBox.ShadowOffset = new Vector2(0, 4);
+        art.AddThemeStyleboxOverride("panel", artBox);
+        var mono = UiTheme.Label(LibraryScreen.Monogram(_game.Base.Title), 150, color.Lightened(0.4f) with { A = 0.4f });
+        mono.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        mono.HorizontalAlignment = HorizontalAlignment.Center;
+        mono.VerticalAlignment = VerticalAlignment.Center;
+        art.AddChild(mono);
         info.AddChild(art);
         info.AddChild(UiTheme.Label(_game.Base.Title, UiTheme.TitleSize - 4, wrap: true));
         var b = _game.Base;
@@ -71,6 +81,19 @@ public partial class GamePage : Screen
         _play = new ActionButton("▶  Play", () => App.Launch(_game), "Starts the game with everything below applied.");
         _play.AddThemeFontSizeOverride("font_size", 24);
         _play.CustomMinimumSize = new Vector2(0, 64);
+        // Primary action stands out: filled with the accent colour.
+        _play.AddThemeStyleboxOverride("normal", UiTheme.Box(UiTheme.Accent.Darkened(0.25f), 0, 12));
+        _play.AddThemeStyleboxOverride("hover", UiTheme.Box(UiTheme.Accent.Darkened(0.15f), 0, 12));
+        _play.AddThemeStyleboxOverride("pressed", UiTheme.Box(UiTheme.Accent.Darkened(0.45f), 0, 12));
+        var playFocus = UiTheme.Focus();
+        playFocus.BorderColor = UiTheme.Text;
+        _play.AddThemeStyleboxOverride("focus", playFocus);
+        if (UiTheme.Accent.Luminance > 0.5f)
+        {
+            _play.AddThemeColorOverride("font_color", UiTheme.Bg);
+            _play.AddThemeColorOverride("font_focus_color", UiTheme.Bg);
+            _play.AddThemeColorOverride("font_hover_color", UiTheme.Bg);
+        }
         Add(_play);
 
         col.AddChild(Section("Launch setup"));
@@ -128,6 +151,8 @@ public partial class GamePage : Screen
         }
 
         Focus.Column(items);
+        Anim.Stagger(items, 0.02);
+        Anim.Stagger(info.GetChildren().OfType<Control>().ToList(), 0.04);
     }
 
     private void UpdateFrameGenNote()

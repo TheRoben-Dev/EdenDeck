@@ -154,10 +154,41 @@ public class LibraryTests : IDisposable
         FakeNsp.Write(Path.Combine(dir, "dlc.nsp"), ("m.cnmt.nca", FakeNsp.NcaHeader(1, 0x0100ABCD00001003)));
         File.WriteAllText(Path.Combine(dir, "readme.txt"), "ignored");
         var backend = new FakeBackend(new EdenLibraryScanner(() => FakeNsp.HeaderKey));
-        var lib = new LibraryService([backend]).Scan([new LibraryFolder(dir)]);
+        var lib = new LibraryService([backend]) { InProgressWindow = TimeSpan.Zero }.Scan([new LibraryFolder(dir)]);
         var g = Assert.Single(lib);
         Assert.Single(g.Updates);
         Assert.Single(g.Dlc);
+    }
+
+    [Fact]
+    public void EachGameIsListedOnceAndCopiesInProgressAreSkipped()
+    {
+        var dir = Path.Combine(_env.Home, "games");
+        var sub = Path.Combine(dir, "switch");
+        Directory.CreateDirectory(sub);
+        var old = DateTime.UtcNow.AddMinutes(-5);
+        void Nsp(string path, ulong tid)
+        {
+            FakeNsp.Write(path, ("m.cnmt.nca", FakeNsp.NcaHeader(1, tid)));
+            File.SetLastWriteTimeUtc(path, old);
+        }
+        Nsp(Path.Combine(sub, "game.nsp"), 0x0100ABCD00000000);
+        Nsp(Path.Combine(sub, "game copy.nsp"), 0x0100ABCD00000000);       // second copy of the same title
+        Nsp(Path.Combine(sub, "game [v65536].nsp"), 0x0100ABCD00000800);
+        Nsp(Path.Combine(sub, "game again [v65536].nsp"), 0x0100ABCD00000800);
+        FakeNsp.Write(Path.Combine(sub, "other.nsp"), ("m.cnmt.nca", FakeNsp.NcaHeader(1, 0x0100EEEE00000000)));  // still copying
+        File.WriteAllBytes(Path.Combine(sub, "third.nsp.filepart"), new byte[16]);
+        var alias = Path.Combine(_env.Home, "alias");
+        Directory.CreateSymbolicLink(alias, dir);                           // like /home -> /var/home on Bazzite
+
+        var backend = new FakeBackend(new EdenLibraryScanner(() => FakeNsp.HeaderKey));
+        var service = new LibraryService([backend]);
+        var lib = service.Scan([new LibraryFolder(dir), new LibraryFolder(alias + "/"), new LibraryFolder(sub)]);
+
+        var g = Assert.Single(lib);
+        Assert.Equal("0100ABCD00000000", g.Base.TitleId);
+        Assert.Single(g.Updates);
+        Assert.Equal(2, service.LastSkippedInProgress);
     }
 
     private sealed class FakeBackend(ILibraryScanner scanner) : IEmulatorBackend

@@ -12,5 +12,6 @@ public partial class ActionButton : Button
         Alignment = HorizontalAlignment.Left;
         CustomMinimumSize = new Vector2(0, 54);
         Pressed += onPress;
+        Anim.PressFlash(this);
     }
 }

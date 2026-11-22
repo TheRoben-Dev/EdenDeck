@@ -76,7 +76,7 @@ public partial class SmokeTest : Node
         });
     }
 
-    private void Step(string name, Action act, double wait = 0.6, string? expect = null) => _steps.Enqueue((name, act, wait, expect));
+    private void Step(string name, Action act, double wait = 1.0, string? expect = null) => _steps.Enqueue((name, act, wait, expect));
 
     private static void Joy(JoyButton b, bool pressed) =>
         Input.ParseInputEvent(new InputEventJoypadButton { Device = 0, ButtonIndex = b, Pressed = pressed });
@@ -134,13 +134,14 @@ public partial class SmokeTest : Node
     private void Capture(string name, string? expect)
     {
         var focus = GetViewport().GuiGetFocusOwner();
-        var text = (focus as Button)?.Text ?? "";
+        // Tiles draw their title with child labels, so fall back to the tooltip (which has the title).
+        var text = focus is Button { Text: { Length: > 0 } t } ? t : focus?.TooltipText ?? "";
         if (expect != null && !text.Contains(expect))
         {
             _failures++;
             GD.PushError($"smoke: step {name} failed: expected focus on '{expect}', got '{text.Split('\n')[0]}'");
         }
-        GD.Print($"smoke: {name}: focus={(focus == null ? "none" : focus.GetType().Name + " '" + (focus as Button)?.Text?.Split('\n')[0] + "'")}");
+        GD.Print($"smoke: {name}: focus={(focus == null ? "none" : focus.GetType().Name + " '" + text.Split('\n')[0] + "'")}");
         var img = GetViewport().GetTexture().GetImage();
         img?.SavePng(Path.Combine(_outDir, $"{++_shot:00}-{name}.png"));
     }

@@ -1,3 +1,4 @@
+using EdenDeck.Host.Updates;
 using EdenDeck.App.Screens;
 using EdenDeck.App.Ui;
 using EdenDeck.Backends.Eden.Config;
@@ -39,6 +40,18 @@ public partial class Main : Control
         Instance = this;
         Pad.Setup();
         Pad.FamilyChanged += UpdateChrome;
+        AppHost? host = null;
+        Exception? startupError = null;
+        try
+        {
+            host = new AppHost();
+        }
+        catch (Exception ex)
+        {
+            startupError = ex;
+        }
+        UiTheme.Use(host?.Settings.Theme ?? "dark");
+        Anim.Enabled = !(host?.Settings.ReduceMotion ?? false);
         Theme = UiTheme.Build();
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         if (OS.GetCmdlineUserArgs().Contains("--windowed"))
@@ -49,6 +62,36 @@ public partial class Main : Control
         var bg = new ColorRect { Color = UiTheme.Bg };
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
+        // Soft accent glow from the top-left corner so the background isn't flat.
+        var glow = new TextureRect
+        {
+            Texture = new GradientTexture2D
+            {
+                Gradient = new Gradient
+                {
+                    Offsets = [0f, 1f],
+                    Colors = [UiTheme.Accent with { A = UiTheme.Terminal ? 0.07f : UiTheme.Nightgrid ? 0.06f : 0.13f }, UiTheme.Accent with { A = 0f }],
+                },
+                Fill = GradientTexture2D.FillEnum.Radial,
+                FillFrom = new Vector2(0.1f, 0f),
+                FillTo = new Vector2(0.85f, 0.9f),
+                Width = 256,
+                Height = 256,
+            },
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.Scale,
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        glow.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(glow);
+        if (UiTheme.Nightgrid)
+        {
+            AddChild(new DotGrid());
+        }
+        if (UiTheme.Terminal)
+        {
+            AddChild(new Scanlines());
+        }
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -81,11 +124,8 @@ public partial class Main : Control
 
         GetViewport().GuiFocusChanged += c => _hints.SetHelp(c.TooltipText);
 
-        try
-        {
-            Host = new AppHost();
-        }
-        catch (Exception e)
+        Host = host;
+        if (startupError is { } e)
         {
             GD.PushError(e.ToString());
             var msg = UiTheme.Label($"Eden Deck could not start:\n\n{e.Message}", wrap: true);
@@ -101,6 +141,90 @@ public partial class Main : Control
         {
             AddChild(new SmokeTest(args[smoke + 1]));
         }
+        else if (Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
+        {
+            CheckForAppUpdate(silent: true);
+        }
+    }
+
+    /// <summary>Asks GitHub for a newer Eden Deck. Silent: no message when up to date or offline.</summary>
+    public async void CheckForAppUpdate(bool silent)
+    {
+        if (Host == null)
+        {
+            return;
+        }
+        var updater = Host.Updater;
+        AppRelease? release;
+        try
+        {
+            release = await Task.Run(() => updater.CheckAsync());
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            if (!silent)
+            {
+                Error("Couldn't reach GitHub to check for updates.");
+            }
+            return;
+        }
+        var current = AppUpdater.DisplayVersion(updater.CurrentVersion);
+        if (release == null)
+        {
+            if (!silent)
+            {
+                Success($"Eden Deck {current} is the latest version");
+            }
+            return;
+        }
+        // A startup check never interrupts a running game or a page the user is on.
+        if (silent && (GameRunning || _stack.Count != 1))
+        {
+            return;
+        }
+        var next = AppUpdater.DisplayVersion(release.Version);
+        if (!updater.CanSelfUpdate)
+        {
+            Toast($"Eden Deck {next} is available. Re-run the installer to update this copy.");
+            return;
+        }
+        Push(new ChoicePage($"Eden Deck {next} is available (you have {current}).\n\nThe update takes a few seconds. Your games, keys and settings are not touched, and the current version is kept so you can roll back in Settings.",
+            ("Update and restart", () => InstallAppUpdate(release)),
+            ("Later", () => { })));
+    }
+
+    private void InstallAppUpdate(AppRelease release)
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        var updater = Host.Updater;
+        Busy($"Updating to {AppUpdater.DisplayVersion(release.Version)}…", (p, ct) => updater.InstallAsync(release, p, ct), Restart);
+    }
+
+    public void RollbackApp()
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        Guard(() => Restart(Host.Updater.Rollback()));
+    }
+
+    /// <summary>Starts the given app binary with the same arguments and quits this one.</summary>
+    private void Restart(string exe)
+    {
+        try
+        {
+            AppUpdater.Relaunch(exe, OS.GetCmdlineUserArgs());
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or IOException)
+        {
+            Error("Updated. Please start Eden Deck again to finish.");
+            return;
+        }
+        GetTree().Quit();
     }
 
     public override void _Notification(int what)
@@ -176,6 +300,7 @@ public partial class Main : Control
 
     private void SwitchTab(int index)
     {
+        var dir = index == _tab ? 0 : (index - _tab + TabNames.Length) % TabNames.Length == 1 ? 1 : -1;
         _tab = index;
         foreach (var s in _stack)
         {
@@ -185,8 +310,19 @@ public partial class Main : Control
         var screen = TabFactories[index]();
         _stack.Add(screen);
         _content.AddChild(screen);
+        if (dir != 0)
+        {
+            Anim.Enter(screen, dir);
+        }
+        else
+        {
+            Anim.FadeIn(screen);
+        }
         UpdateChrome();
     }
+
+    /// <summary>Re-creates the whole UI (after a theme change).</summary>
+    public void Reload() => GetTree().ReloadCurrentScene();
 
     public void Push(Screen screen)
     {
@@ -198,6 +334,7 @@ public partial class Main : Control
         }
         _stack.Add(screen);
         _content.AddChild(screen);
+        Anim.Enter(screen, 1);
         UpdateChrome();
     }
 
@@ -212,6 +349,7 @@ public partial class Main : Control
         top.QueueFree();
         var prev = _stack[^1];
         prev.Visible = true;
+        Anim.Enter(prev, -1);
         prev.Restore();
         UpdateChrome();
     }

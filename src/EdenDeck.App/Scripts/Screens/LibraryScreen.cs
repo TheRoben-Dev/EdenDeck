@@ -49,6 +49,7 @@ public partial class LibraryScreen : Screen
             tiles.Add(tile);
         }
         Focus.Grid(tiles, Columns);
+        Anim.Stagger(tiles);
         _first = tiles.FirstOrDefault();
     }
 
@@ -57,7 +58,7 @@ public partial class LibraryScreen : Screen
         var extras = new List<string>();
         if (g.Updates.Count > 0)
         {
-            extras.Add("Update");
+            extras.Add("UPDATE");
         }
         if (g.Dlc.Count > 0)
         {
@@ -67,19 +68,59 @@ public partial class LibraryScreen : Screen
         {
             CustomMinimumSize = new Vector2(220, 150),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
-            Text = g.Base.Title + (extras.Count > 0 ? "\n" + string.Join(" · ", extras) : ""),
-            AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
-            Alignment = HorizontalAlignment.Left,
             TooltipText = $"{g.Base.Title}  ·  {g.GameId}",
         };
         var color = UiTheme.TileColor(g.Base.Title);
-        b.AddThemeStyleboxOverride("normal", UiTheme.Box(color, 0, 12));
-        b.AddThemeStyleboxOverride("hover", UiTheme.Box(color.Lightened(0.08f), 0, 12));
-        b.AddThemeStyleboxOverride("pressed", UiTheme.Box(color.Darkened(0.2f), 0, 12));
+        var normal = UiTheme.Box(color, 0, 14);
+        normal.ShadowColor = new Color(0, 0, 0, 0.35f);
+        normal.ShadowSize = 6;
+        normal.ShadowOffset = new Vector2(0, 3);
+        b.AddThemeStyleboxOverride("normal", normal);
+        b.AddThemeStyleboxOverride("hover", UiTheme.Box(color.Lightened(0.08f), 0, 14));
+        b.AddThemeStyleboxOverride("pressed", UiTheme.Box(color.Darkened(0.2f), 0, 14));
+
+        // Placeholder art until real icons: big faded monogram in the corner.
+        var mono = UiTheme.Label(Monogram(g.Base.Title), 76, color.Lightened(0.35f) with { A = 0.35f });
+        mono.MouseFilter = MouseFilterEnum.Ignore;
+        mono.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
+        mono.GrowHorizontal = GrowDirection.Begin;
+        mono.OffsetTop = -8;
+        mono.OffsetRight = -12;
+        b.AddChild(mono);
+
+        var text = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
+        text.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        text.OffsetLeft = 16;
+        text.OffsetRight = -16;
+        text.OffsetBottom = -12;
+        text.AddThemeConstantOverride("separation", 2);
+        var title = UiTheme.Label(g.Base.Title, 20, Colors.White, wrap: true);
+        title.MouseFilter = MouseFilterEnum.Ignore;
+        title.MaxLinesVisible = 2;
+        title.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        text.AddChild(title);
+        if (extras.Count > 0)
+        {
+            var chips = UiTheme.Label(string.Join("  ·  ", extras), 12, Colors.White with { A = 0.7f });
+            chips.MouseFilter = MouseFilterEnum.Ignore;
+            text.AddChild(chips);
+        }
+        b.AddChild(text);
+
+        Anim.FocusPop(b, 1.06f);
         b.Pressed += () => App.Push(new GamePage(g));
         b.SetMeta("game", g.GameId);
         return b;
+    }
+
+    /// <summary>Up to two initials from the title ("Mountain Climb Deluxe" -> "MC").</summary>
+    public static string Monogram(string title)
+    {
+        var words = title.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => char.IsLetterOrDigit(w[0]) && w.Length > 1 || char.IsDigit(w[0]))
+            .ToList();
+        var letters = string.Concat(words.Take(2).Select(w => char.ToUpperInvariant(w[0])));
+        return letters.Length > 0 ? letters : title.Length > 0 ? title[..1].ToUpperInvariant() : "?";
     }
 
     private void BuildEmpty()
@@ -122,7 +163,8 @@ public partial class LibraryScreen : Screen
     public void Rescan() =>
         App.Busy("Scanning library…", (_, ct) => Task.FromResult(Host.Rescan(ct)), games =>
         {
-            App.Success($"{games.Count} games");
+            var copying = Host.LibraryService.LastSkippedInProgress;
+            App.Success(copying > 0 ? $"{games.Count} games ({copying} still copying, rescan when done)" : $"{games.Count} games");
             Rebuild();
             App.UpdateChrome();
         });
