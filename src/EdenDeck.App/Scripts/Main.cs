@@ -21,6 +21,8 @@ public partial class Main : Control
 
     private readonly List<Screen> _stack = new();
     private Control _content = null!;
+    private Control _overlay = null!;
+    private Backdrop _backdrop = null!;
     private Header _header = null!;
     private HintBar _hints = null!;
     private Toast _toast = null!;
@@ -37,6 +39,10 @@ public partial class Main : Control
 
     public override void _Ready()
     {
+        if (Pad.IsHandheld)
+        {
+            Input.MouseMode = Input.MouseModeEnum.Hidden;  // shown again when a real mouse moves
+        }
         Instance = this;
         Pad.Setup();
         Pad.FamilyChanged += UpdateChrome;
@@ -119,6 +125,20 @@ public partial class Main : Control
         root.AddChild(_content);
         _hints = new HintBar();
         root.AddChild(_hints);
+        // Overlay layer (game cards) above header and content; the hint bar stays visible below it.
+        _overlay = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        _overlay.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        _overlay.OffsetBottom = -56;
+        AddChild(_overlay);
+        _backdrop = new Backdrop();
+        _backdrop.Clicked += () =>
+        {
+            if (_stack.Count > 1 && _stack[^1].IsOverlay && !GameRunning)
+            {
+                Pop();
+            }
+        };
+        _overlay.AddChild(_backdrop);
         _toast = new Toast();
         AddChild(_toast);
 
@@ -242,6 +262,11 @@ public partial class Main : Control
 
     public override void _Input(InputEvent e)
     {
+        if (!GameRunning && TouchScroll.Handle(GetViewport(), e))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         var joy = e is InputEventJoypadButton or InputEventJoypadMotion;
         if (joy && (GameRunning || !_appFocused))
         {
@@ -259,6 +284,7 @@ public partial class Main : Control
     {
         if (!GameRunning && _appFocused)
         {
+            TouchScroll.Process(delta);
             Pad.Process(delta);
         }
     }
@@ -324,17 +350,35 @@ public partial class Main : Control
     /// <summary>Re-creates the whole UI (after a theme change).</summary>
     public void Reload() => GetTree().ReloadCurrentScene();
 
+    private bool OverlayOpen => _stack.Any(x => x.IsOverlay);
+
     public void Push(Screen screen)
     {
-        if (_stack.Count > 0)
+        var top = _stack.Count > 0 ? _stack[^1] : null;
+        top?.Remember();
+        if (screen.IsOverlay)
         {
-            var top = _stack[^1];
-            top.Remember();
-            top.Visible = false;
+            // The page behind stays visible (dimmed and blurred) but can't take focus.
+            if (top != null)
+            {
+                SetFocusable(top, false);
+            }
+            _stack.Add(screen);
+            _overlay.AddChild(screen);
+            _backdrop.FadeTo(true);
+            screen.AnimateOpen();
         }
-        _stack.Add(screen);
-        _content.AddChild(screen);
-        Anim.Enter(screen, 1);
+        else
+        {
+            if (top != null)
+            {
+                top.Visible = false;
+            }
+            _stack.Add(screen);
+            // Pages opened from a card (pickers, confirmations) sit above the backdrop too.
+            (OverlayOpen ? _overlay : _content).AddChild(screen);
+            Anim.Enter(screen, 1);
+        }
         UpdateChrome();
     }
 
@@ -346,12 +390,46 @@ public partial class Main : Control
         }
         var top = _stack[^1];
         _stack.RemoveAt(_stack.Count - 1);
-        top.QueueFree();
         var prev = _stack[^1];
-        prev.Visible = true;
-        Anim.Enter(prev, -1);
+        if (top.IsOverlay)
+        {
+            top.AnimateClose(top.QueueFree);
+            SetFocusable(prev, true);
+            if (!OverlayOpen)
+            {
+                _backdrop.FadeTo(false);
+            }
+        }
+        else
+        {
+            top.QueueFree();
+            prev.Visible = true;
+            Anim.Enter(prev, -1);
+        }
         prev.Restore();
         UpdateChrome();
+    }
+
+    /// <summary>Turns keyboard/pad focus off (and back on) for everything in a page behind an overlay.</summary>
+    private static void SetFocusable(Node root, bool on)
+    {
+        foreach (var n in root.GetChildren())
+        {
+            if (n is Control c)
+            {
+                if (!on && c.FocusMode != FocusModeEnum.None)
+                {
+                    c.SetMeta("ed_focus", (int)c.FocusMode);
+                    c.FocusMode = FocusModeEnum.None;
+                }
+                else if (on && c.HasMeta("ed_focus"))
+                {
+                    c.FocusMode = (FocusModeEnum)c.GetMeta("ed_focus").AsInt32();
+                    c.RemoveMeta("ed_focus");
+                }
+            }
+            SetFocusable(n, on);
+        }
     }
 
     /// <summary>Pops back to the given screen if it is still on the stack.</summary>

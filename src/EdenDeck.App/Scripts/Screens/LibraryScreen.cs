@@ -107,8 +107,8 @@ public partial class LibraryScreen : Screen
         }
         b.AddChild(text);
 
-        Anim.FocusPop(b, 1.06f);
-        b.Pressed += () => App.Push(new GamePage(g));
+        Anim.FocusPop(b, 1.04f);
+        b.Pressed += () => App.Push(new GamePage(g, b.GetGlobalRect()));
         b.SetMeta("game", g.GameId);
         return b;
     }

@@ -165,13 +165,14 @@ public static class UiTheme
         return b;
     }
 
-    /// <summary>Focus ring drawn over the normal style: thick accent border, slight glow.</summary>
+    /// <summary>
+    /// Focus ring drawn over the normal style: a flat accent tint and one crisp accent border.
+    /// No shadow: a StyleBox shadow is drawn under the whole box, so behind a translucent fill it
+    /// showed as a noisy, dithered glow on the Deck's panel, and its blur doubled the edge.
+    /// </summary>
     public static StyleBoxFlat Focus()
     {
-        var b = Box(new Color(0, 0, 0, 0), Nightgrid ? 2 : 3, 10, Accent);
-        b.ShadowColor = Accent with { A = Nightgrid ? 0.22f : 0.35f };
-        b.ShadowSize = 8;
-        b.ExpandMarginLeft = b.ExpandMarginRight = b.ExpandMarginTop = b.ExpandMarginBottom = 2;
+        var b = Box(Accent with { A = Nightgrid ? 0.12f : 0.16f }, 3, 10, Accent);
         return b;
     }
 
