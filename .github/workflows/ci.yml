@@ -23,6 +23,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Workflow files are valid
+        run: |
+          python3 -c "import sys, yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml
+          bash -n tools/release/*.sh tools/smoke/*.sh
       - name: Build (warnings are errors)
         run: dotnet build EdenDeck.sln -c Release
       - name: Test

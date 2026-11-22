@@ -138,7 +138,7 @@ jobs:
 
           This installs to \`~/Applications/EdenDeck\`, adds Eden Deck to your app menu and puts \`edendeck\` on your PATH.
 
-**Start it from Steam for controller support:** *Games → Add a Non-Steam Game to My Library →* tick Eden Deck. Started outside Steam, Steam's desktop layout turns the controller into keyboard and mouse input (arrows, Enter, Esc and Tab still work).
+          **Start it from Steam for controller support:** *Games → Add a Non-Steam Game to My Library →* tick Eden Deck. Started outside Steam, Steam's desktop layout turns the controller into keyboard and mouse input (arrows, Enter, Esc and Tab still work).
 
           **Manual install:** download \`EdenDeck-linux-x86_64.tar.gz\`, extract it anywhere and run \`EdenDeck/EdenDeck.x86_64\`.
 
