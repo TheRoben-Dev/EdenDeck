@@ -19,7 +19,15 @@ public partial class Toast : PanelContainer
         GrowHorizontal = GrowDirection.Both;
         GrowVertical = GrowDirection.Begin;
         CustomMinimumSize = new Vector2(560, 0);
-        OffsetBottom = -86;
+        SetRestingOffset(-86);
+    }
+
+    private void SetRestingOffset(float y)
+    {
+        OffsetTop = y;
+        OffsetBottom = y;
+        // Collapse any stretched height so the panel shrinks back to its content.
+        ResetSize();
     }
 
     /// <summary>Theme changed: pick up the new font and colours.</summary>
@@ -34,17 +42,19 @@ public partial class Toast : PanelContainer
         if (Anim.Enabled)
         {
             // Rise in from just below its spot.
+            // Top and bottom offsets stay equal and the height comes from the minimum size (grow
+            // up), so repeated toasts never accumulate height (deriving offset_top from Size did).
             Modulate = Colors.Transparent;
-            OffsetBottom = -66;
-            OffsetTop = OffsetBottom - Size.Y;
+            SetRestingOffset(-66);
             _tween.SetParallel();
             _tween.TweenProperty(this, "modulate", Colors.White, Anim.Normal);
             _tween.TweenProperty(this, "offset_bottom", -86f, Anim.Slow);
-            _tween.TweenProperty(this, "offset_top", -86f - Size.Y, Anim.Slow);
+            _tween.TweenProperty(this, "offset_top", -86f, Anim.Slow);
             _tween.SetParallel(false);
         }
         else
         {
+            SetRestingOffset(-86);
             Modulate = Colors.White;
         }
         _tween.TweenInterval(Math.Clamp(text.Length / 18.0, 2.5, 8));

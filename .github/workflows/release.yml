@@ -127,6 +127,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # "What's new" from CHANGELOG.md comes first; the app shows the part before the "---".
+          awk -v v="$VERSION" '$0 ~ "^## " {p = ($2 == v || $2 == "v" v)} p && $0 !~ "^## "' CHANGELOG.md | sed '/./,$!d' > changes.md
+          if [ ! -s changes.md ]; then echo "CHANGELOG.md has no section for $VERSION"; exit 1; fi
+          { echo "## What's new"; cat changes.md; echo; echo "---"; echo; } > head.md
           cat > notes.md <<NOTES
           Portable Linux build for SteamOS, Bazzite and other x86_64 distros.
 
@@ -146,7 +150,8 @@ jobs:
 
           Eden Deck never downloads keys, firmware or games. Downloads are listed in \`SHA256SUMS\`, and the installer checks them.
           NOTES
-          gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Eden Deck $VERSION" --notes-file notes.md
+          cat head.md notes.md > release-notes.md
+          gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Eden Deck $VERSION" --notes-file release-notes.md
 
       - name: Upload screenshots
         if: always() && steps.version.outputs.skip != 'true'

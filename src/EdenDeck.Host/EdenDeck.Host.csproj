@@ -7,5 +7,6 @@
     <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
     <ProjectReference Include="..\EdenDeck.Backends.Eden\EdenDeck.Backends.Eden.csproj" />
     <InternalsVisibleTo Include="EdenDeck.Core.Tests" />
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
   </ItemGroup>
 </Project>
