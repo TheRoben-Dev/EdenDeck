@@ -177,7 +177,7 @@ public partial class SmokeTest : Node
             Step($"open-{id}-a", () =>
             {
                 FindFocusable(GetTree().Root, "Mountain Climb")?.GrabFocus();
-                Press(Pad.Accept);
+                Tap(JoyButton.A);
             }, wait: 1.2, expect: "Play");
             Step($"open-{id}-play", () => Press(Pad.Accept), wait: 3.0, expect: "OK");
             Step($"open-{id}-ok", () => Press(Pad.Accept), wait: 0.8, expect: "Play");
@@ -186,6 +186,27 @@ public partial class SmokeTest : Node
             Step($"open-{id}-tap-back", () =>
             {
                 Press(Pad.Back);
+                Tap(JoyButton.RightShoulder);
+                Tap(JoyButton.RightShoulder);
+            }, wait: 0.8);
+        }
+        // Live switches back and forth from the library itself (the 3D theme in both directions).
+        foreach (var id in new[] { "dark", "polygon", "nightgrid", "polygon", "dark" })
+        {
+            Step($"reswitch-{id}", () =>
+            {
+                Tap(JoyButton.LeftShoulder);
+                Tap(JoyButton.LeftShoulder);
+                SetTheme(id);
+            }, wait: 1.2);
+            Step($"reswitch-{id}-open", () =>
+            {
+                FindFocusable(GetTree().Root, "Ocean Odyssey")?.GrabFocus();
+                Tap(JoyButton.A);
+            }, wait: 1.2, expect: "Play");
+            Step($"reswitch-{id}-back", () =>
+            {
+                Tap(JoyButton.B);
                 Tap(JoyButton.RightShoulder);
                 Tap(JoyButton.RightShoulder);
             }, wait: 0.8);
