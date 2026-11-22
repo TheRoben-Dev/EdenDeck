@@ -78,6 +78,30 @@ public class ProfileStoreTests
             File.Delete(file);
         }
     }
+
+    [Fact]
+    public void KeepsFavoritesAndCollections()
+    {
+        var file = Path.Combine(Path.GetTempPath(), "edendeck-" + Guid.NewGuid() + ".json");
+        try
+        {
+            var s = new ProfileStore(file);
+            var c = GameProfile.WithCollection(null, "Backlog", true);
+            c = GameProfile.WithCollection(c, "Party", true);
+            c = GameProfile.WithCollection(c, "party", true);  // same shelf, any case
+            Assert.Equal(["Backlog", "party"], c);
+            s.Set("eden:1", new GameProfile { Favorite = true, Collections = c });
+            s.Set("eden:2", new GameProfile { Collections = ["Alpha"] });
+            var again = new ProfileStore(file);
+            Assert.True(again.Get("eden:1").Favorite);
+            Assert.Equal(["Alpha", "Backlog", "party"], again.CollectionNames);
+            Assert.Null(GameProfile.WithCollection(["Alpha"], "ALPHA", false));
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 }
 
 public class ProcessLauncherTests

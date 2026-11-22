@@ -84,7 +84,19 @@ public partial class SmokeTest : Node
         Step("saves-page", () => Press(Pad.Accept), expect: "Back up now");
         Step("saves-backup", () => Press(Pad.Accept), expect: "Back up now");
         Step("saves-back", () => Press(Pad.Back), expect: "Saves  ·  backed up");
-        Step("back-to-library", () => Press(Pad.Back));
+        // Favorites and collections: star the game, shelve it, and the library gets a Show filter.
+        Step("game-fav", () => FindFocusable(GetTree().Root, "Favorites come first")?.GrabFocus(), expect: "Favorite");
+        Step("game-fav-on", () => Press("ui_right"), expect: "Favorite");
+        Step("game-shelves", () => FindFocusable(GetTree().Root, "Put this game on shelves")?.GrabFocus(), expect: "Collections");
+        Step("shelves-page", () => Press(Pad.Accept), expect: "the Playing now shelf");
+        Step("shelves-on", () => Press("ui_right"), expect: "the Playing now shelf");
+        Step("shelves-back", () => Press(Pad.Back), expect: "Collections  ·  Playing now");
+        Step("back-to-library", () => Press(Pad.Back), expect: "Castle Defenders");
+        Step("library-show", () => FindFocusable(GetTree().Root, "Favorites and your collections")?.GrabFocus(), expect: "Favorites and your collections");
+        Step("library-show-favorites", () => Press("ui_right"), expect: "Favorites and your collections");
+        Step("library-show-all", () => FindFocusable(GetTree().Root, "Favorites and your collections")?.GrabFocus() , expect: "Favorites and your collections");
+        Step("library-show-all-left", () => Press("ui_left"), expect: "Favorites and your collections");
+        Step("library-refocus", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
         Step("returned", () => { }, wait: 3.0, expect: "OK");

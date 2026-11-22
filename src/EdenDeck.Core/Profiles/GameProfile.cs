@@ -36,6 +36,23 @@ public sealed record GameProfile
     public int Crt { get; init; }
 
     public DateTimeOffset? LastPlayed { get; init; }
+
+    /// <summary>Starred: listed first in the library.</summary>
+    public bool Favorite { get; init; }
+
+    /// <summary>The player's own collections this game is in (names as typed).</summary>
+    public List<string>? Collections { get; init; }
+
+    /// <summary>The list with <paramref name="name"/> added or taken out (ignoring case); null once empty.</summary>
+    public static List<string>? WithCollection(List<string>? list, string name, bool on)
+    {
+        var l = (list ?? []).Where(c => !string.Equals(c, name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (on)
+        {
+            l.Add(name);
+        }
+        return l.Count == 0 ? null : l;
+    }
 }
 
 public sealed class ProfileStore
@@ -65,6 +82,10 @@ public sealed class ProfileStore
     }
 
     public IReadOnlyDictionary<string, GameProfile> All => _profiles;
+
+    /// <summary>Every collection name in use, sorted.</summary>
+    public IReadOnlyList<string> CollectionNames =>
+        _profiles.Values.SelectMany(p => p.Collections ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.OrdinalIgnoreCase).ToList();
 
     private void Save()
     {

@@ -1,3 +1,4 @@
+using EdenDeck.Core.Profiles;
 using EdenDeck.App.Ui;
 using EdenDeck.App.Ui.Poly;
 using EdenDeck.Core.Library;
@@ -26,12 +27,41 @@ public partial class LibraryScreen : Screen
         var col = Column(14);
         AddChild(col);
         var played = Host.Profiles.All;
+        GameProfile? P(LibraryGame g) => played.TryGetValue(g.GameId, out var p) ? p : null;
+        var collections = Host.Profiles.CollectionNames;
+        var anyFavorite = Host.Library.Any(g => P(g)?.Favorite == true);
+        if (Filter == Favorites && !anyFavorite || Filter.Length > 0 && Filter != Favorites && !collections.Contains(Filter))
+        {
+            Filter = "";  // the last favorite or collection went away
+        }
+        // Favorites first, then most recently played, then by name.
         var games = Host.Library
-            .OrderByDescending(g => played.TryGetValue(g.GameId, out var p) ? p.LastPlayed : null)
+            .Where(g => Filter == "" || Filter == Favorites ? (Filter == "" || P(g)?.Favorite == true) : P(g)?.Collections?.Contains(Filter) == true)
+            .OrderByDescending(g => P(g)?.Favorite == true)
+            .ThenByDescending(g => P(g)?.LastPlayed)
             .ThenBy(g => g.Base.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        col.AddChild(UiTheme.Label($"{games.Count} games", UiTheme.SmallSize + 1, UiTheme.Dim));
+        col.AddChild(UiTheme.Label(games.Count == Host.Library.Count ? $"{games.Count} games" : $"{games.Count} of {Host.Library.Count} games",
+            UiTheme.SmallSize + 1, UiTheme.Dim));
         var fixes = FixRows(col);
+        if (anyFavorite || collections.Count > 0)
+        {
+            // Only once the player has starred a game or made a collection.
+            var options = new List<(string, string)> { ("", "All games") };
+            if (anyFavorite)
+            {
+                options.Add((Favorites, "★ Favorites"));
+            }
+            options.AddRange(collections.Select(c => (c, c)));
+            var show = new Stepper("Show", options, Filter, "Favorites and your collections. Star games and add them to collections on their card.");
+            show.Changed += v =>
+            {
+                Filter = v;
+                Rebuild();
+            };
+            col.AddChild(show);
+            fixes.Add(show);
+        }
 
         var grid = new GridContainer { Columns = Columns };
         grid.AddThemeConstantOverride("h_separation", 18);
@@ -71,6 +101,11 @@ public partial class LibraryScreen : Screen
     }
 
     private readonly List<Cartridge> _carts = new();
+
+    private const string Favorites = "\u0001favorites";
+
+    /// <summary>What the library shows: "" all, <see cref="Favorites"/>, or a collection name. Kept while the app runs.</summary>
+    private static string Filter { get; set; } = "";
 
     /// <summary>Puts each game's own icon on its cartridge as it's read (cached ones appear at once).</summary>
     private async void LoadIcons(IReadOnlyList<LibraryGame> games, CartStage? stage)
@@ -124,6 +159,10 @@ public partial class LibraryScreen : Screen
     private Button Tile(LibraryGame g)
     {
         var extras = new List<string>();
+        if (Host.Profiles.Get(g.GameId).Favorite)
+        {
+            extras.Add("★");
+        }
         if (g.Updates.Count > 0)
         {
             extras.Add("UPDATE");
@@ -243,4 +282,26 @@ public partial class LibraryScreen : Screen
     }
 
     public override void FocusDefault() => _first?.GrabFocus();
+
+    /// <summary>Rebuilds (a favorite or collection changed the order) and keeps focus on the same game.</summary>
+    public void Refresh(string gameId)
+    {
+        Rebuild();
+        Focusables(this).FirstOrDefault(c => c.HasMeta("game") && c.GetMeta("game").AsString() == gameId)?.GrabFocus();
+    }
+
+    private static IEnumerable<Control> Focusables(Node n)
+    {
+        foreach (var c in n.GetChildren())
+        {
+            if (c is Control ctl && ctl.FocusMode != FocusModeEnum.None)
+            {
+                yield return ctl;
+            }
+            foreach (var d in Focusables(c))
+            {
+                yield return d;
+            }
+        }
+    }
 }
