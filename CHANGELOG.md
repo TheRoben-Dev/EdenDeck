@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.5
+- Fix: in Game Mode, adding shortcuts to Steam no longer shuts Steam down. That could leave the Deck stuck on Scanline with no way back. Scanline now offers **Restart the Deck now** instead and adds the shortcuts while the Deck shuts down, so they're in your library after the restart. On the desktop, Scanline still restarts just Steam.
+
 ## 0.4.4
 - New: **button mapping for games** under Settings → Buttons. Pick **Switch positions** (A is the right face button, like on a Switch) or **Xbox letters** (A is the bottom button, as printed on a Steam Deck or Xbox pad), or point any Switch button at any button, trigger or d-pad direction. It's saved in Eden's own controller setup, so Eden shows the same mapping, and "Save player 1 as profile" on the Controller page keeps it for one game. Scanline's menus always keep A to confirm and B to go back. Works with the Steam Deck, Steam Input in Game Mode and Xbox-style pads; for others, map in Eden.
 

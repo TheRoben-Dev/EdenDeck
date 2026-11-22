@@ -910,10 +910,20 @@ public partial class Main : Control
     public void OfferSteamRestart(string message)
     {
         var pending = Host!.Steam.Pending().Count;
+        var later = ($"Later ({pending} waiting)", (Action)(() => Toast("Saved. They're added the next time Steam or the Deck restarts, or from Settings → Steam.")));
+        if (GameMode)
+        {
+            // Never shut Steam down in Game Mode: it is the session, and stopping it from here left the screen dead.
+            Push(new ChoicePage(
+                message + " In Game Mode that's done by restarting the Deck. Scanline adds them while it shuts down.",
+                ("Restart the Deck now", () => Guard(() => Host.Steam.RebootAndApply())),
+                later));
+            return;
+        }
         Push(new ChoicePage(
-            message + (GameMode ? " Scanline closes with it and Steam comes right back." : " Scanline closes with it; Steam opens again by itself."),
+            message + " Scanline closes with it; Steam opens again by itself.",
             ("Restart Steam now", () => Guard(() => Host.Steam.RestartSteamAndApply())),
-            ($"Later ({pending} waiting)", () => Toast("Saved. Restart Steam from any game page or Settings → Steam when you're ready."))));
+            later));
     }
 
     private static bool GameMode => EdenDeck.Host.SteamService.GameMode;
