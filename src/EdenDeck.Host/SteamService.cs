@@ -40,6 +40,9 @@ public sealed class SteamService
     /// <summary>The app itself, for the Scanline shortcut.</summary>
     public string? AppBinary => _appDir is { } d && File.Exists(Path.Combine(d, "Scanline.x86_64")) ? Path.Combine(d, "Scanline.x86_64") : null;
 
+    /// <summary>Scanline's own Steam artwork (32-bit 3D theme), shipped in steam-art next to the app.</summary>
+    public string? ArtDir => _appDir is { } d && Directory.Exists(Path.Combine(d, "steam-art")) ? Path.Combine(d, "steam-art") : null;
+
     public bool Available => Launcher != null && SteamShortcuts.AccountConfigDirs(_home).Count > 0;
 
     /// <summary>Why Add to Steam can't work here, or null when it can.</summary>
@@ -72,7 +75,7 @@ public sealed class SteamService
             AppName = "Scanline",
             Exe = app,
             StartDir = Path.GetDirectoryName(app)!,
-            Icon = IconIn(Path.GetDirectoryName(app)!),
+            Icon = ArtDir is { } art && File.Exists(Path.Combine(art, "icon.png")) ? Path.Combine(art, "icon.png") : IconIn(Path.GetDirectoryName(app)!),
             Tags = [Tag],
         };
     }
@@ -84,6 +87,29 @@ public sealed class SteamService
     // ---- The list Scanline manages ----------------------------------------------------------------
 
     public sealed record Entry(string Key, SteamShortcut Shortcut, bool Remove = false);
+
+    /// <summary>Registry key of the shortcut for Scanline itself.</summary>
+    public const string AppKey = "app";
+
+    /// <summary>Installs (or removes) Scanline's artwork for its own shortcut in every account. Never fatal.</summary>
+    private void Artwork(uint appId, bool remove)
+    {
+        if (ArtDir is not { } art)
+        {
+            return;
+        }
+        foreach (var config in SteamShortcuts.AccountConfigDirs(_home))
+        {
+            try
+            {
+                SteamShortcuts.InstallArtwork(config, appId, art, remove);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                AppLog.Warn($"steam: artwork for {appId} in {config}: {e.Message}");
+            }
+        }
+    }
 
     public IReadOnlyList<Entry> Wanted()
     {
@@ -135,6 +161,10 @@ public sealed class SteamService
     public bool Add(string key, SteamShortcut shortcut)
     {
         SaveWanted(Wanted().Where(e => e.Key != key).Append(new Entry(key, shortcut)));
+        if (key == AppKey)
+        {
+            Artwork(shortcut.AppId, remove: false);  // Steam picks up grid files without a restart
+        }
         return !SteamRunning && Apply() >= 0;
     }
 
@@ -147,6 +177,10 @@ public sealed class SteamService
             return false;
         }
         SaveWanted(Wanted().Where(e => e.Key != key).Append(old with { Remove = true }));
+        if (key == AppKey)
+        {
+            Artwork(old.Shortcut.AppId, remove: true);
+        }
         if (!SteamRunning)
         {
             Apply();
@@ -187,6 +221,10 @@ public sealed class SteamService
                 file.Save();
                 changed++;
             }
+        }
+        foreach (var e in wanted.Where(e => e.Key == AppKey && !e.Remove))
+        {
+            Artwork(e.Shortcut.AppId, remove: false);
         }
         // Removals are done once they've been written.
         if (wanted.Any(e => e.Remove))

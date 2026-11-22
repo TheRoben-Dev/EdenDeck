@@ -199,7 +199,12 @@ public partial class Main : Control
 
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
-        if (smoke >= 0 && smoke + 1 < args.Length)
+        var art = Array.IndexOf(args, "--render-steam-art");
+        if (art >= 0 && art + 1 < args.Length)
+        {
+            AddChild(new SteamArtRenderer(args[art + 1]));
+        }
+        else if (smoke >= 0 && smoke + 1 < args.Length)
         {
             AddChild(new SmokeTest(args[smoke + 1]));
         }
