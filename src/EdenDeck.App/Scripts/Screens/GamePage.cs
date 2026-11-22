@@ -28,6 +28,23 @@ public partial class GamePage : Screen
 
     public override bool IsOverlay => true;
 
+    /// <summary>A favorite or collection changed: the library re-sorts when this page closes.</summary>
+    private bool _shelved;
+
+    public override bool OnBack()
+    {
+        if (!_shelved)
+        {
+            return false;
+        }
+        App.Pop();
+        if (App.Top is LibraryScreen library)
+        {
+            library.Refresh(_game.GameId);
+        }
+        return true;
+    }
+
     private GameProfile Profile => Host.Profiles.Get(_game.GameId);
 
     private void SetProfile(Func<GameProfile, GameProfile> change) =>
@@ -177,6 +194,21 @@ public partial class GamePage : Screen
             Add(new ActionButton("Saves" + (!hasSave ? "" : lastBackup == null ? "  ·  not backed up" : $"  ·  backed up {lastBackup.CreatedUtc.ToLocalTime():d MMM}"),
                 () => App.Push(new SavesPage(_game, Rebuild)), "Back up, restore or delete this game's save."));
         }
+
+        var fav = Profile.Favorite;
+        Add(Toggle.Create("★ Favorite", fav, on =>
+            {
+                SetProfile(x => x with { Favorite = on });
+                _shelved = true;
+            },
+            "Favorites come first in the library and get their own filter.", "Listed first in the library.", "Not starred."));
+        var shelves = Profile.Collections ?? [];
+        Add(new ActionButton("Collections" + (shelves.Count == 0 ? "" : "  ·  " + string.Join(", ", shelves)),
+            () => App.Push(new CollectionsPage(_game, () =>
+            {
+                _shelved = true;
+                Rebuild();
+            })), "Put this game on shelves like Playing now or Up next."));
 
         col.AddChild(Section("Launch setup"));
         var p = Profile;
