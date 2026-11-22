@@ -21,6 +21,22 @@ public sealed class ControllerAndAddOnTests : IDisposable
     private static readonly PadInfo SteamPad = new("030079f6de280000ff11000001000000", "Steam Virtual Gamepad", 0x28de, 0x11ff);
 
     [Fact]
+    public void RecognisesDeckPadByGuidWhenNameAndIdsDiffer()
+    {
+        // Seen on a Steam Deck in Game Mode (0.2.6): Godot name/IDs differ from the evdev GUID.
+        var deck = new PadInfo("030079f6de280000ff11000001000000", "#SettingsController_SteamController", 0x28de, 0x12fd);
+        Assert.Equal((0x28de, 0x11ff), EdenControllerDefaults.GuidIds(deck.Guid));
+        Assert.True(EdenControllerDefaults.HasKnownLayout(deck));
+        var cfg = Path.Combine(Path.GetTempPath(), "edendeck-deckpad-" + Guid.NewGuid().ToString("N")[..8] + ".ini");
+        File.WriteAllText(cfg, "[Controls]\nplayer_0_button_a=\"engine:keyboard,code:67,toggle:0\"\n");
+        Assert.True(EdenControllerDefaults.EnsurePlayer1(cfg, deck));
+        Assert.Contains("guid:03000000de280000ff11000001000000", QtIni.Load(cfg).Get("Controls", "player_0_button_a"));
+        // A manual mapping made in Eden afterwards is left alone.
+        Assert.False(EdenControllerDefaults.EnsurePlayer1(cfg, deck));
+        File.Delete(cfg);
+    }
+
+    [Fact]
     public void EdenGuidZeroesNameCrc()
     {
         Assert.Equal("03000000de280000ff11000001000000", EdenControllerDefaults.EdenGuid(SteamPad.Guid));

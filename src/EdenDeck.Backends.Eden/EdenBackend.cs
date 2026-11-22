@@ -66,6 +66,21 @@ public sealed class EdenBackend : IEmulatorBackend
     /// <summary>Copies the user's own Lossless.dll from Steam into Eden's lossless/ dir when needed.</summary>
     public LosslessDll.Status EnsureLosslessDll() => LosslessDll.Ensure(Paths.LosslessDir, Home);
 
+    /// <summary>The Lossless.dll frame gen should load: the Steam copy, else the one in Eden's lossless/ dir.</summary>
+    public string? LosslessDllPath()
+    {
+        var steam = LosslessDll.FindInSteam(Home);
+        if (steam != null)
+        {
+            return steam;
+        }
+        var local = Path.Combine(Paths.LosslessDir, LosslessDll.FileName);
+        return LosslessDll.IsInstalled(Paths.LosslessDir) ? local : null;
+    }
+
+    /// <summary>Installed lsfg-vk layer, if any.</summary>
+    public LsfgVk.Install FindLsfgVk() => LsfgVk.Find(Env ?? Environment.GetEnvironmentVariable);
+
     /// <summary>Read-only check for the game page: is frame gen going to find Lossless.dll?</summary>
     public bool LosslessDllAvailable() => LosslessDll.IsInstalled(Paths.LosslessDir) || LosslessDll.FindInSteam(Home) != null;
 

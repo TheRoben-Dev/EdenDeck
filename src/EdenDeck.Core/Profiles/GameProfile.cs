@@ -6,7 +6,7 @@ namespace EdenDeck.Core.Profiles;
 public enum FrameGenMode
 {
     Off,
-    /// <summary>Emulator's built-in frame gen (Eden Nightly: Lossless engine).</summary>
+    /// <summary>Lossless Scaling frame gen (lsfg-vk on Linux). Name kept for saved profiles.</summary>
     Builtin,
     LsfgVk,
     /// <summary>EdenDeck layer FSR 3.1 frame gen (experimental, phase 5).</summary>

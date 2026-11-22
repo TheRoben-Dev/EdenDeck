@@ -164,10 +164,9 @@ public partial class GamePage : Screen
             }, "Loads this game's update and DLC files straight from your library. Nothing is installed or copied."));
         }
 
-        var nightly = Host.Eden.Schema.Channel == "nightly";
-        var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Eden built-in")],
+        var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Lossless (lsfg-vk)")],
             p.FrameGen == FrameGenMode.Builtin ? nameof(FrameGenMode.Builtin) : nameof(FrameGenMode.Off),
-            "Doubles a 30 fps game to 60 fps using Eden's built-in frame generation. Never goes above 60.")
+            "Doubles a 30 fps game to 60 fps with Lossless Scaling frame generation (lsfg-vk). Never goes above 60.")
         {
             Expands = true,
             DetailFor = v => v == nameof(FrameGenMode.Builtin)
@@ -201,13 +200,16 @@ public partial class GamePage : Screen
         _frameGenNote = UiTheme.Label("", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true);
         col.AddChild(_frameGenNote);
         UpdateFrameGenNote();
-        if (!nightly)
+        var lsfg = Host.Eden.FindLsfgVk();
+        if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
         {
-            col.AddChild(UiTheme.Label("Frame generation needs Eden Nightly and your own Lossless Scaling files.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            col.AddChild(UiTheme.Label(lsfg.Kind == EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.Legacy
+                ? "Frame generation needs lsfg-vk 2.x. The installed lsfg-vk is an older 1.x version."
+                : "Frame generation needs lsfg-vk, which isn't installed yet.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
-        else if (!Host.Eden.LosslessDllAvailable())
+        else if (Host.Eden.LosslessDllPath() == null)
         {
-            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and EdenDeck copies it into Eden for you.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and EdenDeck finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
 
         col.AddChild(Section("Eden settings for this game"));
