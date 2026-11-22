@@ -23,7 +23,7 @@ public abstract partial class TwoPaneScreen : Screen
     private Tween? _awayTween;
 
     private const float ListWidth = 280;
-    private const float ListNarrowBy = 44;
+    private const float ListShift = 16;
 
     /// <summary>Heading over the category list.</summary>
     protected abstract string Heading { get; }
@@ -46,10 +46,17 @@ public abstract partial class TwoPaneScreen : Screen
         row.AddThemeConstantOverride("separation", 28);
         AddChild(row);
 
+        // The list sits in a plain holder so sliding it aside is a pure transform: the row never
+        // re-lays out mid-animation (that rounding is what made the end of the slide jitter).
+        var holder = new Control { CustomMinimumSize = new Vector2(ListWidth, 0), SizeFlagsVertical = SizeFlags.ExpandFill };
+        row.AddChild(holder);
         var left = Column(6);
-        left.SizeFlagsHorizontal = SizeFlags.Fill;
-        left.CustomMinimumSize = new Vector2(ListWidth, 0);
-        row.AddChild(left);
+        holder.AddChild(left);
+        holder.Resized += () =>
+        {
+            left.Size = holder.Size;
+            ApplyAway(_away);
+        };
         _left = left;
         left.AddChild(Section(Heading));
         for (var i = 0; i < _list.Count; i++)
@@ -101,13 +108,16 @@ public abstract partial class TwoPaneScreen : Screen
         {
             return;
         }
-        _left.CustomMinimumSize = new Vector2(ListWidth - ListNarrowBy * v, 0);
+        // Whole pixels only, so text never shimmers between frames or snaps when the tween ends.
+        _left.Position = new Vector2(-Mathf.Round(ListShift * v), 0);
         for (var i = 0; i < _cats.Count; i++)
         {
             var selected = i == _category;
-            // Selected stays fully lit; the rest fade to a grey ghost.
-            _cats[i].Modulate = selected ? Colors.White : new Color(1, 1, 1, 1 - 0.65f * v);
-            _cats[i].Scale = Vector2.One * (1 - 0.06f * v * (selected ? 0 : 1));
+            var c = _cats[i];
+            // Selected stays fully lit; the rest fade to a grey ghost and shrink toward their left edge.
+            c.Modulate = selected ? Colors.White : new Color(1, 1, 1, 1 - 0.65f * v);
+            c.PivotOffset = new Vector2(0, c.Size.Y / 2);
+            c.Scale = Vector2.One * (1 - 0.06f * v * (selected ? 0 : 1));
         }
         if (_left.GetChildCount() > 0 && _left.GetChild(0) is Control heading)
         {

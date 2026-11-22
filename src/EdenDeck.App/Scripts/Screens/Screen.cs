@@ -47,7 +47,24 @@ public abstract partial class Screen : MarginContainer
             RemoveChild(c);
             c.QueueFree();
         }
-        Build();
+        _failBack = null;
+        try
+        {
+            Build();
+        }
+        catch (Exception e)
+        {
+            // Never leave a half-built (or invisible) page holding focus: show what went wrong and a way back.
+            GD.PushError($"{GetType().Name} could not be built: {e}");
+            AppLog.Error($"{GetType().Name} could not be built: {e}");
+            foreach (var c in GetChildren())
+            {
+                RemoveChild(c);
+                c.QueueFree();
+            }
+            BuildFailed(e);
+            return;
+        }
         // Keep the lists where they were (theme switch, data change) instead of jumping to the top.
         var fresh = Scrollers(this);
         for (var i = 0; i < Math.Min(scrolls.Count, fresh.Count); i++)
@@ -68,6 +85,32 @@ public abstract partial class Screen : MarginContainer
 
     protected abstract void Build();
 
+    private ActionButton? _failBack;
+
+    private void BuildFailed(Exception e)
+    {
+        var center = new CenterContainer();
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(center);
+        var panel = new PanelContainer { CustomMinimumSize = new Vector2(560, 0) };
+        var box = UiTheme.Box(UiTheme.Panel, 1, 18, UiTheme.Line);
+        box.ContentMarginLeft = box.ContentMarginRight = box.ContentMarginTop = box.ContentMarginBottom = 26;
+        panel.AddThemeStyleboxOverride("panel", box);
+        center.AddChild(panel);
+        var col = Column(12);
+        panel.AddChild(col);
+        col.AddChild(UiTheme.Label("This page couldn't open.", UiTheme.FontSize + 4, UiTheme.Text, wrap: true));
+        col.AddChild(UiTheme.Label(e.Message, UiTheme.SmallSize + 1, UiTheme.Bad, wrap: true));
+        col.AddChild(UiTheme.Label("The details are in the app's log. Please send it along with what you did.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        _failBack = new ActionButton("Back", () => App.Pop(), "Goes back to the previous page.");
+        col.AddChild(_failBack);
+        App?.Error($"Something went wrong: {e.Message}");
+        if (IsVisibleInTree())
+        {
+            _failBack.CallDeferred(Control.MethodName.GrabFocus);
+        }
+    }
+
     /// <summary>Focuses the screen's primary control.</summary>
     public abstract void FocusDefault();
 
@@ -86,6 +129,10 @@ public abstract partial class Screen : MarginContainer
         if (_lastFocus != null && IsInstanceValid(_lastFocus) && _lastFocus.IsVisibleInTree() && IsAncestorOf(_lastFocus))
         {
             _lastFocus.GrabFocus();
+        }
+        else if (_failBack != null && IsInstanceValid(_failBack))
+        {
+            _failBack.GrabFocus();
         }
         else
         {

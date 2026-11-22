@@ -101,8 +101,8 @@ public static class Props
         var noise = Tex(Noise(28, 20, 1));
         var bars = ColorBars();
         var screen = l.Mat(C("ffffff"), noise, emission: C("000000"));
-        screen.SetShaderParameter("albedo", C("1c2422"));
-        screen.SetShaderParameter("use_tex", false);
+        screen.Param("albedo", C("1c2422"));
+        screen.Param("use_tex", false);
         Part(b, Box(0.8f, 0.6f, 0.03f), screen, new Vector3(-0.1f, 0.03f, 0.44f));
         var knob = l.Mat(C("b0b3bb"));
         Part(b, Cyl(0.05f, 0.05f, 0.05f, 8), knob, new Vector3(0.5f, 0.2f, 0.42f), new Vector3(90, 0, 0));
@@ -117,32 +117,32 @@ public static class Props
             var a = pr.TapAge;
             if (a < 0.2f)
             {
-                screen.SetShaderParameter("use_tex", false);
-                screen.SetShaderParameter("albedo", C("ffffff"));
-                screen.SetShaderParameter("emission", C("aaaaaa"));
+                screen.Param("use_tex", false);
+                screen.Param("albedo", C("ffffff"));
+                screen.Param("emission", C("aaaaaa"));
             }
             else if (a < 1.3f)
             {
-                screen.SetShaderParameter("tex", noise);
-                screen.SetShaderParameter("use_tex", true);
-                screen.SetShaderParameter("albedo", C("ffffff"));
-                screen.SetShaderParameter("emission", C("303030"));
+                screen.Param("tex", noise);
+                screen.Param("use_tex", true);
+                screen.Param("albedo", C("ffffff"));
+                screen.Param("emission", C("303030"));
                 noise.Update(Noise(28, 20, seed++));
             }
             else if (a < 3.6f)
             {
-                screen.SetShaderParameter("tex", bars);
-                screen.SetShaderParameter("use_tex", true);
-                screen.SetShaderParameter("emission", C("202020"));
+                screen.Param("tex", bars);
+                screen.Param("use_tex", true);
+                screen.Param("emission", C("202020"));
                 // Rolling hold: the picture slips vertically for a moment.
-                screen.SetShaderParameter("uv_offset", new Vector2(0, a < 1.8f ? (a - 1.3f) * 2 : 0));
+                screen.Param("uv_offset", new Vector2(0, a < 1.8f ? (a - 1.3f) * 2 : 0));
             }
             else
             {
-                screen.SetShaderParameter("use_tex", false);
-                screen.SetShaderParameter("albedo", C("1c2422"));
-                screen.SetShaderParameter("emission", C("000000"));
-                screen.SetShaderParameter("uv_offset", Vector2.Zero);
+                screen.Param("use_tex", false);
+                screen.Param("albedo", C("1c2422"));
+                screen.Param("emission", C("000000"));
+                screen.Param("uv_offset", Vector2.Zero);
             }
         };
         return p;
@@ -186,15 +186,17 @@ public static class Props
         var disc = Part(b, Cyl(0.4f, 0.4f, 0.012f, 16), l.Mat(C("ffffff"), DiscTexture()), new Vector3(0.04f, 0, 0), new Vector3(90, 0, 0));
         var hinge = new Node3D { Position = new Vector3(-0.5f, 0, 0.02f) };
         b.AddChild(hinge);
-        Part(hinge, Box(1f, 0.9f, 0.03f), l.Mat(C("c8dcf0"), alpha: 0.38f), new Vector3(0.5f, 0, 0.02f));
-        Part(hinge, Box(0.86f, 0.8f, 0.004f), l.Mat(C("3c64b4"), alpha: 0.55f), new Vector3(0.52f, 0, 0.0f));  // booklet
-        Part(b, Box(0.06f, 0.9f, 0.08f), l.Mat(C("9fb0c8"), alpha: 0.6f), new Vector3(-0.5f, 0, 0));  // spine
+        // Only the lid is see-through: two overlapping translucent parts swap draw order as the lid
+        // turns, which flickered. The booklet is printed paper (opaque), tucked just inside the lid.
+        Part(hinge, Box(1f, 0.9f, 0.03f), l.Mat(C("c8dcf0"), alpha: 0.38f), new Vector3(0.5f, 0, 0.035f));
+        Part(hinge, Box(0.86f, 0.8f, 0.01f), l.Mat(C("3c64b4")), new Vector3(0.52f, 0, 0.012f));  // booklet
+        Part(b, Box(0.06f, 0.9f, 0.08f), l.Mat(C("7f8fa8")), new Vector3(-0.53f, 0, 0));  // spine
         var spin = 0f;
         p.Animate = (pr, t, dt) =>
         {
             pr.OpenTarget = pr.TapAge < 2.6f ? 1 : 0;
             hinge.RotationDegrees = new Vector3(0, -115 * Overshoot(pr.Open), 0);
-            spin += dt * (pr.Open > 0.5f ? 900 : 0);
+            spin += dt * (pr.Open > 0.5f ? 360 : 0);  // slow enough not to strobe at 30 Hz
             disc.RotationDegrees = new Vector3(90, spin, 0);
         };
         return p;
@@ -222,7 +224,7 @@ public static class Props
         {
             pr.OpenTarget = pr.TapAge < 2.8f ? 1 : 0;
             hinge.RotationDegrees = new Vector3(-80 * Overshoot(pr.Open), 0, 0);
-            spin += dt * (pr.Open > 0.3f ? 1200 * pr.Open : 0);
+            spin += dt * (pr.Open > 0.3f ? 420 * pr.Open : 0);
             disc.RotationDegrees = new Vector3(0, spin, 0);
         };
         return p;
@@ -247,7 +249,7 @@ public static class Props
             Part(b, Box(0.04f, 0.06f, 0.01f), gold, new Vector3(-0.15f + i * 0.06f, -0.3f, 0.052f));
         }
         p.Animate = (pr, t, dt) =>
-            label.SetShaderParameter("emission", pr.TapAge < 1.2f ? C("3a5a90") * (1 - pr.TapAge / 1.2f) : Colors.Black);
+            label.Param("emission", pr.TapAge < 1.2f ? C("3a5a90") * (1 - pr.TapAge / 1.2f) : Colors.Black);
         return p;
     }
 
@@ -262,7 +264,7 @@ public static class Props
         var egg = Critter(on, off, false);
         var hatched = Critter(on, off, true);
         var screen = l.Mat(C("ffffff"), egg, emission: C("101810"));
-        screen.SetShaderParameter("uv_scale", new Vector2(0.5f, 1));
+        screen.Param("uv_scale", new Vector2(0.5f, 1));
         Part(b, Quad(0.36f, 0.3f), screen, new Vector3(0, 0.05f, 0.28f));
         var btn = l.Mat(C("f4f0f6"));
         for (var i = -1; i <= 1; i++)
@@ -274,8 +276,8 @@ public static class Props
         {
             var frame = (int)(t * 2) % 2;
             var jump = pr.TapAge < 0.8f ? (int)(pr.TapAge * 10) % 2 : frame;
-            screen.SetShaderParameter("tex", pr.Taps % 3 == 0 && pr.Taps > 0 ? hatched : egg);
-            screen.SetShaderParameter("uv_offset", new Vector2(jump * 0.5f, 0));
+            screen.Param("tex", pr.Taps % 3 == 0 && pr.Taps > 0 ? hatched : egg);
+            screen.Param("uv_offset", new Vector2(jump * 0.5f, 0));
             // Hanging from its ring: a slow pendulum.
             pr.BaseRot = new Vector3(0, 0, Mathf.Sin(t * 1.3f + pr.Phase) * 9);
         };
@@ -303,8 +305,8 @@ public static class Props
         {
             var lit = pr.TapAge < 3f;
             var pulse = 0.5f + 0.5f * Mathf.Sin(pr.TapAge * 9);
-            screen.SetShaderParameter("albedo", lit ? C("b8d878").Lerp(C("e8f0a0"), pulse) : off);
-            screen.SetShaderParameter("emission", lit ? C("405020") : Colors.Black);
+            screen.Param("albedo", lit ? C("b8d878").Lerp(C("e8f0a0"), pulse) : off);
+            screen.Param("emission", lit ? C("405020") : Colors.Black);
         };
         return p;
     }
@@ -343,8 +345,8 @@ public static class Props
             // Open = flat out; shut = folded onto the keypad.
             hinge.RotationDegrees = new Vector3(-(1 - pr.Open) * 172 + 12, 0, 0);
             var glow = pr.Open > 0.9f;
-            screen.SetShaderParameter("albedo", glow ? C("7ac8ff") : C("2a3540"));
-            screen.SetShaderParameter("emission", glow ? C("204060") : Colors.Black);
+            screen.Param("albedo", glow ? C("7ac8ff") : C("2a3540"));
+            screen.Param("emission", glow ? C("204060") : Colors.Black);
         };
         return p;
     }
@@ -377,7 +379,7 @@ public static class Props
                 blobs[i].Position = new Vector3(Mathf.Cos(i * 2.1f + churn * 0.3f) * r * 0.6f, y, Mathf.Sin(i * 2.1f + churn * 0.3f) * r * 0.6f);
                 blobs[i].Scale = new Vector3(1, 1.2f + Mathf.Sin(churn * 2 + i) * 0.25f, 1);
             }
-            blobMat.SetShaderParameter("emission", C("603000").Lerp(C("ff8020"), fast));
+            blobMat.Param("emission", C("603000").Lerp(C("ff8020"), fast));
         };
         return p;
     }
@@ -412,7 +414,7 @@ public static class Props
         p.Animate = (pr, t, dt) =>
         {
             var pulse = pr.TapAge < 1.2f ? 1 - pr.TapAge / 1.2f : 0;
-            mat.SetShaderParameter("emission", C("104060").Lerp(C("60e0ff"), pulse + 0.15f * (0.5f + 0.5f * Mathf.Sin(t * 2.4f))));
+            mat.Param("emission", C("104060").Lerp(C("60e0ff"), pulse + 0.15f * (0.5f + 0.5f * Mathf.Sin(t * 2.4f))));
         };
         return p;
     }
@@ -457,7 +459,7 @@ public static class Props
         var mat = l.Mat(C("ffd040"), emission: C("402800"));
         Part(p.Body, Torus(0.22f, 0.34f, 10, 5), mat, Vector3.Zero, new Vector3(90, 0, 0));
         p.Animate = (pr, t, dt) =>
-            mat.SetShaderParameter("emission", pr.TapAge < 0.8f ? C("ffe080") * (1 - pr.TapAge / 0.8f) : C("402800"));
+            mat.Param("emission", pr.TapAge < 0.8f ? C("ffe080") * (1 - pr.TapAge / 0.8f) : C("402800"));
         return p;
     }
 }

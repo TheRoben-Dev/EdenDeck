@@ -123,6 +123,7 @@ public partial class LibraryScreen : Screen
         Anim.PressFlash(b);
         b.Pressed += () =>
         {
+            EdenDeck.Host.AppLog.Info($"tile pressed: {g.Base.Title} (3D stage: {_stage != null})");
             void Open() => App.Push(new GamePage(g, b.GetGlobalRect()));
             if (_stage != null)
             {

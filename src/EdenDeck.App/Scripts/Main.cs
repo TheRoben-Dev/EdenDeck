@@ -44,6 +44,10 @@ public partial class Main : Control
         get => _gameRunning;
         private set
         {
+            if (_gameRunning != value)
+            {
+                AppLog.Info(value ? "game running" : "game ended");
+            }
             _gameRunning = value;
             if (_highlight != null)
             {
@@ -88,7 +92,17 @@ public partial class Main : Control
         {
             startupError = ex;
         }
-        UiTheme.Use(host?.Settings.Theme ?? "dark");
+        if (host != null)
+        {
+            AppLog.Open(Path.Combine(host.Paths.Data, "logs"));
+        }
+        if (startupError != null)
+        {
+            AppLog.Error("startup: " + startupError);
+        }
+        var startTheme = host?.Settings.Theme ?? "dark";
+        AppLog.Info($"theme {startTheme}, window {DisplayServer.WindowGetSize()}, pads: {string.Join(", ", Input.GetConnectedJoypads().Select(Input.GetJoyName))}");
+        UiTheme.Use(startTheme, host?.Settings.Accents.GetValueOrDefault(startTheme));
         Anim.Enabled = !(host?.Settings.ReduceMotion ?? false);
         Theme = UiTheme.Build();
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -250,6 +264,7 @@ public partial class Main : Control
     /// </summary>
     public void ApplyTheme(string name)
     {
+        AppLog.Info($"theme -> {name} (stack: {StackNames()})");
         TextureRect? snap = null;
         if (Anim.Enabled)
         {
@@ -264,7 +279,7 @@ public partial class Main : Control
             };
             snap.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         }
-        UiTheme.Use(name);
+        UiTheme.Use(name, Host?.Settings.Accents.GetValueOrDefault(name));
         Theme = UiTheme.Build();
         BuildBackground();
         var header = NewHeader();
@@ -293,6 +308,7 @@ public partial class Main : Control
         {
             _hints.SetHelp(f.HasMeta(Stepper.ExpandsMeta) ? "" : f.TooltipText);
         }
+        AppLog.Info($"theme applied, focus: {Describe(GetViewport().GuiGetFocusOwner())}");
         if (snap != null)
         {
             AddChild(snap);
@@ -472,17 +488,31 @@ public partial class Main : Control
         GetTree().Quit();
     }
 
+    /// <summary>
+    /// Quitting: release Godot objects that C# statics keep alive, while .NET is still running.
+    /// Left for engine shutdown they can abort the process ("script_bindings is not empty").
+    /// </summary>
+    public override void _ExitTree()
+    {
+        Theme = null;
+        EdenDeck.App.Ui.Poly.Ps1.ReleaseShared();
+        EdenDeck.App.Ui.Poly.CartStage.ReleaseShared();
+        UiTheme.ReleaseFonts();
+    }
+
     public override void _Notification(int what)
     {
         if (what == NotificationApplicationFocusOut)
         {
             _appFocused = false;
+            AppLog.Info("window lost focus");
             Pad.ReleaseAll();
             PauseBackground();
         }
         else if (what == NotificationApplicationFocusIn)
         {
             _appFocused = true;
+            AppLog.Info("window focused");
             Input.MouseMode = Input.MouseModeEnum.Hidden;
             PauseBackground();
         }
@@ -490,6 +520,15 @@ public partial class Main : Control
 
     public override void _Input(InputEvent e)
     {
+        switch (e)
+        {
+            case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
+                AppLog.Info($"pointer {(mb.Pressed ? "down" : "up")} at {mb.Position.Round()} over {Describe(GetViewport().GuiGetHoveredControl())}, focus {Describe(GetViewport().GuiGetFocusOwner())}");
+                break;
+            case InputEventJoypadButton { Pressed: true } jb when jb.ButtonIndex is JoyButton.A or JoyButton.B:
+                AppLog.Info($"pad {jb.ButtonIndex} (game running {GameRunning}, app focused {_appFocused}), focus {Describe(GetViewport().GuiGetFocusOwner())}");
+                break;
+        }
         if (!GameRunning && TouchScroll.Handle(GetViewport(), e))
         {
             GetViewport().SetInputAsHandled();
@@ -586,8 +625,14 @@ public partial class Main : Control
 
     // ---- navigation ----
 
+    private string StackNames() => string.Join(" > ", _stack.Select(x => x.GetType().Name));
+
+    private static string Describe(Control? c) =>
+        c == null ? "none" : $"{c.GetType().Name} '{(c is Button b ? b.Text : c.TooltipText).Split('\n')[0]}'";
+
     private void SwitchTab(int index)
     {
+        AppLog.Info($"tab -> {TabNames[index]}");
         var dir = index == _tab ? 0 : (index - _tab + TabNames.Length) % TabNames.Length == 1 ? 1 : -1;
         _tab = index;
         foreach (var s in _stack)
@@ -621,6 +666,7 @@ public partial class Main : Control
 
     public void Push(Screen screen)
     {
+        AppLog.Info($"push {screen.GetType().Name} over {StackNames()}");
         var top = _stack.Count > 0 ? _stack[^1] : null;
         top?.Remember();
         if (screen.IsOverlay)
@@ -651,6 +697,7 @@ public partial class Main : Control
 
     public void Pop()
     {
+        AppLog.Info($"pop ({StackNames()})");
         if (_stack.Count <= 1)
         {
             return;
@@ -732,7 +779,11 @@ public partial class Main : Control
 
     public void Toast(string text) => _toast.Show(text);
 
-    public void Error(string text) => _toast.Show(text, UiTheme.Bad);
+    public void Error(string text)
+    {
+        AppLog.Warn("shown error: " + text);
+        _toast.Show(text, UiTheme.Bad);
+    }
 
     public void Success(string text) => _toast.Show(text, UiTheme.Good);
 

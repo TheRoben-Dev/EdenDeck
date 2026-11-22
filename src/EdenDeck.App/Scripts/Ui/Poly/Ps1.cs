@@ -75,10 +75,30 @@ public static class Ps1
             """,
     };
 
-    /// <summary>Semi-transparent surfaces (the era's translucent plastic and glass), blended, no depth write.</summary>
-    private static Shader Translucent => _translucent ??= new Shader
+    private static Shader? _translucentFront;
+
+    /// <summary>Drops the shared shaders at quit, while .NET is still up (see Main._ExitTree).</summary>
+    public static void ReleaseShared()
     {
-        Code = "shader_type spatial;\nrender_mode unshaded, cull_disabled, depth_draw_never, blend_mix, specular_disabled, shadows_disabled;\n" +
+        foreach (var s in new[] { _opaque, _translucent, _translucentFront, _post })
+        {
+            s?.Dispose();
+        }
+        _opaque = _translucent = _translucentFront = _post = null;
+    }
+
+    /// <summary>
+    /// Semi-transparent surfaces (the era's translucent plastic and glass), blended, no depth write.
+    /// Drawn in two passes, far side then near side, so a shell never shows its faces in a random
+    /// order (which flickered as parts turned).
+    /// </summary>
+    private static Shader Translucent => _translucent ??= TranslucentPass("cull_front");
+
+    private static Shader TranslucentFront => _translucentFront ??= TranslucentPass("cull_back");
+
+    private static Shader TranslucentPass(string cull) => new()
+    {
+        Code = $"shader_type spatial;\nrender_mode unshaded, {cull}, depth_draw_never, blend_mix, specular_disabled, shadows_disabled;\n" +
                SpatialCommon + "\nvoid fragment() {\n" + Shade + """
                 ALBEDO = c.rgb;
                 ALPHA = c.a * alpha;
@@ -120,12 +140,12 @@ public static class Ps1
 
         public void Apply(ShaderMaterial m)
         {
-            m.SetShaderParameter("snap_res", SnapRes);
-            m.SetShaderParameter("fog_color", Fog);
-            m.SetShaderParameter("fog_near", FogNear);
-            m.SetShaderParameter("fog_far", FogFar);
-            m.SetShaderParameter("light_dir", LightDir);
-            m.SetShaderParameter("ambient", Ambient);
+            m.Param("snap_res", SnapRes);
+            m.Param("fog_color", Fog);
+            m.Param("fog_near", FogNear);
+            m.Param("fog_far", FogFar);
+            m.Param("light_dir", LightDir);
+            m.Param("ambient", Ambient);
         }
 
         public void ApplyAll()
@@ -139,18 +159,31 @@ public static class Ps1
         public ShaderMaterial Mat(Color albedo, Texture2D? tex = null, float alpha = 1, Color? emission = null, bool unlit = false)
         {
             var m = new ShaderMaterial { Shader = alpha < 1 ? Translucent : Opaque };
-            m.SetShaderParameter("albedo", albedo);
+            if (alpha < 1)
+            {
+                m.NextPass = new ShaderMaterial { Shader = TranslucentFront };
+            }
+            m.Param("albedo", albedo);
             if (tex != null)
             {
-                m.SetShaderParameter("tex", tex);
-                m.SetShaderParameter("use_tex", true);
+                m.Param("tex", tex);
+                m.Param("use_tex", true);
             }
-            m.SetShaderParameter("alpha", alpha);
-            m.SetShaderParameter("emission", emission ?? Colors.Black);
-            m.SetShaderParameter("unlit", unlit ? 1f : 0f);
+            m.Param("alpha", alpha);
+            m.Param("emission", emission ?? Colors.Black);
+            m.Param("unlit", unlit ? 1f : 0f);
             Apply(m);
             Materials.Add(m);
             return m;
+        }
+    }
+
+    /// <summary>Sets a shader parameter on a material and its extra passes.</summary>
+    public static void Param(this ShaderMaterial m, StringName name, Variant value)
+    {
+        for (Material? x = m; x is ShaderMaterial sm; x = sm.NextPass)
+        {
+            sm.SetShaderParameter(name, value);
         }
     }
 

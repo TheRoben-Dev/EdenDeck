@@ -23,6 +23,17 @@ public sealed class AppUpdater
     public const string Asset = "EdenDeck-linux-x86_64.tar.gz";
     public const string LatestApi = $"https://api.github.com/repos/{Repo}/releases/latest";
 
+    // The app is being renamed to Scanline (repository, package and binary). This version already
+    // accepts both names so it can update across the rename; GitHub redirects the old repo URL.
+    private static readonly string[] Repos = ["TheRoben-Dev/EdenDeck", "TheRoben-Dev/Scanline"];
+    private static readonly string[] Assets = [Asset, "Scanline-linux-x86_64.tar.gz"];
+    private static readonly (string Folder, string Binary, string Launcher)[] Layouts =
+        [("Scanline", "Scanline.x86_64", "scanline"), ("EdenDeck", "EdenDeck.x86_64", "edendeck")];
+
+    /// <summary>The app binary in an install folder (either name), or null.</summary>
+    public static string? AppBinary(string dir) =>
+        Layouts.Select(l => Path.Combine(dir, l.Binary)).FirstOrDefault(File.Exists);
+
     private readonly HttpClient _http;
 
     /// <param name="installDir">Folder holding EdenDeck.x86_64; null = the running app's folder.</param>
@@ -42,11 +53,10 @@ public sealed class AppUpdater
     /// app binary and the launcher that we can write next to. Not for dev builds or packages.
     /// </summary>
     public bool CanSelfUpdate =>
-        File.Exists(Path.Combine(InstallDir, "EdenDeck.x86_64")) &&
-        File.Exists(Path.Combine(InstallDir, "edendeck")) &&
+        Layouts.Any(l => File.Exists(Path.Combine(InstallDir, l.Binary)) && File.Exists(Path.Combine(InstallDir, l.Launcher))) &&
         Directory.GetParent(InstallDir.TrimEnd('/')) is { } parent && IsWritable(parent.FullName);
 
-    public bool CanRollback => Directory.Exists(PreviousDir) && File.Exists(Path.Combine(PreviousDir, "EdenDeck.x86_64"));
+    public bool CanRollback => Directory.Exists(PreviousDir) && AppBinary(PreviousDir) != null;
 
     /// <summary>Version of the copy kept for rollback, from its README.txt ("Eden Deck 0.1.1 (Linux x86_64)").</summary>
     public string? PreviousVersion
@@ -56,7 +66,9 @@ public sealed class AppUpdater
             try
             {
                 var first = File.ReadLines(Path.Combine(PreviousDir, "README.txt")).FirstOrDefault() ?? "";
-                return first.StartsWith("Eden Deck ", StringComparison.Ordinal) ? ParseVersion(first[10..]) is { } v ? DisplayVersion(v) : null : null;
+                var rest = first.StartsWith("Eden Deck ", StringComparison.Ordinal) ? first[10..]
+                    : first.StartsWith("Scanline ", StringComparison.Ordinal) ? first[9..] : null;
+                return ParseVersion(rest) is { } v ? DisplayVersion(v) : null;
             }
             catch (IOException)
             {
@@ -117,14 +129,16 @@ public sealed class AppUpdater
         {
             return null;
         }
-        string? tarball = null, sums = null;
+        string? tarball = null, sums = null, tarballName = null;
         long size = 0;
         foreach (var a in assets.EnumerateArray())
         {
             var name = a.GetProperty("name").GetString();
             var url = a.GetProperty("browser_download_url").GetString();
-            if (name == Asset)
+            // Prefer the new package name when a release carries both.
+            if (name != null && Assets.Contains(name) && (tarballName == null || Array.IndexOf(Assets, name) > Array.IndexOf(Assets, tarballName)))
             {
+                tarballName = name;
                 tarball = url;
                 size = a.TryGetProperty("size", out var sz) ? sz.GetInt64() : 0;
             }
@@ -144,7 +158,7 @@ public sealed class AppUpdater
     /// <summary>Only this repository's release downloads are accepted.</summary>
     public static bool IsOfficial(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == "https" && u.Host == "github.com" &&
-        u.AbsolutePath.StartsWith($"/{Repo}/releases/download/", StringComparison.Ordinal);
+        Repos.Any(r => u.AbsolutePath.StartsWith($"/{r}/releases/download/", StringComparison.Ordinal));
 
     /// <summary>
     /// Downloads, verifies and installs the release. Returns the path of the new app binary.
@@ -162,7 +176,7 @@ public sealed class AppUpdater
         Directory.CreateDirectory(stage);
         try
         {
-            var tarball = Path.Combine(stage, Asset);
+            var tarball = Path.Combine(stage, Path.GetFileName(new Uri(release.TarballUrl).AbsolutePath));
             await DownloadAsync(release.TarballUrl, tarball, release.Size, progress, ct);
             var sums = await _http.GetStringAsync(release.SumsUrl, ct);
             Verify(tarball, sums);
@@ -175,11 +189,12 @@ public sealed class AppUpdater
             {
                 await TarFile.ExtractToDirectoryAsync(gz, extracted, overwriteFiles: false, ct);
             }
-            var newApp = Path.Combine(extracted, "EdenDeck");
-            if (!File.Exists(Path.Combine(newApp, "EdenDeck.x86_64")))
+            var layout = Layouts.FirstOrDefault(l => File.Exists(Path.Combine(extracted, l.Folder, l.Binary)));
+            if (layout.Folder == null)
             {
-                throw new InvalidDataException("The update package is missing EdenDeck.x86_64.");
+                throw new InvalidDataException("The update package is missing the app binary.");
             }
+            var newApp = Path.Combine(extracted, layout.Folder);
 
             // Swap: current -> .previous (replacing an older .previous), new -> current.
             if (Directory.Exists(PreviousDir))
@@ -196,7 +211,7 @@ public sealed class AppUpdater
                 Directory.Move(PreviousDir, InstallDir);
                 throw;
             }
-            return Path.Combine(InstallDir, "EdenDeck.x86_64");
+            return Path.Combine(InstallDir, layout.Binary);
         }
         finally
         {
@@ -221,7 +236,7 @@ public sealed class AppUpdater
         Directory.Move(InstallDir, temp);
         Directory.Move(PreviousDir, InstallDir);
         Directory.Move(temp, PreviousDir);
-        return Path.Combine(InstallDir, "EdenDeck.x86_64");
+        return AppBinary(InstallDir)!;
     }
 
     /// <summary>Starts the (new) app binary with the same arguments. The caller then quits.</summary>
