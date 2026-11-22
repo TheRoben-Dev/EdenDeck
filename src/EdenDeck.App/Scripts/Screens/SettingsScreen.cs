@@ -345,7 +345,7 @@ public partial class SettingsScreen : TwoPaneScreen
         var pending = steam.Pending();
         col.AddChild(UiTheme.Label(
             pending.Count > 0
-                ? $"{managed} shortcut(s) from Scanline, {pending.Count} waiting for Steam to restart."
+                ? $"{managed} shortcut(s) from Scanline, {pending.Count} waiting. Restart Steam to see them."
                 : $"{managed} shortcut(s) from Scanline, all in Steam.",
             UiTheme.SmallSize + 2, pending.Count > 0 ? UiTheme.Warn : UiTheme.Good, wrap: true));
         Add(new ActionButton(steam.Has("app") ? "Update the Scanline shortcut" : "Add Scanline to Steam",
@@ -366,7 +366,7 @@ public partial class SettingsScreen : TwoPaneScreen
             App.RenderSteamArt();
             if (steam.Pending().Count > 0)
             {
-                App.OfferSteamRestart($"{Host.Library.Count} games are ready for Steam. Steam picks up new shortcuts when it restarts.");
+                App.SteamRestartNotice($"{Host.Library.Count} games are ready for Steam.");
             }
             else
             {
@@ -374,13 +374,6 @@ public partial class SettingsScreen : TwoPaneScreen
                 RefreshPane();
             }
         }, "One Steam shortcut per game in your library. Games already added are updated, not duplicated."));
-        if (pending.Count > 0)
-        {
-            var gameMode = EdenDeck.Host.SteamService.GameMode;
-            Add(new ActionButton(gameMode ? $"Restart the Deck to add {pending.Count}" : $"Restart Steam to add {pending.Count}",
-                () => App.OfferSteamRestart("Steam picks up new shortcuts when it restarts."),
-                gameMode ? "Restarts the Deck and writes the shortcuts while it shuts down." : "Closes Steam, writes the shortcuts and lets Steam start again."));
-        }
     }
 
     private void BuildUpdates(VBoxContainer col, Action<Control> Add)

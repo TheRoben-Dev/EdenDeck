@@ -249,7 +249,7 @@ internal static class Cli
             case "apply":
                 if (a.Contains("--after-steam-exits"))
                 {
-                    return steam.ApplyAfterSteamExits(restart: a.Contains("--restart"));
+                    return steam.ApplyAfterSteamExits();
                 }
                 var n = steam.Apply();
                 if (n < 0)

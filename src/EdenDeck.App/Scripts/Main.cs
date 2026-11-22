@@ -223,15 +223,20 @@ public partial class Main : Control
     /// <summary>Writes any Add to Steam shortcuts still waiting, when Steam is closed (never fatal).</summary>
     private void ApplySteamShortcuts()
     {
-        if (Host is not { } host || !host.Steam.Available || host.Steam.SteamRunning || host.Steam.Pending().Count == 0)
+        if (Host is not { } host || !host.Steam.Available || host.Steam.Pending().Count == 0)
         {
             return;
         }
         try
         {
+            if (host.Steam.SteamRunning)
+            {
+                host.Steam.WriteWhenSteamRestarts();  // e.g. the last helper timed out
+                return;
+            }
             host.Steam.Apply();
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)
         {
             AppLog.Warn($"steam: couldn't write shortcuts at startup: {e.Message}");
         }
@@ -910,7 +915,7 @@ public partial class Main : Control
             Toast($"Added {shortcut.AppName} to Steam.");
             return;
         }
-        OfferSteamRestart($"{shortcut.AppName} is ready for Steam. Steam picks up new shortcuts when it restarts.");
+        SteamRestartNotice($"{shortcut.AppName} is ready for Steam.");
     }
 
     private bool _renderingArt;
@@ -956,24 +961,16 @@ public partial class Main : Control
         }
     }
 
-    /// <summary>Asks to restart Steam now so pending shortcuts get written.</summary>
-    public void OfferSteamRestart(string message)
+    /// <summary>
+    /// Tells the player Steam has to be restarted to show new shortcuts. Scanline doesn't restart
+    /// anything itself; a background helper writes the shortcuts as soon as Steam closes.
+    /// </summary>
+    public void SteamRestartNotice(string message)
     {
-        var pending = Host!.Steam.Pending().Count;
-        var later = ($"Later ({pending} waiting)", (Action)(() => Toast("Saved. They're added the next time Steam or the Deck restarts, or from Settings → Steam.")));
-        if (GameMode)
-        {
-            // Never shut Steam down in Game Mode: it is the session, and stopping it from here left the screen dead.
-            Push(new ChoicePage(
-                message + " In Game Mode that's done by restarting the Deck. Scanline adds them while it shuts down.",
-                ("Restart the Deck now", () => Guard(() => Host.Steam.RebootAndApply())),
-                later));
-            return;
-        }
+        Guard(() => Host!.Steam.WriteWhenSteamRestarts());
         Push(new ChoicePage(
-            message + " Scanline closes with it; Steam opens again by itself.",
-            ("Restart Steam now", () => Guard(() => Host.Steam.RestartSteamAndApply())),
-            later));
+            message + " Restart Steam to see the change in your library" + (GameMode ? " (restarting the Deck works too)." : "."),
+            ("OK", () => { })));
     }
 
     private static bool GameMode => EdenDeck.Host.SteamService.GameMode;
