@@ -203,6 +203,16 @@ EdenDeck's core uses a generic emulator-backend interface ([`docs/backends.md`](
 | `tools/smoke/` | Scripted UI smoke test with screenshots |
 | `layer/` | `VK_LAYER_EDENDECK_fsr` Vulkan layer and its hardware test procedure |
 
+## Install
+
+On SteamOS, Bazzite or any x86_64 Linux, open a terminal in Desktop Mode and run:
+
+```sh
+curl -fsSL https://github.com/TheRoben-Dev/EdenDeck/releases/latest/download/install.sh | bash
+```
+
+This installs to `~/Applications/EdenDeck` (no root), adds a menu entry, and puts the `edendeck` launcher on your PATH. Run it again to update. For Game Mode, add Eden Deck to Steam with *Add a Non-Steam Game*.
+
 ## Building
 
 You need the .NET 8 SDK, and for the app, the Godot 4.7.2 .NET editor.

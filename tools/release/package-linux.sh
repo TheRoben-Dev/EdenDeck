@@ -8,9 +8,11 @@
 #   EdenDeck/data_EdenDeck.App_linuxbsd_x86_64/  its managed assemblies
 #   EdenDeck/edendeck                            headless launcher (Steam shortcuts)
 #   EdenDeck/vulkan/                             VK_LAYER_EDENDECK_fsr + manifest (relative path)
+#   EdenDeck/edendeck.svg                       icon for the menu entry
 #   EdenDeck/README.txt
 set -euo pipefail
 VERSION=$1 EXPORT=$2 CLI=$3 LAYER=$4 OUT=$(realpath -m "$5")
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 APP="$STAGE/EdenDeck"
@@ -20,6 +22,7 @@ rm -f "$APP"/edendeck "$APP"/*.pdb
 install -m 755 "$CLI" "$APP/edendeck"
 install -m 755 "$LAYER/libVkLayer_EDENDECK_fsr.so" "$APP/vulkan/"
 install -m 644 "$LAYER/VkLayer_EDENDECK_fsr.json" "$APP/vulkan/"
+install -m 644 "$ROOT/src/EdenDeck.App/icon.svg" "$APP/edendeck.svg"
 cat > "$APP/README.txt" <<TXT
 Eden Deck $VERSION (Linux x86_64)
 
@@ -31,5 +34,8 @@ Source and updates: https://github.com/TheRoben-Dev/EdenDeck
 TXT
 NAME="EdenDeck-$VERSION-linux-x86_64.tar.gz"
 tar -C "$STAGE" --owner=0 --group=0 -czf "$OUT/$NAME" EdenDeck
-(cd "$OUT" && sha256sum "$NAME" > SHA256SUMS)
+# Unversioned copy so releases/latest/download/EdenDeck-linux-x86_64.tar.gz always works.
+cp "$OUT/$NAME" "$OUT/EdenDeck-linux-x86_64.tar.gz"
+install -m 755 "$ROOT/tools/release/install.sh" "$OUT/install.sh"
+(cd "$OUT" && sha256sum "$NAME" EdenDeck-linux-x86_64.tar.gz install.sh > SHA256SUMS)
 cat "$OUT/SHA256SUMS"
