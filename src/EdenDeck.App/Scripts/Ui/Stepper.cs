@@ -149,6 +149,7 @@ public partial class Stepper : Button
         _index = next;
         Refresh();
         Slide(d);
+        Feedback.Play(Cue.Toggle);
         Changed?.Invoke(Value);
     }
 

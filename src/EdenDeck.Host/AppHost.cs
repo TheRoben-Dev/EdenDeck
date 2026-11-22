@@ -39,6 +39,12 @@ public sealed record AppSettings
     /// <summary>The theme's slow animated background behind the menus.</summary>
     public bool AnimatedBackground { get; init; } = true;
 
+    /// <summary>Menu sounds, 0 (off) to 100.</summary>
+    public int SoundVolume { get; init; } = 50;
+
+    /// <summary>A light rumble on the pad for menu moves, presses and errors.</summary>
+    public bool Haptics { get; init; } = true;
+
     /// <summary>Check GitHub Releases for a new Scanline version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
 

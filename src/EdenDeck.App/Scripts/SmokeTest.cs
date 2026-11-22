@@ -137,6 +137,10 @@ public partial class SmokeTest : Node
         Step("buttons-zr", () => FindFocusable(GetTree().Root, "The controller button that presses Switch ZR")?.GrabFocus(), expect: "presses Switch ZR");
         // Themes switch in place: still on Settings, focus stays on the Theme row.
         Step("steam-category", () => FindFocusable(GetTree().Root, "Scanline and your games in your Steam library")?.GrabFocus(), expect: "Steam");
+        Step("sound-category", () => FindFocusable(GetTree().Root, "Menu sounds and controller rumble")?.GrabFocus(), expect: "Sound & feel");
+        Step("sound-pane", () => Press(Pad.Accept), expect: "Short sounds when you move");
+        Step("sound-level", () => Press("ui_right"), expect: "Short sounds when you move");
+        Step("sound-back", () => Press(Pad.Back), expect: "Sound & feel");
         Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         Step("theme-focus", () =>
         {
