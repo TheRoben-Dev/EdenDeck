@@ -55,53 +55,62 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             notes.Add($"key set: {set.Label}{(set.HasFirmware ? " (with firmware)" : "")}");
         }
 
-        // Frame generation (Eden Nightly built-in), under the 60 fps rule.
-        if (!string.IsNullOrEmpty(game.TitleId) && profile.FrameGen == FrameGenMode.Builtin)
+        // Frame generation, under the 60 fps rule. Eden only compiles its own Lossless frame gen
+        // for Android (ENABLE_LSFG defaults OFF on desktop, CMakeLists.txt), so on Linux the
+        // frame_gen keys do nothing and lsfg-vk (Vulkan layer, same Lossless shaders) does the work.
+        var decision = FrameGenPolicy.Decide(profile.FrameGen, profile.NativeFps);
+        var lsfg = _backend.FindLsfgVk();
+        if (decision.Enabled)
         {
-            var decision = FrameGenPolicy.Decide(profile.FrameGen, profile.NativeFps);
-            var schema = _backend.Schema;
-            if (schema.Find("frame_gen") == null)
+            var dll = _backend.EnsureLosslessDll();
+            var dllPath = _backend.LosslessDllPath();
+            if (lsfg.Kind == LsfgVk.Kind.V2 && dllPath != null)
             {
-                notes.Add("frame gen: not available in this Eden version (Nightly only)");
+                foreach (var (k, v) in LsfgVk.EnableEnv(dllPath, decision.Multiplier))
+                {
+                    env[k] = v;
+                }
+                notes.Add($"frame gen: lsfg-vk, {decision.Reason}");
+            }
+            else if (dllPath == null)
+            {
+                notes.Add($"warning: frame gen ({decision.Reason}) won't run. {dll.Message}");
+            }
+            else if (lsfg.Kind == LsfgVk.Kind.Legacy)
+            {
+                notes.Add($"warning: frame gen ({decision.Reason}) won't run: your lsfg-vk is a 1.x version. Update it to 2.x.");
             }
             else
             {
-                var values = decision.Enabled
-                    ? new Dictionary<string, string?>
-                    {
-                        ["frame_gen"] = "true",
-                        ["frame_gen_multiplier"] = decision.Multiplier.ToString(),
-                        ["frame_gen_target_rate"] = decision.TargetFps.ToString(),
-                    }
-                    : new Dictionary<string, string?> { ["frame_gen"] = "false" };
-                prepare.Add(() => _backend.EdenSettings.WritePerGameRaw(game.TitleId, values));
-                if (decision.Enabled)
-                {
-                    // Eden Nightly only generates frames when it finds the user's own Lossless.dll.
-                    // Copy it before the key-set farm links data/ entries (prepare runs in order).
-                    var dll = _backend.EnsureLosslessDll();
-                    notes.Add(dll.Installed
-                        ? $"frame gen: {decision.Reason} (Lossless.dll ready)"
-                        : $"warning: frame gen ({decision.Reason}) won't run. {dll.Message}");
-                    if (!dll.Installed)
-                    {
-                        notes.Add("frame gen check: with the Steam performance overlay on, the FPS reads 60 when frame gen runs");
-                    }
-                }
-                else
-                {
-                    notes.Add($"frame gen: {decision.Reason}");
-                }
+                notes.Add($"warning: frame gen ({decision.Reason}) won't run: lsfg-vk isn't installed.");
             }
         }
-        else if (!string.IsNullOrEmpty(game.TitleId) && _backend.Schema.Find("frame_gen") != null &&
-                 profile.FrameGen == FrameGenMode.Off)
+        else
         {
-            // Make sure a previous built-in frame-gen override doesn't linger.
+            if (lsfg.Kind != LsfgVk.Kind.None)
+            {
+                foreach (var (k, v) in LsfgVk.DisableEnv())
+                {
+                    env[k] = v;
+                }
+            }
+            if (profile.FrameGen == FrameGenMode.Builtin)
+            {
+                notes.Add($"frame gen: {decision.Reason}");
+            }
+        }
+
+        // Never let Eden's built-in frame gen stack on top of lsfg-vk (and clean up the per-game
+        // override older EdenDeck versions wrote).
+        if (!string.IsNullOrEmpty(game.TitleId) && _backend.Schema.Find("frame_gen") != null)
+        {
             var current = Config.QtIni.Load(_backend.Paths.PerGameConfigFile(game.TitleId));
             if (current.Get("Renderer", "frame_gen\\use_global") == "false")
             {
-                prepare.Add(() => _backend.EdenSettings.WritePerGameRaw(game.TitleId, new Dictionary<string, string?> { ["frame_gen"] = null }));
+                prepare.Add(() => _backend.EdenSettings.WritePerGameRaw(game.TitleId, new Dictionary<string, string?>
+                {
+                    ["frame_gen"] = null, ["frame_gen_multiplier"] = null, ["frame_gen_target_rate"] = null,
+                }));
             }
         }
 

@@ -380,32 +380,8 @@ public class LaunchTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(plan.WorkingDirectory, "user")));
     }
 
-    [Fact]
-    public void FrameGenIsCappedAt60And2x()
+    private string FakeSteamLossless(byte[] content)
     {
-        var b = Backend("nightly");
-        // Eden must look closed for config writes in this test process.
-        var plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
-        foreach (var p in plan.Prepare)
-        {
-            p();
-        }
-        var ini = QtIni.Load(b.Paths.PerGameConfigFile("0100ABCD00000000"));
-        Assert.Equal("true", ini.Get("Renderer", "frame_gen"));
-        Assert.Equal("2", ini.Get("Renderer", "frame_gen_multiplier"));
-        Assert.Equal("60", ini.Get("Renderer", "frame_gen_target_rate"));
-        Assert.Contains(plan.Notes, n => n.Contains("30 -> 60"));
-    }
-
-    [Fact]
-    public void FrameGenCopiesUsersLosslessDllFromSteamLibrary()
-    {
-        var b = Backend("nightly");
-        b.Env = _env.Env;
-        var noDll = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
-        Assert.Contains(noDll.Notes, n => n.Contains("won't run") && n.Contains("Lossless.dll not found"));
-        Assert.False(b.LosslessDllAvailable());
-
         // Lossless Scaling in a second Steam library (e.g. the SD card), listed in libraryfolders.vdf.
         var steam = Path.Combine(_env.Home, ".local", "share", "Steam");
         var sd = Path.Combine(_env.Home, "sdcard");
@@ -414,40 +390,107 @@ public class LaunchTests : IDisposable
         Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
         File.WriteAllText(Path.Combine(steam, "steamapps", "libraryfolders.vdf"),
             $"\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{steam}\"\n\t}}\n\t\"1\"\n\t{{\n\t\t\"path\"\t\t\"{sd}\"\n\t}}\n}}\n");
-        File.WriteAllBytes(Path.Combine(app, "Lossless.dll"), [(byte)'M', (byte)'Z', 1, 2, 3]);
-        Assert.True(b.LosslessDllAvailable());
+        var dll = Path.Combine(app, "Lossless.dll");
+        File.WriteAllBytes(dll, content);
+        return dll;
+    }
 
+    private void FakeLsfgVk(string layerName = "VK_LAYER_LSFGVK_frame_generation")
+    {
+        var dir = Path.Combine(_env.Home, ".local", "share", "vulkan", "implicit_layer.d");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "VkLayer_LSFGVK_frame_generation.json"),
+            $"{{\"file_format_version\":\"1.1.0\",\"layer\":{{\"name\":\"{layerName}\",\"disable_environment\":{{\"DISABLE_LSFGVK\":\"1\"}}}}}}");
+    }
+
+    private EdenBackend IsolatedBackend(string channel = "nightly")
+    {
+        var b = Backend(channel);
+        b.Env = _env.Env;
+        return b;
+    }
+
+    [Fact]
+    public void FrameGenUsesLsfgVkCappedAt2xWithoutTouchingItsConfig()
+    {
+        var b = IsolatedBackend();
+        var dll = FakeSteamLossless([(byte)'M', (byte)'Z', 1]);
+        FakeLsfgVk();
         var plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
-        Assert.Contains(plan.Notes, n => n.Contains("Lossless.dll ready"));
+        Assert.Equal("1", plan.Environment["LSFGVK_ENV"]);
+        Assert.Equal(dll, plan.Environment["LSFGVK_DLL_PATH"]);
+        Assert.Equal("2", plan.Environment["LSFGVK_MULTIPLIER"]);
+        Assert.False(plan.Environment.ContainsKey("DISABLE_LSFGVK"));
+        Assert.Contains(plan.Notes, n => n.Contains("lsfg-vk") && n.Contains("30 -> 60"));
+        Assert.False(Directory.Exists(Path.Combine(_env.Home, ".config", "lsfg-vk")));
+    }
+
+    [Fact]
+    public void FrameGenRemovesOldEdenBuiltinOverride()
+    {
+        var b = IsolatedBackend();
+        b.EdenSettings.WritePerGameRaw("0100ABCD00000000", new Dictionary<string, string?> { ["frame_gen"] = "true", ["frame_gen_target_rate"] = "60" });
+        var plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
+        foreach (var p in plan.Prepare)
+        {
+            p();
+        }
+        var ini = QtIni.Load(b.Paths.PerGameConfigFile("0100ABCD00000000"));
+        Assert.NotEqual("true", ini.Get("Renderer", "frame_gen"));
+        Assert.NotEqual("false", ini.Get("Renderer", "frame_gen\\use_global"));
+    }
+
+    [Fact]
+    public void FrameGenExplainsWhatIsMissing()
+    {
+        var b = IsolatedBackend();
+        var profile = new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 };
+        Assert.Contains(b.Launch.Plan(Game(), profile, new LaunchOptions()).Notes, n => n.Contains("Lossless.dll not found"));
+        FakeSteamLossless([(byte)'M', (byte)'Z']);
+        Assert.Contains(b.Launch.Plan(Game(), profile, new LaunchOptions()).Notes, n => n.Contains("lsfg-vk isn't installed"));
+        FakeLsfgVk("VK_LAYER_LS_frame_generation");
+        Assert.Contains(b.Launch.Plan(Game(), profile, new LaunchOptions()).Notes, n => n.Contains("1.x"));
+    }
+
+    [Fact]
+    public void FrameGenCopiesUsersLosslessDllFromSteamLibrary()
+    {
+        var b = IsolatedBackend();
+        Assert.False(b.LosslessDllAvailable());
+        var src = FakeSteamLossless([(byte)'M', (byte)'Z', 1, 2, 3]);
+        Assert.True(b.LosslessDllAvailable());
+        Assert.True(b.EnsureLosslessDll().Installed);
         var copied = Path.Combine(b.Paths.LosslessDir, "Lossless.dll");
         Assert.Equal(new byte[] { (byte)'M', (byte)'Z', 1, 2, 3 }, File.ReadAllBytes(copied));
 
         // An updated DLL replaces the copy and drops Eden's stale shader cache.
         File.WriteAllText(Path.Combine(b.Paths.LosslessDir, "lsfg_spirv.cache"), "old");
-        File.WriteAllBytes(Path.Combine(app, "Lossless.dll"), [(byte)'M', (byte)'Z', 9]);
+        File.WriteAllBytes(src, [(byte)'M', (byte)'Z', 9]);
         Assert.True(b.EnsureLosslessDll().Installed);
         Assert.Equal(new byte[] { (byte)'M', (byte)'Z', 9 }, File.ReadAllBytes(copied));
         Assert.False(File.Exists(Path.Combine(b.Paths.LosslessDir, "lsfg_spirv.cache")));
     }
 
     [Fact]
-    public void NoFrameGenForNative60Titles()
+    public void NoFrameGenForNative60TitlesAndLsfgVkKeptOut()
     {
-        var b = Backend("nightly");
+        var b = IsolatedBackend();
+        FakeSteamLossless([(byte)'M', (byte)'Z']);
+        FakeLsfgVk();
         var plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 60 }, new LaunchOptions());
-        foreach (var p in plan.Prepare)
-        {
-            p();
-        }
-        Assert.Equal("false", QtIni.Load(b.Paths.PerGameConfigFile("0100ABCD00000000")).Get("Renderer", "frame_gen"));
+        Assert.Equal("1", plan.Environment["DISABLE_LSFGVK"]);
+        Assert.False(plan.Environment.ContainsKey("LSFGVK_ENV"));
+        Assert.Contains(plan.Notes, n => n.Contains("already runs at 60"));
     }
 
     [Fact]
-    public void FrameGenUnavailableOnStable()
+    public void FrameGenWorksOnStableToo()
     {
-        var plan = Backend("stable").Launch.Plan(Game(), new GameProfile { FrameGen = FrameGenMode.Builtin }, new LaunchOptions());
-        Assert.Contains(plan.Notes, n => n.Contains("Nightly only"));
-        Assert.Empty(plan.Prepare.Skip(1));
+        var b = IsolatedBackend("stable");
+        FakeSteamLossless([(byte)'M', (byte)'Z']);
+        FakeLsfgVk();
+        var plan = b.Launch.Plan(Game(), new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 }, new LaunchOptions());
+        Assert.Equal("1", plan.Environment["LSFGVK_ENV"]);
     }
 
     [Fact]

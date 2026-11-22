@@ -17,11 +17,34 @@ public static class EdenControllerDefaults
     private const string Section = "Controls";
 
     /// <summary>Steam Virtual Gamepad (Steam Input, Game Mode) and Xbox 360/One pads on xpad share one layout.</summary>
-    public static bool HasKnownLayout(PadInfo pad) =>
-        (pad.Vendor == 0x28de && pad.Product == 0x11ff) ||
-        pad.Vendor == 0x045e ||
-        pad.Name.Contains("Steam Virtual Gamepad", StringComparison.OrdinalIgnoreCase) ||
-        pad.Name.Contains("Xbox", StringComparison.OrdinalIgnoreCase);
+    /// <remarks>
+    /// Match on the IDs inside the SDL GUID too: that is what Eden's SDL sees. On a Steam Deck in
+    /// Game Mode the frontend reported "#SettingsController_SteamController" [28de:12fd] while the
+    /// GUID (and evdev device) is the Steam Virtual Gamepad 28de:11ff.
+    /// </remarks>
+    public static bool HasKnownLayout(PadInfo pad)
+    {
+        var ids = GuidIds(pad.Guid);
+        return IsKnown(pad.Vendor, pad.Product) ||
+               (ids is var (v, p) && IsKnown(v, p)) ||
+               pad.Name.Contains("Steam Virtual Gamepad", StringComparison.OrdinalIgnoreCase) ||
+               pad.Name.Contains("Xbox", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsKnown(int vendor, int product) =>
+        (vendor == 0x28de && product == 0x11ff) || vendor == 0x045e;
+
+    /// <summary>Vendor/product from an SDL GUID (bus 16-bit LE, crc, vendor LE, 0, product LE, 0, version LE, ...).</summary>
+    public static (int Vendor, int Product)? GuidIds(string sdlGuid)
+    {
+        var g = sdlGuid.Trim().ToLowerInvariant();
+        if (g.Length != 32 || !g.All(Uri.IsHexDigit) || g[12..16] != "0000" || g[20..24] != "0000")
+        {
+            return null;
+        }
+        int Le16(int at) => int.Parse(g.Substring(at + 2, 2) + g.Substring(at, 2), NumberStyles.HexNumber);
+        return (Le16(8), Le16(16));
+    }
 
     /// <summary>Eden clears the name CRC (bytes 2-3) of the SDL GUID; do the same.</summary>
     public static string EdenGuid(string sdlGuid)
