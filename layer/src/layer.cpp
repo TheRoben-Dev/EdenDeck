@@ -8,19 +8,26 @@
 //   * Hooks vkQueuePresentKHR and measures present intervals per swapchain.
 //   * Writes a periodic log line and an optional JSON stats file the frontend can read.
 //
-// What it deliberately does NOT do yet (phase 5): read back or modify swapchain
-// images, run FSR passes, generate frames or draw an overlay.
+//   * Optional in-game CRT filter (crt_pass.hpp), the same look as the app's CRT effect, run on
+//     each frame just before present. Off unless SCANLINE_CRT / SCANLINE_CRT_CONTROL say otherwise.
+//
+// Not yet: FSR passes, frame generation, the overlay and quick menu.
 
 #include <vulkan/vk_layer.h>
 #include <vulkan/vulkan.h>
 
+#include <chrono>
+#include <cmath>
 #include <cstring>
+#include <vector>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 
 #include "config.hpp"
+#include "crt_pass.hpp"
+#include "crt_settings.hpp"
 #include "frame_stats.hpp"
 #include "log.hpp"
 
@@ -47,6 +54,7 @@ struct InstanceData {
     PFN_vkDestroyInstance DestroyInstance{};
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR{};
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties{};
+    PFN_vkGetPhysicalDeviceQueueFamilyProperties GetPhysicalDeviceQueueFamilyProperties{};
 };
 
 struct SwapchainData {
@@ -56,6 +64,9 @@ struct SwapchainData {
     uint32_t min_image_count{};
     VkImageUsageFlags usage{};
     FrameStats stats;
+    std::unique_ptr<CrtSwapchain> crt;
+    bool crt_failed = false;
+    uint64_t presents = 0;
 };
 
 struct DeviceData {
@@ -68,6 +79,13 @@ struct DeviceData {
     PFN_vkCreateSwapchainKHR CreateSwapchainKHR{};
     PFN_vkDestroySwapchainKHR DestroySwapchainKHR{};
     PFN_vkQueuePresentKHR QueuePresentKHR{};
+    PFN_vkGetDeviceQueue GetDeviceQueue{};
+    PFN_vkGetDeviceQueue2 GetDeviceQueue2{};
+    PFN_vkSetDeviceLoaderData set_loader_data{};
+    CrtFns crt_fns;
+    bool crt_ready = false;  // crt_fns loaded
+    std::vector<VkQueueFamilyProperties> families;
+    std::unordered_map<VkQueue, uint32_t> queue_family;
     std::unordered_map<VkSwapchainKHR, std::unique_ptr<SwapchainData>> swapchains;
 };
 
@@ -129,6 +147,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreat
     LOAD(DestroyInstance);
     LOAD(GetPhysicalDeviceSurfaceCapabilitiesKHR);
     LOAD(GetPhysicalDeviceProperties);
+    LOAD(GetPhysicalDeviceQueueFamilyProperties);
 #undef LOAD
 
     const char* app = pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pApplicationName
@@ -200,7 +219,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
     LOAD(CreateSwapchainKHR);
     LOAD(DestroySwapchainKHR);
     LOAD(QueuePresentKHR);
+    LOAD(GetDeviceQueue);
+    LOAD(GetDeviceQueue2);
 #undef LOAD
+    if (auto* cb = FindLayerLink<VkDeviceCreateInfo, VK_LOADER_DATA_CALLBACK>(
+            pCreateInfo, VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO)) {
+        data->set_loader_data = cb->u.pfnSetDeviceLoaderData;
+    }
+    if (inst && inst->GetPhysicalDeviceQueueFamilyProperties) {
+        uint32_t n = 0;
+        inst->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &n, nullptr);
+        data->families.resize(n);
+        inst->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &n, data->families.data());
+    }
+    if (!Config::Get().disabled && (CrtSettings::Get().MayBeUsed() || !Config::Get().dump_path.empty()) && inst) {
+        data->crt_ready = data->crt_fns.Load(*pDevice, next_gdpa, inst->instance, inst->gipa);
+        if (!data->crt_ready) {
+            Log("crt: missing Vulkan functions, filter unavailable");
+        }
+    }
 
     if (inst && inst->GetPhysicalDeviceProperties) {
         VkPhysicalDeviceProperties props{};
@@ -231,6 +268,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
         }
         data = std::move(it->second);
         g_devices.erase(it);
+    }
+    for (auto& [handle, sc] : data->swapchains) {
+        sc->crt.reset();
     }
     data->DestroyDevice(device, pAllocator);
 }
@@ -312,6 +352,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
             if (it != dev->swapchains.end()) {
                 it->second->stats.Flush(Config::Get(), it->second->extent.width, it->second->extent.height,
                                         PresentModeName(it->second->present_mode), true);
+                it->second->crt.reset();  // waits for our in-flight passes
                 dev->swapchains.erase(it);
             }
         }
@@ -321,8 +362,77 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     }
 }
 
+VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t family, uint32_t index, VkQueue* pQueue) {
+    DeviceData* dev = nullptr;
+    {
+        std::lock_guard lk(g_lock);
+        dev = FindDevice(GetKey(device));
+    }
+    if (!dev) {
+        return;
+    }
+    dev->GetDeviceQueue(device, family, index, pQueue);
+    if (*pQueue) {
+        std::lock_guard lk(g_lock);
+        dev->queue_family[*pQueue] = family;
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetDeviceQueue2(VkDevice device, const VkDeviceQueueInfo2* pInfo, VkQueue* pQueue) {
+    DeviceData* dev = nullptr;
+    {
+        std::lock_guard lk(g_lock);
+        dev = FindDevice(GetKey(device));
+    }
+    if (!dev) {
+        return;
+    }
+    dev->GetDeviceQueue2(device, pInfo, pQueue);
+    if (*pQueue) {
+        std::lock_guard lk(g_lock);
+        dev->queue_family[*pQueue] = pInfo->queueFamilyIndex;
+    }
+}
+
+float Seconds() {
+    static const auto start = std::chrono::steady_clock::now();
+    const double s = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    return float(std::fmod(s, 1000.0));
+}
+
+// Runs the CRT pass (and the test dump) for a single-swapchain present. Called with g_lock held.
+// Returns the semaphore the present must wait on, or VK_NULL_HANDLE to present unchanged.
+VkSemaphore RunCrt(DeviceData& dev, SwapchainData& sc, VkSwapchainKHR handle, VkQueue queue,
+                   const VkPresentInfoKHR& info) {
+    const Config& cfg = Config::Get();
+    const CrtState state = CrtSettings::Get().Current();
+    const bool dump = !cfg.dump_path.empty() && sc.presents == cfg.dump_frame;
+    if ((state.level == 0 && !dump) || !dev.crt_ready || sc.crt_failed) {
+        return VK_NULL_HANDLE;
+    }
+    if (!sc.crt) {
+        auto fam = dev.queue_family.find(queue);
+        if (fam == dev.queue_family.end() || fam->second >= dev.families.size() ||
+            !(dev.families[fam->second].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+            Log("crt: the present queue can't draw (no graphics), filter off");
+            sc.crt_failed = true;
+            return VK_NULL_HANDLE;
+        }
+        auto crt = std::make_unique<CrtSwapchain>();
+        CrtSwapchain::Shared sh{dev.device, dev.physical_device, &dev.crt_fns, dev.set_loader_data};
+        if (!crt->Init(sh, handle, sc.format, sc.extent, sc.usage, fam->second)) {
+            sc.crt_failed = true;
+            return VK_NULL_HANDLE;
+        }
+        sc.crt = std::move(crt);
+    }
+    return sc.crt->Run(queue, info.pImageIndices[0], info, state, Seconds(), dump ? cfg.dump_path.c_str() : nullptr);
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
     DeviceData* dev = nullptr;
+    VkPresentInfoKHR patched{};
+    VkSemaphore crt_done = VK_NULL_HANDLE;
     {
         std::lock_guard lk(g_lock);
         dev = FindDevice(GetKey(queue));  // queues share their device's dispatch key
@@ -337,13 +447,22 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                 sc.stats.OnPresent(now, pPresentInfo->pImageIndices[i]);
                 sc.stats.MaybeReport(Config::Get(), sc.extent.width, sc.extent.height,
                                      PresentModeName(sc.present_mode));
+                ++sc.presents;
+                if (pPresentInfo->swapchainCount == 1) {
+                    crt_done = RunCrt(*dev, sc, it->first, queue, *pPresentInfo);
+                }
             }
         }
     }
     if (!dev) {
         return VK_ERROR_DEVICE_LOST;
     }
-    // Phase 5 inserts its passes here, before handing the frame to the next layer/driver.
+    if (crt_done) {
+        patched = *pPresentInfo;
+        patched.waitSemaphoreCount = 1;
+        patched.pWaitSemaphores = &crt_done;
+        return dev->QueuePresentKHR(queue, &patched);
+    }
     return dev->QueuePresentKHR(queue, pPresentInfo);
 }
 
@@ -361,6 +480,8 @@ PFN_vkVoidFunction InterceptDevice(const char* name) {
     HOOK(CreateSwapchainKHR);
     HOOK(DestroySwapchainKHR);
     HOOK(QueuePresentKHR);
+    HOOK(GetDeviceQueue);
+    HOOK(GetDeviceQueue2);
 #undef HOOK
     return nullptr;
 }

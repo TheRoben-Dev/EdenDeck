@@ -127,6 +127,34 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
                 env["DISABLE_SCANLINE_LAYER"] = "1";
             }
             notes.Add(options.LayerKillSwitch ? "layer: loaded but disabled (kill switch)" : "layer: VK_LAYER_SCANLINE_overlay");
+            if (!options.LayerKillSwitch)
+            {
+                // The CRT filter always gets a control file so it can be switched while the game
+                // runs (quick menu); the layer reads it twice a second and costs nothing while off.
+                var level = Math.Clamp(profile.Crt, 0, 3);
+                var control = CrtControlFile(_runtimeDir);
+                var text = CrtControlText(level, options.CrtMotion);
+                prepare.Add(() =>
+                {
+                    Directory.CreateDirectory(_runtimeDir);
+                    File.WriteAllText(control, text);
+                });
+                env["SCANLINE_CRT"] = level.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                env["SCANLINE_CRT_MOTION"] = options.CrtMotion ? "1" : "0";
+                env["SCANLINE_CRT_CONTROL"] = control;
+                if (level > 0)
+                {
+                    notes.Add($"CRT effect: {CrtLevelName(level)}");
+                }
+            }
+            else if (profile.Crt > 0)
+            {
+                notes.Add("warning: CRT effect is off because the Scanline layer is switched off (kill switch).");
+            }
+        }
+        else if (profile.Crt > 0)
+        {
+            notes.Add("warning: CRT effect needs Scanline's Vulkan layer, which wasn't found. The game runs without it.");
         }
 
         var args = new List<string>();
@@ -148,6 +176,13 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             Notes = notes,
         };
     }
+
+    /// <summary>The file the layer follows for the CRT setting while a game runs.</summary>
+    public static string CrtControlFile(string runtimeDir) => Path.Combine(runtimeDir, "crt-control");
+
+    public static string CrtControlText(int level, bool motion) => $"level={Math.Clamp(level, 0, 3)}\nmotion={(motion ? 1 : 0)}\n";
+
+    public static string CrtLevelName(int level) => level switch { 1 => "Subtle", 2 => "Medium", 3 => "Strong", _ => "Off" };
 
     private static string Append(string value, string? existing) => string.IsNullOrEmpty(existing) ? value : $"{value}:{existing}";
 }

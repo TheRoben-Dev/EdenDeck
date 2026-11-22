@@ -144,6 +144,7 @@ public sealed class AppHost
         LayerStatsPath = Path.Combine(Paths.Runtime, "stats.json"),
         LayerKillSwitch = Settings.LayerKillSwitch,
         Fullscreen = true,
+        CrtMotion = !Settings.ReduceMotion,
     };
 
     public LaunchPlan PlanLaunch(LibraryGame game)

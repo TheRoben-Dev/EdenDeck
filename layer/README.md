@@ -4,7 +4,24 @@ Phase 1 prototype of the Scanline Vulkan layer. It's injected only into the Eden
 through environment variables. Eden is not modified.
 
 **Current scope:** loader chaining, swapchain tracking, a `vkQueuePresentKHR` hook with
-frame-time stats (log + JSON file). No image access, FSR, frame gen or overlay yet (phase 5).
+frame-time stats (log + JSON file), and the optional in-game **CRT filter**. No FSR, frame gen or
+overlay yet.
+
+## CRT filter
+
+`src/crt_pass.hpp`, shaders in `shaders/` (compiled into `src/shaders.inc` by
+`scripts/gen-shaders.sh`; the output is checked in and CI checks it is current). Right before each
+present it copies the finished frame and draws it back through a port of the app's own CRT shader
+(`src/EdenDeck.App/Scripts/Ui/Scanlines.cs`), with the same Subtle/Medium/Strong numbers. The submit
+waits on the app's present semaphores and the present waits on ours.
+
+* **Order with lsfg-vk:** implicit layers (lsfg-vk) sit above explicitly enabled ones, so lsfg-vk's
+  generated frames are presented through this layer and get filtered too. When Scanline enables
+  lsfg-vk explicitly, it must come before `VK_LAYER_SCANLINE_overlay` in `VK_INSTANCE_LAYERS`.
+* **Graceful:** if the swapchain can't be read back (no TRANSFER_SRC usage), the present queue has no
+  graphics, or anything fails to allocate, the filter turns itself off for that swapchain with one
+  log line. If the layer doesn't load at all, the game simply runs unfiltered.
+* **Cost while off:** none per frame beyond a `stat()` of the control file twice a second.
 
 ## Build
 
@@ -34,6 +51,10 @@ Produces `layer/build/libVkLayer_SCANLINE_overlay.so` and two manifests:
 | `SCANLINE_LAYER_STATS=<path>` | JSON stats, rewritten atomically every report interval |
 | `SCANLINE_LAYER_REPORT_MS=<ms>` | report interval, default 2000 |
 | `SCANLINE_LAYER_NO_USAGE_PATCH=1` | don't add TRANSFER_SRC/DST to swapchain image usage |
+| `SCANLINE_CRT=0..3` | CRT filter at start: off, Subtle, Medium, Strong |
+| `SCANLINE_CRT_MOTION=0` | still picture: no wobble, rolling band or flicker (app's Animations off) |
+| `SCANLINE_CRT_CONTROL=<path>` | file with `level=N` / `motion=0\|1` lines, followed while the game runs |
+| `SCANLINE_LAYER_DUMP=<path.ppm>` | test hook: write the presented frame N as a PPM (`SCANLINE_LAYER_DUMP_FRAME`, default 60) |
 | `DISABLE_SCANLINE_LAYER=1` | kill switch: pure pass-through (explicit) / not loaded (implicit) |
 
 ## What has been verified, and where
@@ -78,7 +99,7 @@ Pass criteria, from the log path the script prints:
 * The game renders normally, with no new crashes or flicker. Compare with a run where
   `DISABLE_SCANLINE_LAYER=1` is set.
 
-If no `[edendeck-layer]` lines appear at all:
+If no `[scanline-layer]` lines appear at all:
 
 1. `VK_LOADER_DEBUG=layer` to see whether the loader found the manifest.
 2. The AppImage may bundle an old `libvulkan.so.1` that ignores `VK_ADD_LAYER_PATH`. Check with

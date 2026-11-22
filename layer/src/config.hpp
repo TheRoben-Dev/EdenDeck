@@ -12,6 +12,9 @@ namespace scanline {
 //   SCANLINE_LAYER_STATS=<path>        JSON stats file rewritten about once per report interval
 //   SCANLINE_LAYER_REPORT_MS=<ms>      report interval (default 2000)
 //   SCANLINE_LAYER_NO_USAGE_PATCH=1    do not add TRANSFER_SRC/DST to swapchain usage
+//   SCANLINE_LAYER_DUMP=<path.ppm>     test hook: write presented frame N (below) as a PPM
+//   SCANLINE_LAYER_DUMP_FRAME=<n>      which present to dump (default 60)
+//   CRT filter settings: see crt_settings.hpp (SCANLINE_CRT, SCANLINE_CRT_MOTION, SCANLINE_CRT_CONTROL)
 //   DISABLE_SCANLINE_LAYER=1           global kill switch. With the implicit manifest the loader
 //                                      skips the layer; with the explicit manifest the layer
 //                                      loads but hooks nothing (pure pass-through).
@@ -19,6 +22,8 @@ struct Config {
     std::string log_path;
     std::string stats_path;
     std::string process_name;
+    std::string dump_path;
+    unsigned long dump_frame = 60;
     unsigned report_ms = 2000;
     bool patch_swapchain_usage = true;
     bool disabled = false;
@@ -43,6 +48,10 @@ private:
             if (v >= 100 && v <= 60000) {
                 c.report_ms = static_cast<unsigned>(v);
             }
+        }
+        c.dump_path = Env("SCANLINE_LAYER_DUMP");
+        if (auto n = Env("SCANLINE_LAYER_DUMP_FRAME"); !n.empty()) {
+            c.dump_frame = std::strtoul(n.c_str(), nullptr, 10);
         }
         c.patch_swapchain_usage = Env("SCANLINE_LAYER_NO_USAGE_PATCH") != "1";
         c.disabled = Env("DISABLE_SCANLINE_LAYER") == "1";

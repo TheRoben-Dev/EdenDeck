@@ -65,6 +65,13 @@ public partial class SmokeTest : Node
                 Press("ui_down");
             }
         });
+        // Per-game CRT effect: same four levels as the app's, stepped and stepped back.
+        Step("game-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
+        Step("game-crt-step", () =>
+        {
+            Press("ui_right");
+            Press("ui_left");
+        }, expect: "CRT effect");
         Step("back-to-library", () => Press(Pad.Back));
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
