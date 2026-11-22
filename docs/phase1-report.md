@@ -76,9 +76,9 @@ smoke test, or is untested.
 gamescope and Steam Deck/Ally Game Mode, on Stable and Nightly; AppImage contents; release
 asset names and digests; per-game config and DisabledAddOns behaviour on a live install.
 
-## Direction question for review
+## Phase 5 direction (decided 2026-11-22: option A, "Eden built-ins, layer = overlay")
 
-Given finding 6, I recommend changing phase 5 from "build FSR 3 upscaling + frame gen in our
+Given finding 6, phase 5 changes phase 5 from "build FSR 3 upscaling + frame gen in our
 layer" to:
 
 * **Upscaling:** offer "Eden internal resolution" + "FSR (Eden built-in)" + "SGSR (Nightly)",
