@@ -77,6 +77,16 @@ public static class Ps1
 
     private static Shader? _translucentFront;
 
+    /// <summary>Drops the shared shaders at quit, while .NET is still up (see Main._ExitTree).</summary>
+    public static void ReleaseShared()
+    {
+        foreach (var s in new[] { _opaque, _translucent, _translucentFront, _post })
+        {
+            s?.Dispose();
+        }
+        _opaque = _translucent = _translucentFront = _post = null;
+    }
+
     /// <summary>
     /// Semi-transparent surfaces (the era's translucent plastic and glass), blended, no depth write.
     /// Drawn in two passes, far side then near side, so a shell never shows its faces in a random

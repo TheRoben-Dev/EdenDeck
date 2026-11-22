@@ -34,6 +34,12 @@ public partial class CartStage : PolyStage
 
     private static ArrayMesh? _shellMesh;
 
+    public static void ReleaseShared()
+    {
+        _shellMesh?.Dispose();
+        _shellMesh = null;
+    }
+
     /// <summary>Grid mode: one cart per tile, drawn inside <paramref name="clip"/> (the scroller).</summary>
     public CartStage(IReadOnlyList<(Control Tile, string Title)> tiles, Control clip) : this(tiles.Select(t => t.Title).ToList(), single: false)
     {

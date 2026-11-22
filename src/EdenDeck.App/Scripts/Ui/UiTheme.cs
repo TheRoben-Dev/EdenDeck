@@ -249,6 +249,16 @@ public static class UiTheme
 
     private static Font? _chakra;
 
+    /// <summary>Drops the cached fonts at quit (see Main._ExitTree).</summary>
+    public static void ReleaseFonts()
+    {
+        foreach (var f in new[] { _font, _pixel, _chakra })
+        {
+            f?.Dispose();
+        }
+        _font = _pixel = _chakra = null;
+    }
+
     /// <summary>Chakra Petch SemiBold (SIL OFL 1.1, bundled under Assets/Fonts): squared-off, late-90s menu lettering.</summary>
     private static Font ChakraFont()
     {

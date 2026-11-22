@@ -488,6 +488,18 @@ public partial class Main : Control
         GetTree().Quit();
     }
 
+    /// <summary>
+    /// Quitting: release Godot objects that C# statics keep alive, while .NET is still running.
+    /// Left for engine shutdown they can abort the process ("script_bindings is not empty").
+    /// </summary>
+    public override void _ExitTree()
+    {
+        Theme = null;
+        EdenDeck.App.Ui.Poly.Ps1.ReleaseShared();
+        EdenDeck.App.Ui.Poly.CartStage.ReleaseShared();
+        UiTheme.ReleaseFonts();
+    }
+
     public override void _Notification(int what)
     {
         if (what == NotificationApplicationFocusOut)
