@@ -2,7 +2,7 @@ namespace EdenDeck.Core.Launch;
 
 public sealed record LaunchOptions
 {
-    /// <summary>Directory containing VkLayer_EDENDECK_fsr.json, or null to not inject the layer.</summary>
+    /// <summary>Directory containing VkLayer_SCANLINE_overlay.json, or null to not inject the layer.</summary>
     public string? LayerDirectory { get; init; }
 
     /// <summary>Where the layer writes its stats JSON.</summary>

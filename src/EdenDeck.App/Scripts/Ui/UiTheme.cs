@@ -44,7 +44,7 @@ public sealed record ThemeSpec(string Id, string Label, string Blurb)
     public Decor Decor { get; init; }
     public float Glow { get; init; } = 0.13f;
     public bool Light { get; init; }
-    public string Wordmark { get; init; } = "EDEN DECK";
+    public string Wordmark { get; init; } = "SCANLINE";
 
     /// <summary>Tile label colours: hue spread, saturation, value.</summary>
     public (float Sat, float Val, int HueFrom, int HueSpan) Tiles { get; init; } = (0.45f, 0.30f, 0, 360);
@@ -67,7 +67,7 @@ public static class UiTheme
             Accent = new("FF2A6D"), Text = new("E6EDF3"), Dim = new("8B98A9"),
             Good = new("2BFF88"), Warn = new("FF9F1C"), Bad = new("FF003C"), Info = new("00E5FF"),
             Shell = new("151a22"), Chamfer = true, Hairline = 1, FontKind = "mono", Upper = true,
-            Decor = Decor.DotGrid, Glow = 0.06f, Wordmark = "EDEN·DECK", Tiles = (0.35f, 0.14f, 0, 360),
+            Decor = Decor.DotGrid, Glow = 0.06f, Wordmark = "SCAN·LINE", Tiles = (0.35f, 0.14f, 0, 360),
         },
         new("terminal", "Retro terminal", "Phosphor green on black with CRT scanlines.")
         {
@@ -75,7 +75,7 @@ public static class UiTheme
             Accent = new("3dff8f"), Text = new("c9ffdc"), Dim = new("5f9a76"),
             Good = new("3dff8f"), Warn = new("ffd166"), Bad = new("ff5f6d"),
             Shell = new("0e1912"), Radius = 3, FontKind = "mono", Upper = true,
-            Decor = Decor.Scanlines, Glow = 0.07f, Wordmark = "> EDEN_DECK_", Tiles = (0.55f, 0.18f, 130, 40),
+            Decor = Decor.Scanlines, Glow = 0.07f, Wordmark = "> SCANLINE_", Tiles = (0.55f, 0.18f, 130, 40),
         },
         new("brick", "8-bit brick", "Warm grey and black with a red accent, square corners and a chunky pixel font.")
         {
@@ -83,7 +83,7 @@ public static class UiTheme
             Accent = new("e0353b"), Text = new("f3eee6"), Dim = new("a89f94"),
             Good = new("6cc04a"), Warn = new("f2b33d"), Bad = new("ff5a4c"),
             Shell = new("595249"), Radius = 0, Hairline = 2, Bevel = 4, FontKind = "pixel", Upper = true,
-            Glow = 0.05f, Wordmark = "EDEN DECK", Tiles = (0.55f, 0.42f, 0, 360),
+            Glow = 0.05f, Wordmark = "SCANLINE", Tiles = (0.55f, 0.42f, 0, 360),
         },
         new("sixteen", "16-bit", "Lavender and purple with rounded panels and colourful accents.")
         {
@@ -113,7 +113,7 @@ public static class UiTheme
             Accent = new("ffc23d"), Text = new("eef0ff"), Dim = new("9095c4"),
             Good = new("5ce08c"), Warn = new("ff9a3d"), Bad = new("ff5a6a"), Info = new("4fc3ff"),
             Shell = new("6c6f80"), Radius = 3, Hairline = 1, Bevel = 3, FontKind = "chakra", Upper = true,
-            Glow = 0f, Wordmark = "EDEN DECK", Tiles = (0.55f, 0.42f, 0, 360),
+            Glow = 0f, Wordmark = "SCANLINE", Tiles = (0.55f, 0.42f, 0, 360),
         },
     ];
 

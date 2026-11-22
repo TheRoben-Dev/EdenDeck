@@ -10,7 +10,7 @@ public enum AddOnState
     Active,
     /// <summary>Turned off in Eden's add-ons list for this game.</summary>
     Disabled,
-    /// <summary>Found by Eden Deck but not loaded (turned off for this game in Eden Deck).</summary>
+    /// <summary>Found by Scanline but not loaded (turned off for this game in Scanline).</summary>
     NotLoaded,
 }
 
@@ -19,7 +19,7 @@ public sealed record AddOnStatus(string Label, AddOnState State);
 /// <summary>
 /// Updates and DLC without installing to NAND: Eden loads them straight from
 /// [UI] Paths\external_content_dirs (scanned recursively at startup; src/core/file_sys/
-/// registered_cache.cpp ExternalContentProvider). Eden Deck stages links to the launched game's
+/// registered_cache.cpp ExternalContentProvider). Scanline stages links to the launched game's
 /// files in one folder it lists there, and reports per game whether Eden will actually load
 /// them, including the user's own [DisabledAddOns] choices ("Update", "Update@&lt;version&gt;", "DLC").
 /// </summary>
@@ -55,7 +55,7 @@ public static class EdenAddOns
     /// <summary>
     /// Before a launch: Eden scans every external content dir recursively and opens each NSP/XCI
     /// in it at startup, so pointing it at whole library folders (what 0.2.3 did) made Eden slow
-    /// or crash with large libraries. Instead Eden Deck keeps one small staging folder holding
+    /// or crash with large libraries. Instead Scanline keeps one small staging folder holding
     /// links to just this game's newest update and its DLC, and lists only that folder.
     /// Entries equal to the library folders (added by 0.2.3) are removed; the user's own entries
     /// stay. Returns true if Eden's config changed.
@@ -112,7 +112,7 @@ public static class EdenAddOns
         var ini = QtIni.Load(configFile);
         var userDirs = ExternalContentDirs(ini).Select(Norm).Where(d => d != Norm(stagingDir)).ToList();
         var disabled = DisabledAddOns.Read(ini).GetValueOrDefault(DisabledAddOns.ParseTitleId(game.Base.TitleId)) ?? [];
-        // Loaded if Eden Deck stages it for this launch, or it already sits in one of the user's own content dirs.
+        // Loaded if Scanline stages it for this launch, or it already sits in one of the user's own content dirs.
         bool Visible(GameEntry e) => enabled || userDirs.Any(d => (Norm(Path.GetDirectoryName(e.Path)!)).StartsWith(d, StringComparison.Ordinal));
 
         if (game.Updates.Count > 0)

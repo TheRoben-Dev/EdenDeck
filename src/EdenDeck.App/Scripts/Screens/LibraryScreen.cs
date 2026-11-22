@@ -159,7 +159,7 @@ public partial class LibraryScreen : Screen
         col.AddChild(UiTheme.Label(noFolders ? "Add your games" : "No games found", 30));
         col.AddChild(UiTheme.Label(
             noFolders
-                ? "Pick the folder that holds your own game dumps (.nsp, .xci, .nsz, .xcz). Eden Deck never downloads games."
+                ? "Pick the folder that holds your own game dumps (.nsp, .xci, .nsz, .xcz). Scanline never downloads games."
                 : "None of your library folders contain Switch games yet. Add another folder, or rescan after copying games over.",
             UiTheme.SmallSize + 2, UiTheme.Dim, wrap: true));
         var items = FixRows(col);

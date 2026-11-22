@@ -44,7 +44,7 @@ Godot-free libraries.
 **Headless direct launch:** per-game "Add to Steam" shortcuts must start a game straight
 from Game Mode with all of that game's settings applied (Eden overrides, controller
 profile, upscaling/frame gen, layer env). So `EdenDeck.Core` exposes a launch pipeline that
-also runs without the UI: `edendeck launch <TITLEID>` (a small .NET console entry point
+also runs without the UI: `scanline launch <TITLEID>` (a small .NET console entry point
 shipped in the same package) writes the per-game Eden config, prepares env vars and execs
 Eden. The Steam shortcut points at that command, so the UI and Game Mode launches share one
 code path and can't drift apart.
@@ -56,7 +56,7 @@ B = back, mapped by the detected controller's layout and glyphs) and lives only 
 
 ## Self-updates and release automation
 
-Requirement: the user downloads EdenDeck from GitHub once. After that, updates arrive in the
+Requirement: the user downloads Scanline from GitHub once. After that, updates arrive in the
 app, and all CI, PR and release work is automated.
 
 **Release pipeline (GitHub Actions):**
@@ -65,12 +65,12 @@ app, and all CI, PR and release work is automated.
    `dotnet test`, build the Godot export (from phase 2 on).
 2. Merge to `main`: release-please (or an equivalent conventional-commit bot) keeps a
    release PR open with the changelog. Merging that PR tags `vX.Y.Z`.
-3. Tag build: produce `EdenDeck-x86_64.AppImage` (+ `.zsync`), the Flatpak bundle and repo,
+3. Tag build: produce `Scanline-x86_64.AppImage` (+ `.zsync`), the Flatpak bundle and repo,
    `SHA256SUMS` and a minisign signature. Publish a GitHub Release.
 
 **Update channels:**
 
-* **AppImage:** the app polls `api.github.com/repos/TheRoben-Dev/EdenDeck/releases/latest`,
+* **AppImage:** the app polls `api.github.com/repos/TheRoben-Dev/Scanline/releases/latest`,
   downloads the new AppImage, checks `SHA256SUMS` and its minisign signature (public key
   built into the app), swaps the file in place and keeps the previous one for rollback. The
   embedded zsync update info also lets AppImageUpdate-style tools update it.

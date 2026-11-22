@@ -1,6 +1,6 @@
 # Emulator backends (design note)
 
-EdenDeck starts with Eden only, but later backends are planned: PS3 (RPCS3), PS2 (PCSX2),
+Scanline starts with Eden only, but later backends are planned: PS3 (RPCS3), PS2 (PCSX2),
 PS1 (DuckStation), Xbox (xemu), NDS (melonDS) and GBA (mGBA). From phase 2 on, the code
 treats Eden as the first implementation of a generic backend interface, so adding one
 later is a new module and not a rewrite.
@@ -31,7 +31,7 @@ made of these parts:
 
 The UI only talks to these capabilities. Optional parts that a backend doesn't
 implement are hidden in the UI for that system. Our own features (Add to Steam, the
-headless `edendeck launch <id>`, quick menu, overlay, stats) stay backend-agnostic: the
+headless `scanline launch <id>`, quick menu, overlay, stats) stay backend-agnostic: the
 game id becomes `<backend>:<title-id>`.
 
 Each backend gets the same treatment as Eden got in phase 1: verify CLI, config and paths

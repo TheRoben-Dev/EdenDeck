@@ -114,19 +114,19 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             }
         }
 
-        if (options.LayerDirectory is { } layerDir && File.Exists(Path.Combine(layerDir, "VkLayer_EDENDECK_fsr.json")))
+        if (options.LayerDirectory is { } layerDir && File.Exists(Path.Combine(layerDir, "VkLayer_SCANLINE_overlay.json")))
         {
             env["VK_ADD_LAYER_PATH"] = Append(layerDir, Environment.GetEnvironmentVariable("VK_ADD_LAYER_PATH"));
-            env["VK_INSTANCE_LAYERS"] = Append("VK_LAYER_EDENDECK_fsr", Environment.GetEnvironmentVariable("VK_INSTANCE_LAYERS"));
+            env["VK_INSTANCE_LAYERS"] = Append("VK_LAYER_SCANLINE_overlay", Environment.GetEnvironmentVariable("VK_INSTANCE_LAYERS"));
             if (options.LayerStatsPath != null)
             {
-                env["EDENDECK_LAYER_STATS"] = options.LayerStatsPath;
+                env["SCANLINE_LAYER_STATS"] = options.LayerStatsPath;
             }
             if (options.LayerKillSwitch)
             {
-                env["DISABLE_EDENDECK_LAYER"] = "1";
+                env["DISABLE_SCANLINE_LAYER"] = "1";
             }
-            notes.Add(options.LayerKillSwitch ? "layer: loaded but disabled (kill switch)" : "layer: VK_LAYER_EDENDECK_fsr");
+            notes.Add(options.LayerKillSwitch ? "layer: loaded but disabled (kill switch)" : "layer: VK_LAYER_SCANLINE_overlay");
         }
 
         var args = new List<string>();

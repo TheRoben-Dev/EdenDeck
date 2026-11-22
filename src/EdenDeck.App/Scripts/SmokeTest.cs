@@ -67,7 +67,7 @@ public partial class SmokeTest : Node
         });
         Step("back-to-library", () => Press(Pad.Back));
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
-        // The fake Eden exits at once: Eden Deck reports the early exit instead of silently returning.
+        // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
         Step("returned", () => { }, wait: 3.0, expect: "OK");
         Step("early-exit-ok", () => Press(Pad.Accept), expect: "Castle Defenders");
         Step("eden", () => Press(Pad.TabNext));

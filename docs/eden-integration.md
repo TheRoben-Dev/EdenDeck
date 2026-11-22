@@ -1,6 +1,6 @@
 # Eden integration reference
 
-Everything EdenDeck knows about Eden lives here and, in code, in `eden_adapter`. Eden is
+Everything Scanline knows about Eden lives here and, in code, in `eden_adapter`. Eden is
 treated as an external, unmodified binary. We only touch it through CLI arguments, its INI
 files, its data/mod directories, environment variables and a Vulkan layer.
 
@@ -134,9 +134,9 @@ roots, and `Ryujinx` under `$XDG_CONFIG_HOME`.
 * Keys: copy the user's `prod.keys` and optional `title.keys` into `<data>/keys/`
   (`core/crypto/key_manager.cpp` L575-578). `prod.keys` is required.
 * Firmware: Eden's own installer clears `<nand>/system/Contents/registered/` and copies the
-  firmware `.nca` files into it (`qt_common/util/content.cpp` `InstallFirmware`). EdenDeck does
+  firmware `.nca` files into it (`qt_common/util/content.cpp` `InstallFirmware`). Scanline does
   the same from a user-selected folder or zip, after validation.
-* EdenDeck never downloads, bundles or links to keys, firmware or games.
+* Scanline never downloads, bundles or links to keys, firmware or games.
 
 ### Per-game key and firmware sets (design, untested)
 
@@ -158,7 +158,7 @@ dirs is modified, and launching Eden by hand keeps working normally.
 ```
 $XDG_RUNTIME_DIR/edendeck/launch/<TITLEID>/        <- Eden's working directory
   user/                                            <- portable EdenDir
-    keys/            -> ~/.local/share/edendeck/keysets/<set>/      (selected set)
+    keys/            -> ~/.local/share/scanline/keysets/<set>/      (selected set)
     nand/
       system/
         Contents/registered -> .../keysets/<set>/firmware/  (only if the set has firmware)
@@ -209,7 +209,7 @@ All are INI files written by `frontend_common/config.cpp` via SimpleIni, QSettin
 * Booleans `true`/`false`; strings with special characters are double-quoted (QSettings compat).
 * Arrays use QSettings form: `name\1\field=...`, `name\size=N`.
 * On every load Eden re-saves the file (`Config::Reload` calls `SaveValues`), so **Eden
-  rewrites any file it reads**. Unknown keys are dropped on rewrite: **never store EdenDeck
+  rewrites any file it reads**. Unknown keys are dropped on rewrite: **never store Scanline
   data inside Eden's INI files**, and only write while Eden is not running.
 
 ### Settings the UI exposes (verified on both channels)
@@ -296,7 +296,7 @@ a profile name is set. Details for phase 3.
   title IDs (`(id & 0xFFF) == 0x800`). DLC/variant titles also see mods of their parent title.
 * **Load order:** mod folders are sorted by name (`std::sort` on `GetName()`), and the
   **first** layer wins in `LayeredVfsDirectory` (`vfs_layered.cpp`). So `A_mod` overrides
-  `Z_mod` for the same romfs path. EdenDeck implements load order by managing a name prefix
+  `Z_mod` for the same romfs path. Scanline implements load order by managing a name prefix
   (e.g. `010_`), and warns when two enabled mods ship the same romfs path.
 
 ### Disabled add-ons
@@ -333,7 +333,7 @@ From `CMakeModules/GenerateSCMRev.cmake` and `src/common/net/net.cpp`:
 | Nightly | `https://nightly.eden-emu.dev/latest/release.json` (builds from `eden-ci/nightly`) |
 
 The release JSON has GitHub-style `tag_name`, `assets[]` with `name`, `size`, `digest`,
-`browser_download_url`. Eden's built-in updater has no Linux AppImage branch, so EdenDeck
+`browser_download_url`. Eden's built-in updater has no Linux AppImage branch, so Scanline
 must handle Linux updates. Linux asset file names, and whether `digest` is populated
 (`sha256:...`), are **[install]**: they could not be fetched from here. The manager will
 select assets by suffix (`.AppImage`) and architecture, and verify `digest` when present.
@@ -351,7 +351,7 @@ Found during the spike; relevant to phases 5 and the lsfg-vk request.
   `video_core/frame_gen/lossless_dll.*`, `renderer_vulkan/present/frame_gen*.cpp`). It needs the
   user's own `Lossless.dll` at `<data>/lossless/Lossless.dll`. Settings (all per-game, `[Renderer]`):
 
-  | Key | Type | Default | EdenDeck value |
+  | Key | Type | Default | Scanline value |
   |---|---|---|---|
   | `frame_gen` | bool | false | on only for titles below 60 fps |
   | `frame_gen_multiplier` | u32 2-4 | 2 | **always 2** |
@@ -365,7 +365,7 @@ Found during the spike; relevant to phases 5 and the lsfg-vk request.
 * **Lossless.dll on SteamOS:** Lossless Scaling installed through Steam (Proton) lands in
   `<steam library>/steamapps/common/Lossless Scaling/Lossless.dll`. The library list is in
   `~/.local/share/Steam/steamapps/libraryfolders.vdf` (also `~/.steam/steam/...`, Flatpak Steam
-  `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/...`). EdenDeck copies the user's own
+  `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/...`). Scanline copies the user's own
   file into Eden's `lossless/` dir; it never ships or downloads it. Expected Steam path is
   **[install]**.
 * **External lsfg-vk** (the standalone Vulkan layer) is the fallback for Stable Eden. It is
@@ -380,10 +380,10 @@ Found during the spike; relevant to phases 5 and the lsfg-vk request.
 
 | Var | Purpose |
 |---|---|
-| `VK_ADD_LAYER_PATH=<dir with VkLayer_EDENDECK_fsr.json>` | make our explicit layer discoverable |
-| `VK_INSTANCE_LAYERS=VK_LAYER_EDENDECK_fsr` | enable it for this process only |
-| `EDENDECK_LAYER_STATS=$XDG_RUNTIME_DIR/edendeck/stats.json` | layer → frontend stats |
-| `DISABLE_EDENDECK_LAYER=1` | kill switch (layer becomes pass-through) |
+| `VK_ADD_LAYER_PATH=<dir with VkLayer_SCANLINE_overlay.json>` | make our explicit layer discoverable |
+| `VK_INSTANCE_LAYERS=VK_LAYER_SCANLINE_overlay` | enable it for this process only |
+| `SCANLINE_LAYER_STATS=$XDG_RUNTIME_DIR/edendeck/stats.json` | layer → frontend stats |
+| `DISABLE_SCANLINE_LAYER=1` | kill switch (layer becomes pass-through) |
 
 `VK_ADD_LAYER_PATH` needs Vulkan loader 1.3.234 or newer. SteamOS 3.6+ and current Bazzite ship
 newer loaders. The Eden AppImage may bundle its own `libvulkan.so.1` **[install]**, so check

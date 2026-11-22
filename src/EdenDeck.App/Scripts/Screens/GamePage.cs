@@ -217,7 +217,7 @@ public partial class GamePage : Screen
         }
         else if (Try(() => Host.Eden.LosslessDllPath(), "", "Lossless.dll status", col) == null)
         {
-            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and EdenDeck finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
 
         col.AddChild(Section("Eden settings for this game"));

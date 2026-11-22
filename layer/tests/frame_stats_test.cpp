@@ -5,7 +5,7 @@
 
 #include "frame_stats.hpp"
 
-using namespace edendeck;
+using namespace scanline;
 using namespace std::chrono;
 
 static int g_failures = 0;

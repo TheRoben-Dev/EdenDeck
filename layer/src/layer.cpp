@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// VK_LAYER_EDENDECK_fsr: phase 1 prototype.
+// VK_LAYER_SCANLINE_overlay: phase 1 prototype.
 //
 // What this does today:
 //   * Chains correctly through the Vulkan loader (instance + device level).
@@ -30,7 +30,7 @@
 #define EDK_EXPORT extern "C"
 #endif
 
-namespace edendeck {
+namespace scanline {
 namespace {
 
 using DispatchKey = void*;
@@ -264,7 +264,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     VkSwapchainCreateInfoKHR ci = *pCreateInfo;
     // Phase 5 needs to copy from / write to swapchain images. Request the transfer bits now
     // (only when the surface supports them) so we can verify on real compositors early that
-    // adding them does not break swapchain creation. Opt-out: EDENDECK_LAYER_NO_USAGE_PATCH=1.
+    // adding them does not break swapchain creation. Opt-out: SCANLINE_LAYER_NO_USAGE_PATCH=1.
     if (Config::Get().patch_swapchain_usage && dev->instance &&
         dev->instance->GetPhysicalDeviceSurfaceCapabilitiesKHR) {
         VkSurfaceCapabilitiesKHR caps{};
@@ -422,20 +422,20 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
     return next;
 }
 
-}  // namespace edendeck
+}  // namespace scanline
 
 // ---------------------------------------------------------------------------
 // Exports (loader-layer interface v2)
 // ---------------------------------------------------------------------------
 
-EDK_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL edendeck_GetInstanceProcAddr(VkInstance instance,
+EDK_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL scanline_GetInstanceProcAddr(VkInstance instance,
                                                                                 const char* pName) {
-    return edendeck::GetInstanceProcAddr(instance, pName);
+    return scanline::GetInstanceProcAddr(instance, pName);
 }
 
-EDK_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL edendeck_GetDeviceProcAddr(VkDevice device,
+EDK_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL scanline_GetDeviceProcAddr(VkDevice device,
                                                                               const char* pName) {
-    return edendeck::GetDeviceProcAddr(device, pName);
+    return scanline::GetDeviceProcAddr(device, pName);
 }
 
 EDK_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -446,8 +446,8 @@ vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface* pVersionStruct
     if (pVersionStruct->loaderLayerInterfaceVersion > 2) {
         pVersionStruct->loaderLayerInterfaceVersion = 2;
     }
-    pVersionStruct->pfnGetInstanceProcAddr = &edendeck::GetInstanceProcAddr;
-    pVersionStruct->pfnGetDeviceProcAddr = &edendeck::GetDeviceProcAddr;
+    pVersionStruct->pfnGetInstanceProcAddr = &scanline::GetInstanceProcAddr;
+    pVersionStruct->pfnGetDeviceProcAddr = &scanline::GetDeviceProcAddr;
     pVersionStruct->pfnGetPhysicalDeviceProcAddr = nullptr;
     return VK_SUCCESS;
 }

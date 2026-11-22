@@ -52,7 +52,7 @@ smoke test, or is untested.
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| AppImage bundles an old Vulkan loader that ignores `VK_ADD_LAYER_PATH` | layer not loaded | implicit manifest gated by `ENABLE_EDENDECK_LAYER=1` (built and tested) |
+| AppImage bundles an old Vulkan loader that ignores `VK_ADD_LAYER_PATH` | layer not loaded | implicit manifest gated by `ENABLE_SCANLINE_LAYER=1` (built and tested) |
 | Qt `eden` window stays open after the game exits, or exclusive fullscreen misbehaves under gamescope | clunky return to EdenDeck | frontend owns the process lifetime; set `fullscreen_mode` per launch; evaluate `eden-cli` (needs a merged config since it ignores per-game files) |
 | Eden changes keys/enums again (it changed several in 6 months) | wrong settings written | versioned schema snapshots, translate by name, CI job regenerates snapshots from Nightly and fails on drift |
 | Flatpak sandbox vs. Eden AppImage (no FUSE, GPU/driver/layer alignment) | Flatpak build can't launch Eden cleanly | run Eden on the host via `flatpak-spawn --host`; self-hosted remote, not Flathub; AppImage build unaffected |

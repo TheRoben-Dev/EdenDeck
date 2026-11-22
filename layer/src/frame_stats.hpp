@@ -11,7 +11,7 @@
 #include "config.hpp"
 #include "log.hpp"
 
-namespace edendeck {
+namespace scanline {
 
 // Present-interval statistics for one swapchain. Header-only so it can be unit tested
 // without a Vulkan device. Not thread safe on its own; the caller holds the layer lock.
@@ -122,4 +122,4 @@ private:
     uint64_t total_presents_ = 0;
 };
 
-}  // namespace edendeck
+}  // namespace scanline

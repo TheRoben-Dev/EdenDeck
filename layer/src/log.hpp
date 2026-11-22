@@ -7,7 +7,7 @@
 
 #include "config.hpp"
 
-namespace edendeck {
+namespace scanline {
 
 inline void Log(const char* fmt, ...) {
     static std::mutex lock;
@@ -29,4 +29,4 @@ inline void Log(const char* fmt, ...) {
     std::fflush(out);
 }
 
-}  // namespace edendeck
+}  // namespace scanline

@@ -41,7 +41,7 @@ public static class EdenControls
         ini.Save(configFile);
     }
 
-    /// <summary>Input profiles made in Eden's Controls page (or saved by Eden Deck).</summary>
+    /// <summary>Input profiles made in Eden's Controls page (or saved by Scanline).</summary>
     public static IReadOnlyList<string> Profiles(string inputDir) =>
         Directory.Exists(inputDir)
             ? Directory.EnumerateFiles(inputDir, "*.ini").Select(Path.GetFileNameWithoutExtension).OfType<string>().Order(StringComparer.OrdinalIgnoreCase).ToList()

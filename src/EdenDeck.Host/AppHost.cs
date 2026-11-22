@@ -15,7 +15,7 @@ public sealed record AppSettings
 {
     public List<LibraryFolder> LibraryFolders { get; init; } = new();
 
-    /// <summary>Directory with VkLayer_EDENDECK_fsr.json; null = auto (next to the app).</summary>
+    /// <summary>Directory with VkLayer_SCANLINE_overlay.json; null = auto (next to the app).</summary>
     public string? LayerDirectory { get; init; }
 
     /// <summary>Global kill switch for EdenDeck's Vulkan layer.</summary>
@@ -39,7 +39,7 @@ public sealed record AppSettings
     /// <summary>The theme's slow animated background behind the menus.</summary>
     public bool AnimatedBackground { get; init; } = true;
 
-    /// <summary>Check GitHub Releases for a new Eden Deck version at startup.</summary>
+    /// <summary>Check GitHub Releases for a new Scanline version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
 
     /// <summary>Last app version whose "What's new" was shown; null on a fresh install.</summary>
@@ -47,7 +47,7 @@ public sealed record AppSettings
 }
 
 /// <summary>
-/// Composition root shared by the Godot UI and the headless CLI (`edendeck launch`), so a game
+/// Composition root shared by the Godot UI and the headless CLI (`scanline launch`), so a game
 /// started from a Steam shortcut goes through exactly the same code as one started in the UI.
 /// </summary>
 public sealed class AppHost
@@ -70,6 +70,10 @@ public sealed class AppHost
 
     public AppHost(AppPaths? paths = null, HttpClient? http = null)
     {
+        if (paths == null)
+        {
+            AppPaths.MigrateFromEdenDeck();  // Scanline's folders -> Scanline's, once
+        }
         Paths = paths ?? new AppPaths();
         Directory.CreateDirectory(Paths.Config);
         Directory.CreateDirectory(Paths.Data);
@@ -158,17 +162,17 @@ public sealed class AppHost
     public void MarkPlayed(LibraryGame game) =>
         Profiles.Set(game.GameId, Profiles.Get(game.GameId) with { LastPlayed = DateTimeOffset.Now });
 
-    /// <summary>The layer ships next to the app binary: &lt;app dir&gt;/vulkan/ (tarball), $APPDIR/usr/share/edendeck/vulkan (AppImage) or /app/share/edendeck/vulkan (Flatpak).</summary>
+    /// <summary>The layer ships next to the app binary: &lt;app dir&gt;/vulkan/ (tarball), $APPDIR/usr/share/scanline/vulkan (AppImage) or /app/share/scanline/vulkan (Flatpak).</summary>
     private static string? AutoLayerDirectory()
     {
         string?[] candidates =
         [
-            Environment.GetEnvironmentVariable("APPDIR") is { } appdir ? Path.Combine(appdir, "usr/share/edendeck/vulkan") : null,
+            Environment.GetEnvironmentVariable("APPDIR") is { } appdir ? Path.Combine(appdir, "usr/share/scanline/vulkan") : null,
             Environment.ProcessPath is { } exe ? Path.Combine(Path.GetDirectoryName(exe)!, "vulkan") : null,
             Path.Combine(AppContext.BaseDirectory, "vulkan"),
-            "/app/share/edendeck/vulkan",
+            "/app/share/scanline/vulkan",
         ];
-        return candidates.FirstOrDefault(c => c != null && File.Exists(Path.Combine(c, "VkLayer_EDENDECK_fsr.json")));
+        return candidates.FirstOrDefault(c => c != null && File.Exists(Path.Combine(c, "VkLayer_SCANLINE_overlay.json")));
     }
 
     private static T? LoadJson<T>(string path) where T : class

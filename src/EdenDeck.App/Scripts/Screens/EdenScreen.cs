@@ -91,7 +91,7 @@ public partial class EdenScreen : TwoPaneScreen
         if (install.Current is { } cur)
         {
             col.AddChild(UiTheme.Label($"Eden {Cap(cur.Channel)} {cur.Version}", 24));
-            col.AddChild(Note((cur.ManagedByEdenDeck ? "Installed by Eden Deck · " : "Your own copy · ") + cur.ExecutablePath));
+            col.AddChild(Note((cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
         }
         else
         {
@@ -118,7 +118,7 @@ public partial class EdenScreen : TwoPaneScreen
         if (install.Current != null)
         {
             Add(new ActionButton("Open Eden", App.OpenEden,
-                "Opens Eden's own window for anything Eden Deck doesn't cover yet. Close it to come back."));
+                "Opens Eden's own window for anything Scanline doesn't cover yet. Close it to come back."));
         }
     }
 
@@ -138,7 +138,7 @@ public partial class EdenScreen : TwoPaneScreen
             "Copies your own prod.keys (and title.keys from the same folder, if present) into Eden."));
         Add(new ActionButton("Import firmware folder", ImportFirmware,
             "Copies your own firmware .nca files into Eden. The current firmware is backed up first."));
-        col.AddChild(Note("Eden Deck never downloads keys, firmware or games. Use your own dumps."));
+        col.AddChild(Note("Scanline never downloads keys, firmware or games. Use your own dumps."));
     }
 
     private void BuildKeySets(VBoxContainer col, Action<Control> Add)
@@ -164,13 +164,13 @@ public partial class EdenScreen : TwoPaneScreen
 
     private void BuildFrameGen(VBoxContainer col, Action<Control> Add)
     {
-        col.AddChild(Note("Eden's own frame generation only exists on Android, so Eden Deck uses lsfg-vk with your copy of Lossless Scaling. " +
+        col.AddChild(Note("Eden's own frame generation only exists on Android, so Scanline uses lsfg-vk with your copy of Lossless Scaling. " +
                           "It doubles 30 fps games to 60 and never goes above 60. Turn it on per game on the game's page."));
         var lsfg = Host.Eden.FindLsfgVk();
         var (lsfgText, lsfgColor) = lsfg.Kind switch
         {
             LsfgVk.Kind.V2 => ($"✓  lsfg-vk   {lsfg.Manifest}", UiTheme.Good),
-            LsfgVk.Kind.Legacy => ($"✗  lsfg-vk   version 1.x found ({lsfg.Manifest}); Eden Deck needs 2.x", UiTheme.Warn),
+            LsfgVk.Kind.Legacy => ($"✗  lsfg-vk   version 1.x found ({lsfg.Manifest}); Scanline needs 2.x", UiTheme.Warn),
             _ => ("✗  lsfg-vk   not installed", UiTheme.Warn),
         };
         col.AddChild(UiTheme.Label(lsfgText, UiTheme.SmallSize + 2, lsfgColor, wrap: true));
@@ -183,11 +183,11 @@ public partial class EdenScreen : TwoPaneScreen
         }
         if (lsfg.Kind != LsfgVk.Kind.V2)
         {
-            col.AddChild(Note("lsfg-vk 2.x isn't installed yet. Bundling it inside Eden Deck is coming in a later update."));
+            col.AddChild(Note("lsfg-vk 2.x isn't installed yet. Bundling it inside Scanline is coming in a later update."));
         }
         if (lsfg.Kind == LsfgVk.Kind.V2 && dll != null)
         {
-            col.AddChild(Note("Everything is in place. Your own lsfg-vk settings aren't changed; Eden Deck only turns it on for Eden games that need it.", UiTheme.Good));
+            col.AddChild(Note("Everything is in place. Your own lsfg-vk settings aren't changed; Scanline only turns it on for Eden games that need it.", UiTheme.Good));
         }
         Add(new ActionButton("Check again", () =>
         {
@@ -199,7 +199,7 @@ public partial class EdenScreen : TwoPaneScreen
     private void BuildAdvanced(VBoxContainer col, Action<Control> Add)
     {
         Add(new ActionButton("Use an Eden AppImage from this device", PickExternal,
-            "Point Eden Deck at an Eden AppImage you already have."));
+            "Point Scanline at an Eden AppImage you already have."));
         col.AddChild(Section("Details"));
         col.AddChild(Note($"Settings format: {Host.Eden.Schema.Label}"));
         var p = Host.Eden.Paths;

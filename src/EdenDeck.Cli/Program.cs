@@ -4,7 +4,7 @@ using EdenDeck.Core.Library;
 using EdenDeck.Core.Profiles;
 using EdenDeck.Host;
 
-// Headless entry point. Per-game Steam shortcuts run `edendeck launch eden:<TITLEID>`, which
+// Headless entry point. Per-game Steam shortcuts run `scanline launch eden:<TITLEID>`, which
 // applies the game's settings exactly like the UI does and then starts Eden.
 
 return await Cli.Run(args);
@@ -14,21 +14,21 @@ internal static class Cli
     private const string Usage = """
         EdenDeck command line
 
-          edendeck launch <game-id|path>           apply the game's settings and start it
-          edendeck scan                            rescan library folders
-          edendeck library                         list games
-          edendeck folders add <dir> | remove <dir> | list
-          edendeck eden status                     installed Eden and system files
-          edendeck eden check <stable|nightly>     check Eden's official feed for an update
-          edendeck eden install <stable|nightly>   download + verify + install from the official feed
-          edendeck eden rollback                   switch back to the previous Eden version
-          edendeck eden use <AppImage>             use an Eden AppImage you already have
-          edendeck keys import <prod.keys> [title.keys]           your own default keys
-          edendeck firmware import <folder>                       your own firmware (.nca files)
-          edendeck keyset add <label> <prod.keys> [title.keys] [firmware-folder]
-          edendeck keyset list
-          edendeck game set <game-id> [--keyset <id>|--no-keyset] [--framegen off|builtin] [--fps <native fps>]
-          edendeck game show <game-id>
+          scanline launch <game-id|path>           apply the game's settings and start it
+          scanline scan                            rescan library folders
+          scanline library                         list games
+          scanline folders add <dir> | remove <dir> | list
+          scanline eden status                     installed Eden and system files
+          scanline eden check <stable|nightly>     check Eden's official feed for an update
+          scanline eden install <stable|nightly>   download + verify + install from the official feed
+          scanline eden rollback                   switch back to the previous Eden version
+          scanline eden use <AppImage>             use an Eden AppImage you already have
+          scanline keys import <prod.keys> [title.keys]           your own default keys
+          scanline firmware import <folder>                       your own firmware (.nca files)
+          scanline keyset add <label> <prod.keys> [title.keys] [firmware-folder]
+          scanline keyset list
+          scanline game set <game-id> [--keyset <id>|--no-keyset] [--framegen off|builtin] [--fps <native fps>]
+          scanline game show <game-id>
 
         EdenDeck never downloads keys, firmware or games.
         """;
@@ -66,7 +66,7 @@ internal static class Cli
 
     private static async Task<int> Launch(AppHost host, string idOrPath)
     {
-        var game = host.FindGame(idOrPath) ?? throw new InvalidOperationException($"Game not found: {idOrPath} (run `edendeck scan`?)");
+        var game = host.FindGame(idOrPath) ?? throw new InvalidOperationException($"Game not found: {idOrPath} (run `scanline scan`?)");
         var plan = host.PlanLaunch(game);
         var launcher = new ProcessLauncher(Console.WriteLine);
         host.MarkPlayed(game);
@@ -90,7 +90,7 @@ internal static class Cli
     {
         if (host.Settings.LibraryFolders.Count == 0)
         {
-            return Fail("No library folders. Add one with `edendeck folders add <dir>`.");
+            return Fail("No library folders. Add one with `scanline folders add <dir>`.");
         }
         var games = host.Rescan();
         Console.WriteLine($"{games.Count} games");

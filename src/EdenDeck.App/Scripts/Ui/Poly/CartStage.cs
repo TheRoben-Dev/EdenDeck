@@ -107,7 +107,7 @@ public partial class CartStage : PolyStage
         }
     }
 
-    /// <summary>Cart outline: 0.8 x 1.0 with the top-left corner cut (Eden Deck's cartridge shape), extruded.</summary>
+    /// <summary>Cart outline: 0.8 x 1.0 with the top-left corner cut (Scanline's cartridge shape), extruded.</summary>
     private static ArrayMesh ShellMesh()
     {
         const float w = 0.4f;

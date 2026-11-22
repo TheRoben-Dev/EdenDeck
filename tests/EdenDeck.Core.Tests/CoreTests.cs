@@ -119,8 +119,8 @@ public class ProcessLauncherTests
     public void AppPathsFollowXdg()
     {
         var p = new AppPaths(n => n switch { "HOME" => "/h", "XDG_CONFIG_HOME" => "/c", "XDG_RUNTIME_DIR" => "/run/user/1000", _ => null });
-        Assert.Equal("/c/edendeck", p.Config);
-        Assert.Equal("/h/.local/share/edendeck", p.Data);
-        Assert.Equal("/run/user/1000/edendeck", p.Runtime);
+        Assert.Equal("/c/scanline", p.Config);
+        Assert.Equal("/h/.local/share/scanline", p.Data);
+        Assert.Equal("/run/user/1000/scanline", p.Runtime);
     }
 }

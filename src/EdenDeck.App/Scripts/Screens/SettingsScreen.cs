@@ -215,12 +215,12 @@ public partial class SettingsScreen : TwoPaneScreen
     private void BuildUpdates(VBoxContainer col, Action<Control> Add)
     {
         var updater = Host.Updater;
-        col.AddChild(UiTheme.Label($"Eden Deck {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
-        Add(new ActionButton("Changelog", App.ShowChangelog, "What changed in each version of Eden Deck."));
+        col.AddChild(UiTheme.Label($"Scanline {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
+        Add(new ActionButton("Changelog", App.ShowChangelog, "What changed in each version of Scanline."));
         if (updater.CanSelfUpdate)
         {
             Add(new ActionButton("Check for updates", () => App.CheckForAppUpdate(silent: false),
-                "Looks for a newer Eden Deck on GitHub. Updates install in place and keep your games, keys and settings."));
+                "Looks for a newer Scanline on GitHub. Updates install in place and keep your games, keys and settings."));
             Add(Toggle.Create("Check at startup", Host.Settings.CheckForUpdates,
                 on => Host.SaveSettings(Host.Settings with { CheckForUpdates = on }),
                 "Asks when a new version is out. Never interrupts a game."));
@@ -228,7 +228,7 @@ public partial class SettingsScreen : TwoPaneScreen
             {
                 var prev = updater.PreviousVersion is { } pv ? $" ({pv})" : "";
                 Add(new ActionButton($"Roll back to previous version{prev}", () => App.Confirm(
-                    $"Go back to the previous Eden Deck{prev}? The app restarts.", "Roll back", App.RollbackApp)));
+                    $"Go back to the previous Scanline{prev}? The app restarts.", "Roll back", App.RollbackApp)));
             }
         }
         else
@@ -236,15 +236,15 @@ public partial class SettingsScreen : TwoPaneScreen
             col.AddChild(UiTheme.Label("This copy can't update itself (development build or package). Use the installer to update.",
                 UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
-        col.AddChild(UiTheme.Label("Eden Deck never downloads keys, firmware or games. Use your own dumps.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Scanline never downloads keys, firmware or games. Use your own dumps.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
     private void BuildAdvanced(VBoxContainer col, Action<Control> Add)
     {
         Add(Toggle.Create("Performance overlay layer", !Host.Settings.LayerKillSwitch,
             on => Host.SaveSettings(Host.Settings with { LayerKillSwitch = !on }),
-            "Eden Deck's Vulkan layer (FPS and frame-time stats).",
-            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Eden Deck.",
+            "Scanline's Vulkan layer (FPS and frame-time stats).",
+            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Scanline.",
             "No overlay and no stats; games run exactly as in plain Eden."));
         col.AddChild(Section("Expert Eden options"));
         BuildEdenOptions(col, Add, o => AdvancedOptions.Contains(o.Id), showGroups: true);
