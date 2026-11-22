@@ -32,7 +32,8 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - 🕹️ **Controller mapping** written straight into Eden's own input profiles, with Steam Input handled properly
 - 🚂 **Per-game "Add to Steam"** so each game launches from Game Mode with its own settings applied
 - 🧩 **Mod and cheat manager** with conflict warnings and one-tap enable/disable
-- ✨ **FSR upscaling and frame generation** through a custom Vulkan layer, plus optional **lsfg-vk** (Lossless Scaling) support
+- ✨ **Upscaling and frame generation** using Eden's built-in FSR/SGSR and Lossless Scaling frame gen (your own copy), plus lsfg-vk for Eden Stable
+- 📊 **In-game overlay and quick menu** through EdenDeck's own Vulkan layer
 - 🎯 **Frame generation capped at 60 FPS**, because the goal is smooth 60 FPS Switch games and nothing more
 - 🔄 **In-app self-updates** from this repo's GitHub Releases
 
@@ -88,24 +89,25 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 
 ### 5. Upscaling and frame generation
 
-EdenDeck ships its own Vulkan layer, `VK_LAYER_EDENDECK_fsr`, built on the AMD FidelityFX SDK (FSR 3.1). It is injected **only into Eden, only at launch**, through environment variables. Eden itself is never patched.
-
-**Being honest about the limits:** a layer like this only sees the final frame. It gets no game motion vectors, no reliable depth buffer and no HUD-free image. The options below are presented with that in mind.
+Phase 1 found that Eden already has the important pieces built in, and they work better
+than a layer that only sees the finished frame: spatial **FSR 1** (both channels), **SGSR**
+(Nightly), and **frame generation using Lossless Scaling's engine** (Nightly). These run
+inside Eden's renderer, so they know the game's real resolution and can tell real frames from
+repeats. EdenDeck drives them through Eden's own per-game settings.
 
 **Upscaling.** You choose between:
 
 | Mode | What it is |
 | --- | --- |
 | **Quality (Eden internal scaling)** | Eden renders at a higher resolution itself. Usually the best image. |
-| **FSR spatial** | EASU + RCAS sharpening on the final frame. Cheap and stable. |
-| **FSR 3 temporal (experimental)** | Temporal upscaling with estimated motion. Can look better or worse depending on the game. |
+| **FSR (Eden built-in)** | EASU + RCAS on the game image, with adjustable sharpening. Cheap and stable. |
+| **SGSR (Eden Nightly)** | Snapdragon Game Super Resolution, an alternative spatial upscaler. |
 
-What ships as the default will be whatever actually looks best in testing.
+**Frame generation.** One engine per game:
 
-**Frame generation.** Two engines, and you pick **one per game** (they're mutually exclusive):
-
-- **FSR 3.1 frame generation** (built in), driven by optical flow.
-- **lsfg-vk** (Lossless Scaling frame generation on Linux). This needs your own copy of [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) installed through Steam; EdenDeck detects it and exposes per-game options, and never ships or downloads Lossless Scaling files.
+- **Eden's built-in frame gen** (Nightly). This needs your own copy of [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam. EdenDeck finds its `Lossless.dll` and puts it where Eden expects it, and never ships or downloads Lossless Scaling files.
+- **lsfg-vk** for Eden Stable, with the same Lossless Scaling requirement.
+- **FSR 3.1 frame generation** in EdenDeck's own layer, as an experimental option for players without Lossless Scaling.
 
 **The 60 FPS rule.** Frame generation exists here to get Switch games to a smooth 60 FPS, and **output is hard-capped at 60 FPS**:
 
@@ -113,18 +115,12 @@ What ships as the default will be whatever actually looks best in testing.
 - Games that already run at 60 get **no frame generation**.
 - No 3x/4x modes and no targets above 60.
 
-**Frame pacing and quality work:**
+**EdenDeck's Vulkan layer** (`VK_LAYER_EDENDECK_fsr`) is injected **only into Eden, only at launch**, through environment variables. Eden is never patched. Its main jobs:
 
-- Duplicate-present detection so only real frames are interpolated, which matters for 30 FPS titles.
-- Scene-cut and menu detection that pauses interpolation where it would smear.
-- Per-game HUD masks and confidence thresholds to reduce ghosting on static UI.
-- A clear latency note in the UI.
-
-**Also:**
-
-- Per-game toggles and presets, plus a **global kill switch**.
-- A graceful fallback with a clear message when your GPU lacks a required Vulkan feature.
 - An optional **performance overlay**: real vs. generated FPS, frame-time graph, active upscale mode.
+- The **in-game quick menu**.
+- Per-game toggles and presets, plus a **global kill switch**.
+- A graceful fallback with a clear message when something isn't supported.
 - Targets **X11, Wayland and gamescope** (SteamOS Game Mode). AMD/RADV first (Steam Deck, ROG Ally / Z1 Extreme), then Intel and NVIDIA.
 
 ### 6. Updates and releases
@@ -142,25 +138,25 @@ What ships as the default will be whatever actually looks best in testing.
 │        EdenDeck          │      mod/data folders, env vars      │   Eden (upstream,   │
 │  controller-first UI     │ ───────────────────────────────────▶ │   unmodified)       │
 │                          │                                      │   AppImage / pkg    │
-│   └─ eden_adapter        │                                      └──────────┬──────────┘
+│   └─ Eden backend        │                                      └──────────┬──────────┘
 │      (all Eden-specific  │                                                 │ Vulkan
 │       knowledge lives    │                                      ┌──────────▼──────────┐
 │       here, versioned)   │                                      │ VK_LAYER_EDENDECK_  │
-└──────────────────────────┘                                      │ fsr  /  lsfg-vk     │
+└──────────────────────────┘                                      │ fsr (overlay)       │
                                                                   └─────────────────────┘
 ```
 
 **The core rule: EdenDeck does not fork Eden.** It talks to Eden only through command-line arguments, Eden's config files, its mod and data folders, environment variables and a Vulkan layer.
 
-Everything Eden-specific (config keys, paths, CLI flags) lives in a single versioned module, `eden_adapter`. It detects the installed Eden version and tolerates config keys it doesn't know. When Eden changes, that one module is the only thing that needs updating, and it's covered by tests against sample configs from several Eden versions. Every path, key and flag is verified against the current Eden source and documented in [`docs/eden-integration.md`](docs/eden-integration.md).
+Everything Eden-specific (config keys, paths, CLI flags) lives in a single versioned module, the Eden backend (`EdenDeck.Backends.Eden`, with version snapshots in `eden_adapter/schema/`). It detects the installed Eden version and tolerates config keys it doesn't know. When Eden changes, that one module is the only thing that needs updating, and it's covered by tests against sample configs from several Eden versions. Every path, key and flag is verified against the current Eden source and documented in [`docs/eden-integration.md`](docs/eden-integration.md).
 
 ## Tech stack
 
 | Part | Choice |
 | --- | --- |
-| Frontend UI | **To be decided:** C# with Avalonia or Godot 4 (C#). The comparison covers gamepad focus handling, 800p/4K scaling, Wayland/gamescope behavior and Flatpak/AppImage packaging. |
-| Gamepad input | SDL3 |
-| Vulkan layer | C++20, CMake, AMD FidelityFX SDK (FSR 3.1) |
+| Frontend UI | **Godot 4 (C#/.NET)**, with all logic in Godot-free .NET libraries. Why: [`docs/tech-stack.md`](docs/tech-stack.md) |
+| Gamepad input | SDL3 (through Godot's joypad input) |
+| Vulkan layer | C++20, CMake (overlay, quick menu, optional FSR 3.1 frame gen) |
 | Packaging | Flatpak (primary), AppImage |
 | CI / releases | GitHub Actions |
 
@@ -168,9 +164,9 @@ Everything Eden-specific (config keys, paths, CLI flags) lives in a single versi
 
 ## Roadmap
 
-Development happens in phases, and each one ends with a review before the next starts. Every phase records its assumptions, risks and how it was tested on real hardware.
+Development happens in phases. Each phase lands as a pull request that merges once CI passes. Every phase records its assumptions, risks and how it was tested on real hardware.
 
-- [ ] **Phase 1 — Research spike**
+- [x] **Phase 1 — Research spike** ([report](docs/phase1-report.md))
   Verify Eden's CLI flags, config format and keys, data and mod paths, per-game config and disabled add-ons on current Stable and Nightly. Write [`docs/eden-integration.md`](docs/eden-integration.md). Prototype a minimal Vulkan layer that hooks present in Eden under X11, Wayland and gamescope. Settle the frontend tech stack.
 - [ ] **Phase 2 — MVP**
   Eden manager (including per-game key sets), library scan, controller-navigable UI, launching games fullscreen, basic global settings. CI pipeline in place.
@@ -179,9 +175,25 @@ Development happens in phases, and each one ends with a review before the next s
 - [ ] **Phase 4 — Mods and cheats**
   Mod and cheat manager, archive installer, conflict detection, version checks, backups, optional GameBanana browser.
 - [ ] **Phase 5 — Upscaling and frame generation**
-  FSR spatial upscaling, then FSR 3.1 frame generation (60 FPS cap), lsfg-vk integration, then the in-game overlay and quick menu.
+  Eden's built-in FSR/SGSR and frame generation (60 FPS cap), Lossless Scaling detection, lsfg-vk for Stable, then the in-game overlay and quick menu.
 - [ ] **Phase 6 — Packaging and updates**
   Flatpak and AppImage, in-app self-updates from GitHub Releases, rollback, user docs.
+
+### Future backends
+
+EdenDeck's core uses a generic emulator-backend interface ([`docs/backends.md`](docs/backends.md)), and Eden is the first implementation. More are planned later, each as its own module: **PS3** (RPCS3), **PS2** (PCSX2), **PS1** (DuckStation), **Xbox** (xemu), **NDS** (melonDS) and **GBA** (mGBA). The same rules apply: upstream emulators stay unmodified, and you use only your own BIOS and firmware.
+
+## Repository layout
+
+| Path | What |
+| --- | --- |
+| [`docs/eden-integration.md`](docs/eden-integration.md) | Verified Eden CLI flags, paths, config keys, per-game config, mods, disabled add-ons |
+| [`docs/tech-stack.md`](docs/tech-stack.md) | Frontend stack decision, self-update and release plan |
+| [`docs/backends.md`](docs/backends.md) | Emulator backend interface and future backends |
+| [`docs/phase1-report.md`](docs/phase1-report.md) | Phase 1 findings, assumptions, risks, verification status |
+| `eden_adapter/schema/` | Eden settings and enum snapshots per Eden version |
+| `tools/extract_eden_settings.py` | Regenerates those snapshots from an Eden source checkout |
+| `layer/` | `VK_LAYER_EDENDECK_fsr` Vulkan layer and its hardware test procedure |
 
 ---
 
@@ -190,7 +202,7 @@ Development happens in phases, and each one ends with a review before the next s
 - **No piracy features.** EdenDeck does not download, bundle or link to keys, firmware or games. You must dump these from hardware you own.
 - **Eden is not modified.** If an upstream change is ever genuinely needed, it will be proposed to the Eden project as a pull request, not forked.
 - **Third-party software stays yours.** Lossless Scaling is a paid Steam product you buy and install yourself. EdenDeck only detects it.
-- EdenDeck is an independent project. It is not affiliated with or endorsed by the Eden team, Nintendo, Valve or AMD. "Nintendo Switch" is a trademark of Nintendo.
+- EdenDeck is an independent project. It is not affiliated with or endorsed by the Eden team, Nintendo, Valve, AMD or Lossless Scaling's developer. "Nintendo Switch" is a trademark of Nintendo.
 
 ## License
 

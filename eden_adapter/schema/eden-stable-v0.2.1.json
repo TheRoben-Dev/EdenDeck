@@ -1,0 +1,2015 @@
+{
+ "eden_label": "v0.2.1",
+ "eden_commit": "58c1e20ee58efa3900ba616207d460886214480b",
+ "settings": [
+  {
+   "key": "audio_muted",
+   "member": "audio_muted",
+   "category": "Audio",
+   "section": "Audio",
+   "per_game": false,
+   "type": "bool, false",
+   "default_expr": "false"
+  },
+  {
+   "key": "dump_audio_commands",
+   "member": "dump_audio_commands",
+   "category": "Audio",
+   "section": "Audio",
+   "per_game": false,
+   "type": "bool, false",
+   "default_expr": "false"
+  },
+  {
+   "key": "input_device",
+   "member": "audio_input_device_id",
+   "category": "Audio",
+   "section": "Audio",
+   "per_game": true,
+   "type": "std::string",
+   "default_expr": "\"auto\""
+  },
+  {
+   "key": "output_device",
+   "member": "audio_output_device_id",
+   "category": "Audio",
+   "section": "Audio",
+   "per_game": true,
+   "type": "std::string",
+   "default_expr": "\"auto\""
+  },
+  {
+   "key": "output_engine",
+   "member": "sink_id",
+   "category": "Audio",
+   "section": "Audio",
+   "per_game": true,
+   "type": "AudioEngine",
+   "default_expr": "AudioEngine::Auto"
+  },
+  {
+   "key": "volume",
+   "member": "volume",
+   "category": "Audio",
+   "section": "Audio",
+   "per_game": true,
+   "type": "u8, true",
+   "default_expr": "100, 0, 200"
+  },
+  {
+   "key": "controller_navigation",
+   "member": "controller_navigation",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "debug_pad_enabled",
+   "member": "debug_pad_enabled",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "emulate_analog_keyboard",
+   "member": "emulate_analog_keyboard",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_accurate_vibrations",
+   "member": "enable_accurate_vibrations",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_ir_sensor",
+   "member": "enable_ir_sensor",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_joycon_driver",
+   "member": "enable_joycon_driver",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "enable_procon_driver",
+   "member": "enable_procon_driver",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_raw_input",
+   "member": "enable_raw_input",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_ring_controller",
+   "member": "enable_ring_controller",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "enable_udp_controller",
+   "member": "enable_udp_controller",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "ir_sensor_device",
+   "member": "ir_sensor_device",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"auto\""
+  },
+  {
+   "key": "keyboard_enabled",
+   "member": "keyboard_enabled",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "motion_enabled",
+   "member": "motion_enabled",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "mouse_enabled",
+   "member": "mouse_enabled",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "mouse_panning",
+   "member": "mouse_panning",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "mouse_panning_deadzone_counterweight",
+   "member": "mouse_panning_deadzone_counterweight",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "u8, true",
+   "default_expr": "20, 0, 100"
+  },
+  {
+   "key": "mouse_panning_decay_strength",
+   "member": "mouse_panning_decay_strength",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "u8, true",
+   "default_expr": "18, 0, 100"
+  },
+  {
+   "key": "mouse_panning_min_decay",
+   "member": "mouse_panning_min_decay",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "u8, true",
+   "default_expr": "6, 0, 100"
+  },
+  {
+   "key": "mouse_panning_sensitivity",
+   "member": "mouse_panning_sensitivity",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "u8, true",
+   "default_expr": "50, 1, 100"
+  },
+  {
+   "key": "mouse_panning_x_sensitivity",
+   "member": "mouse_panning_x_sensitivity",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "u8, true",
+   "default_expr": "50, 1, 100"
+  },
+  {
+   "key": "mouse_panning_y_sensitivity",
+   "member": "mouse_panning_y_sensitivity",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "u8, true",
+   "default_expr": "50, 1, 100"
+  },
+  {
+   "key": "pause_tas_on_load",
+   "member": "pause_tas_on_load",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "random_amiibo_id",
+   "member": "random_amiibo_id",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "tas_enable",
+   "member": "tas_enable",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "tas_loop",
+   "member": "tas_loop",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "tas_show_recording_dialog",
+   "member": "tas_show_recording_dialog",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "touch_device",
+   "member": "touch_device",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"min_x:100,min_y:50,max_x:1800,max_y:850\""
+  },
+  {
+   "key": "touch_from_button_map",
+   "member": "touch_from_button_map_index",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "int",
+   "default_expr": "0"
+  },
+  {
+   "key": "udp_input_servers",
+   "member": "udp_input_servers",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"127.0.0.1:26760\""
+  },
+  {
+   "key": "vibration_enabled",
+   "member": "vibration_enabled",
+   "category": "Controls",
+   "section": "Controls",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "current_speed_mode",
+   "member": "current_speed_mode",
+   "category": "Core",
+   "section": "Core",
+   "per_game": false,
+   "type": "SpeedMode",
+   "default_expr": "SpeedMode::Standard"
+  },
+  {
+   "key": "memory_layout_mode",
+   "member": "memory_layout_mode",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "MemoryLayout, true",
+   "default_expr": "MemoryLayout::Memory_4Gb"
+  },
+  {
+   "key": "slow_speed_limit",
+   "member": "slow_speed_limit",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "u16, true",
+   "default_expr": "50, 0, 9999"
+  },
+  {
+   "key": "speed_limit",
+   "member": "speed_limit",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "u16, true",
+   "default_expr": "100, 0, 9999"
+  },
+  {
+   "key": "sync_core_speed",
+   "member": "sync_core_speed",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "turbo_speed_limit",
+   "member": "turbo_speed_limit",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "u16, true",
+   "default_expr": "200, 0, 9999"
+  },
+  {
+   "key": "use_multi_core",
+   "member": "use_multi_core",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "use_speed_limit",
+   "member": "use_speed_limit",
+   "category": "Core",
+   "section": "Core",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpu_accuracy",
+   "member": "cpu_accuracy",
+   "category": "Cpu",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "CpuAccuracy, true",
+   "default_expr": "CpuAccuracy::Auto"
+  },
+  {
+   "key": "cpu_backend",
+   "member": "cpu_backend",
+   "category": "Cpu",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "CpuBackend, true",
+   "default_expr": "#ifdef HAS_NCE CpuBackend::Nce, #else CpuBackend::Dynarmic, #endif CpuBackend::Dynarmic, #ifdef HAS_NCE CpuBackend::Nce, #else CpuBackend::Dynarmic, #endif"
+  },
+  {
+   "key": "cpu_ticks",
+   "member": "cpu_ticks",
+   "category": "Cpu",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "u32, true",
+   "default_expr": "16000, 77, 65535"
+  },
+  {
+   "key": "cpuopt_block_linking",
+   "member": "cpuopt_block_linking",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_const_prop",
+   "member": "cpuopt_const_prop",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_context_elimination",
+   "member": "cpuopt_context_elimination",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_fast_dispatcher",
+   "member": "cpuopt_fast_dispatcher",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_fastmem",
+   "member": "cpuopt_fastmem",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_fastmem_exclusives",
+   "member": "cpuopt_fastmem_exclusives",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_ignore_memory_aborts",
+   "member": "cpuopt_ignore_memory_aborts",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_misc_ir",
+   "member": "cpuopt_misc_ir",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_page_tables",
+   "member": "cpuopt_page_tables",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_recompile_exclusives",
+   "member": "cpuopt_recompile_exclusives",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_reduce_misalign_checks",
+   "member": "cpuopt_reduce_misalign_checks",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_return_stack_buffer",
+   "member": "cpuopt_return_stack_buffer",
+   "category": "CpuDebug",
+   "section": "Cpu",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_unsafe_fastmem_check",
+   "member": "cpuopt_unsafe_fastmem_check",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_unsafe_host_mmu",
+   "member": "cpuopt_unsafe_host_mmu",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "#if !defined(__APPLE__) && !defined(__linux__) && !defined(__ANDROID__) && !defined(_WIN32) false, #else true, #endif"
+  },
+  {
+   "key": "cpuopt_unsafe_ignore_global_monitor",
+   "member": "cpuopt_unsafe_ignore_global_monitor",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_unsafe_ignore_standard_fpcr",
+   "member": "cpuopt_unsafe_ignore_standard_fpcr",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_unsafe_inaccurate_nan",
+   "member": "cpuopt_unsafe_inaccurate_nan",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_unsafe_reduce_fp_error",
+   "member": "cpuopt_unsafe_reduce_fp_error",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "cpuopt_unsafe_unfuse_fma",
+   "member": "cpuopt_unsafe_unfuse_fma",
+   "category": "CpuUnsafe",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "fast_cpu_time",
+   "member": "fast_cpu_time",
+   "category": "Cpu",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "CpuClock",
+   "default_expr": "CpuClock::Off"
+  },
+  {
+   "key": "use_custom_cpu_ticks",
+   "member": "use_custom_cpu_ticks",
+   "category": "Cpu",
+   "section": "Cpu",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "ext_content_from_game_dirs",
+   "member": "ext_content_from_game_dirs",
+   "category": "DataStorage",
+   "section": "Data%20Storage",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "gamecard_current_game",
+   "member": "gamecard_current_game",
+   "category": "DataStorage",
+   "section": "Data%20Storage",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "gamecard_inserted",
+   "member": "gamecard_inserted",
+   "category": "DataStorage",
+   "section": "Data%20Storage",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "gamecard_path",
+   "member": "gamecard_path",
+   "category": "DataStorage",
+   "section": "Data%20Storage",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "std::string()"
+  },
+  {
+   "key": "use_virtual_sd",
+   "member": "use_virtual_sd",
+   "category": "DataStorage",
+   "section": "Data%20Storage",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "debug_knobs",
+   "member": "debug_knobs",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": true,
+   "type": "u16, true",
+   "default_expr": "0, 0, 65535"
+  },
+  {
+   "key": "disable_macro_hle",
+   "member": "disable_macro_hle",
+   "category": "DebuggingGraphics",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "disable_macro_jit",
+   "member": "disable_macro_jit",
+   "category": "DebuggingGraphics",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "disable_web_applet",
+   "member": "disable_web_applet",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "dump_exefs",
+   "member": "dump_exefs",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "dump_macros",
+   "member": "dump_macros",
+   "category": "DebuggingGraphics",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "dump_nso",
+   "member": "dump_nso",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "dump_shaders",
+   "member": "dump_shaders",
+   "category": "DebuggingGraphics",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_all_controllers",
+   "member": "enable_all_controllers",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_fs_access_log",
+   "member": "enable_fs_access_log",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "extended_logging",
+   "member": "extended_logging",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "gdbstub_port",
+   "member": "gdbstub_port",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "u16",
+   "default_expr": "6543"
+  },
+  {
+   "key": "gpu_log_driver_debug",
+   "member": "gpu_log_driver_debug",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "gpu_log_level",
+   "member": "gpu_log_level",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": true,
+   "type": "GpuLogLevel",
+   "default_expr": "GpuLogLevel::Standard"
+  },
+  {
+   "key": "gpu_log_memory_tracking",
+   "member": "gpu_log_memory_tracking",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "gpu_log_ring_buffer_size",
+   "member": "gpu_log_ring_buffer_size",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "s32",
+   "default_expr": "512"
+  },
+  {
+   "key": "gpu_log_shader_dumps",
+   "member": "gpu_log_shader_dumps",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "gpu_log_vulkan_calls",
+   "member": "gpu_log_vulkan_calls",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "gpu_logging_enabled",
+   "member": "gpu_logging_enabled",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "perform_vulkan_check",
+   "member": "perform_vulkan_check",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "program_args",
+   "member": "program_args",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "std::string()"
+  },
+  {
+   "key": "quest_flag",
+   "member": "quest_flag",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "reporting_services",
+   "member": "reporting_services",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "serial_battery",
+   "member": "serial_battery",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "u32",
+   "default_expr": "0"
+  },
+  {
+   "key": "serial_unit",
+   "member": "serial_unit",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "u32",
+   "default_expr": "0"
+  },
+  {
+   "key": "use_auto_stub",
+   "member": "use_auto_stub",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_debug_asserts",
+   "member": "use_debug_asserts",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_dev_keys",
+   "member": "use_dev_keys",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_gdbstub",
+   "member": "use_gdbstub",
+   "category": "Debugging",
+   "section": "Debugging",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "cabinet_applet_mode",
+   "member": "cabinet_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "controller_applet_mode",
+   "member": "controller_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "data_erase_applet_mode",
+   "member": "data_erase_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": false,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "enable_overlay",
+   "member": "enable_overlay",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "error_applet_mode",
+   "member": "error_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "login_share_applet_mode",
+   "member": "login_share_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": false,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "mii_edit_applet_mode",
+   "member": "mii_edit_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "my_page_applet_mode",
+   "member": "my_page_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": false,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "net_connect_applet_mode",
+   "member": "net_connect_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": false,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "offline_web_applet_mode",
+   "member": "offline_web_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "photo_viewer_applet_mode",
+   "member": "photo_viewer_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "player_select_applet_mode",
+   "member": "player_select_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::LLE"
+  },
+  {
+   "key": "shop_applet_mode",
+   "member": "shop_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": false,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "swkbd_applet_mode",
+   "member": "swkbd_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "web_applet_mode",
+   "member": "web_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": true,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "wifi_web_auth_applet_mode",
+   "member": "wifi_web_auth_applet_mode",
+   "category": "LibraryApplet",
+   "section": "LibraryApplet",
+   "per_game": false,
+   "type": "AppletMode",
+   "default_expr": "AppletMode::HLE"
+  },
+  {
+   "key": "censor_username",
+   "member": "censor_username",
+   "category": "Miscellaneous",
+   "section": "Miscellaneous",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "first_launch",
+   "member": "first_launch",
+   "category": "Miscellaneous",
+   "section": "Miscellaneous",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "flush_line",
+   "member": "log_flush_line",
+   "category": "Miscellaneous",
+   "section": "Miscellaneous",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "log_filter",
+   "member": "log_filter",
+   "category": "Miscellaneous",
+   "section": "Miscellaneous",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"*:Info\""
+  },
+  {
+   "key": "airplane_mode",
+   "member": "airplane_mode",
+   "category": "Network",
+   "section": "Network",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "network_interface",
+   "member": "network_interface",
+   "category": "Network",
+   "section": "Network",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "std::string()"
+  },
+  {
+   "key": "accelerate_astc",
+   "member": "accelerate_astc",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "AstcDecodeMode, true",
+   "default_expr": "AstcDecodeMode::Gpu"
+  },
+  {
+   "key": "anti_aliasing",
+   "member": "anti_aliasing",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "AntiAliasing",
+   "default_expr": "AntiAliasing::None"
+  },
+  {
+   "key": "aspect_ratio",
+   "member": "aspect_ratio",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "AspectRatio, true",
+   "default_expr": "AspectRatio::R16_9"
+  },
+  {
+   "key": "astc_recompression",
+   "member": "astc_recompression",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "AstcRecompression, true",
+   "default_expr": "AstcRecompression::Uncompressed"
+  },
+  {
+   "key": "async_presentation",
+   "member": "async_presentation",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "#ifdef ANDROID false, #else false, #endif"
+  },
+  {
+   "key": "backend",
+   "member": "renderer_backend",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "RendererBackend, true",
+   "default_expr": "#if defined(__sun__) || defined(__managarm__) RendererBackend::OpenGL_GLSL, #else RendererBackend::Vulkan, #endif"
+  },
+  {
+   "key": "barrier_feedback_loops",
+   "member": "barrier_feedback_loops",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "bg_blue",
+   "member": "bg_blue",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "u8, false",
+   "default_expr": "0"
+  },
+  {
+   "key": "bg_green",
+   "member": "bg_green",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "u8, false",
+   "default_expr": "0"
+  },
+  {
+   "key": "bg_red",
+   "member": "bg_red",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "u8, false",
+   "default_expr": "0"
+  },
+  {
+   "key": "debug",
+   "member": "renderer_debug",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "disable_buffer_reorder",
+   "member": "disable_buffer_reorder",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "disable_shader_loop_safety_checks",
+   "member": "disable_shader_loop_safety_checks",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "dma_accuracy",
+   "member": "dma_accuracy",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "DmaAccuracy, true",
+   "default_expr": "DmaAccuracy::Default"
+  },
+  {
+   "key": "dyna_state",
+   "member": "dyna_state",
+   "category": "RendererExtensions",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "ExtendedDynamicState",
+   "default_expr": "#if defined(ANDROID) ExtendedDynamicState::Disabled, #elif defined(__APPLE__) ExtendedDynamicState::Disabled, #else ExtendedDynamicState::EDS2, #endif"
+  },
+  {
+   "key": "emulate_bgr565",
+   "member": "emulate_bgr565",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_buffer_history",
+   "member": "enable_buffer_history",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "enable_compute_pipelines",
+   "member": "enable_compute_pipelines",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "fast_gpu_time",
+   "member": "fast_gpu_time",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "GpuOverclock",
+   "default_expr": "GpuOverclock::Medium"
+  },
+  {
+   "key": "fix_bloom_effects",
+   "member": "fix_bloom_effects",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "force_max_clock",
+   "member": "renderer_force_max_clock",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "frame_pacing_mode",
+   "member": "frame_pacing_mode",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "FramePacingMode, true",
+   "default_expr": "FramePacingMode::Target_Auto, FramePacingMode::Target_Auto, FramePacingMode::Target_120"
+  },
+  {
+   "key": "fsr_sharpening_slider",
+   "member": "fsr_sharpening_slider",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "int, true",
+   "default_expr": "#ifdef ANDROID 0, #else 25, #endif 0, 200"
+  },
+  {
+   "key": "fullscreen_mode",
+   "member": "fullscreen_mode",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "FullscreenMode, true",
+   "default_expr": "#ifdef _WIN32 FullscreenMode::Borderless, #else FullscreenMode::Exclusive, #endif"
+  },
+  {
+   "key": "gpu_accuracy",
+   "member": "gpu_accuracy",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "GpuAccuracy, true",
+   "default_expr": "#ifdef ANDROID GpuAccuracy::Low, #else GpuAccuracy::Medium, #endif"
+  },
+  {
+   "key": "gpu_unswizzle_chunk_size",
+   "member": "gpu_unswizzle_chunk_size",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "GpuUnswizzleChunk",
+   "default_expr": "GpuUnswizzleChunk::Medium"
+  },
+  {
+   "key": "gpu_unswizzle_enabled",
+   "member": "gpu_unswizzle_enabled",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "gpu_unswizzle_stream_size",
+   "member": "gpu_unswizzle_stream_size",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "GpuUnswizzle",
+   "default_expr": "GpuUnswizzle::Medium"
+  },
+  {
+   "key": "gpu_unswizzle_texture_size",
+   "member": "gpu_unswizzle_texture_size",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "GpuUnswizzleSize",
+   "default_expr": "GpuUnswizzleSize::Large"
+  },
+  {
+   "key": "max_anisotropy",
+   "member": "max_anisotropy",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "AnisotropyMode, true",
+   "default_expr": "#ifdef ANDROID AnisotropyMode::Default, #else AnisotropyMode::Automatic, #endif"
+  },
+  {
+   "key": "nsight_aftermath",
+   "member": "enable_nsight_aftermath",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "nvdec_emulation",
+   "member": "nvdec_emulation",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "NvdecEmulation",
+   "default_expr": "NvdecEmulation::Gpu"
+  },
+  {
+   "key": "patch_old_qcom_drivers",
+   "member": "patch_old_qcom_drivers",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "renderdoc_hotkey",
+   "member": "enable_renderdoc_hotkey",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "rescale_hack",
+   "member": "rescale_hack",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "#ifdef __ANDROID__ true, #else false, #endif"
+  },
+  {
+   "key": "resolution_setup",
+   "member": "resolution_setup",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "ResolutionSetup",
+   "default_expr": "ResolutionSetup::Res1X"
+  },
+  {
+   "key": "sample_shading_fraction",
+   "member": "sample_shading",
+   "category": "RendererExtensions",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "u32, true",
+   "default_expr": "0, 0, 100"
+  },
+  {
+   "key": "scaling_filter",
+   "member": "scaling_filter",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "ScalingFilter",
+   "default_expr": "ScalingFilter::Bilinear"
+  },
+  {
+   "key": "shader_feedback",
+   "member": "renderer_shader_feedback",
+   "category": "RendererDebug",
+   "section": "Renderer",
+   "per_game": false,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "skip_cpu_inner_invalidation",
+   "member": "skip_cpu_inner_invalidation",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "sync_memory_operations",
+   "member": "sync_memory_operations",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_asynchronous_gpu_emulation",
+   "member": "use_asynchronous_gpu_emulation",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "#ifdef __ANDROID__ false, #else true, #endif"
+  },
+  {
+   "key": "use_asynchronous_shaders",
+   "member": "use_asynchronous_shaders",
+   "category": "RendererHacks",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_disk_shader_cache",
+   "member": "use_disk_shader_cache",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "use_optimized_vertex_buffers",
+   "member": "use_optimized_vertex_buffers",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_reactive_flushing",
+   "member": "use_reactive_flushing",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "#ifdef ANDROID false, #else true, #endif"
+  },
+  {
+   "key": "use_video_framerate",
+   "member": "use_video_framerate",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "use_vsync",
+   "member": "vsync_mode",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "VSyncMode, true",
+   "default_expr": "VSyncMode::Fifo"
+  },
+  {
+   "key": "use_vulkan_driver_pipeline_cache",
+   "member": "use_vulkan_driver_pipeline_cache",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "true"
+  },
+  {
+   "key": "vertex_input_dynamic_state",
+   "member": "vertex_input_dynamic_state",
+   "category": "RendererExtensions",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "#if defined (ANDROID) false, #else true, #endif"
+  },
+  {
+   "key": "vram_usage_mode",
+   "member": "vram_usage_mode",
+   "category": "RendererAdvanced",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "VramUsageMode, true",
+   "default_expr": "VramUsageMode::Conservative"
+  },
+  {
+   "key": "vulkan_device",
+   "member": "vulkan_device",
+   "category": "Renderer",
+   "section": "Renderer",
+   "per_game": true,
+   "type": "int",
+   "default_expr": "0"
+  },
+  {
+   "key": "current_user",
+   "member": "current_user",
+   "category": "System",
+   "section": "System",
+   "per_game": false,
+   "type": "s32",
+   "default_expr": "0"
+  },
+  {
+   "key": "custom_rtc",
+   "member": "custom_rtc",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "s64",
+   "default_expr": "0"
+  },
+  {
+   "key": "custom_rtc_enabled",
+   "member": "custom_rtc_enabled",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "custom_rtc_offset",
+   "member": "custom_rtc_offset",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "s64, true",
+   "default_expr": "0, (std::numeric_limits<int>::min)(), (std::numeric_limits<int>::max)()"
+  },
+  {
+   "key": "device_name",
+   "member": "device_name",
+   "category": "System",
+   "section": "System",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"Eden\""
+  },
+  {
+   "key": "language_index",
+   "member": "language_index",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "Language, true",
+   "default_expr": "Language::EnglishAmerican"
+  },
+  {
+   "key": "region_index",
+   "member": "region_index",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "Region, true",
+   "default_expr": "Region::Usa"
+  },
+  {
+   "key": "rng_seed",
+   "member": "rng_seed",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "u32",
+   "default_expr": "0"
+  },
+  {
+   "key": "rng_seed_enabled",
+   "member": "rng_seed_enabled",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "bool",
+   "default_expr": "false"
+  },
+  {
+   "key": "sound_index",
+   "member": "sound_index",
+   "category": "SystemAudio",
+   "section": "System",
+   "per_game": true,
+   "type": "AudioMode, true",
+   "default_expr": "AudioMode::Stereo"
+  },
+  {
+   "key": "time_zone_index",
+   "member": "time_zone_index",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "TimeZone, true",
+   "default_expr": "TimeZone::Auto"
+  },
+  {
+   "key": "use_docked_mode",
+   "member": "use_docked_mode",
+   "category": "System",
+   "section": "System",
+   "per_game": true,
+   "type": "ConsoleMode",
+   "default_expr": "#ifdef ANDROID ConsoleMode::Handheld, #else ConsoleMode::Docked, #endif"
+  },
+  {
+   "key": "eden_token",
+   "member": "eden_token",
+   "category": "WebService",
+   "section": "WebService",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"\""
+  },
+  {
+   "key": "eden_username",
+   "member": "eden_username",
+   "category": "WebService",
+   "section": "WebService",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"Eden\""
+  },
+  {
+   "key": "web_api_url",
+   "member": "web_api_url",
+   "category": "WebService",
+   "section": "WebService",
+   "per_game": false,
+   "type": "std::string",
+   "default_expr": "\"api.ynet-fun.xyz\""
+  }
+ ],
+ "enums": {
+  "NAME": [
+   "..."
+  ],
+  "AudioMode": [
+   "Mono",
+   "Stereo",
+   "Surround"
+  ],
+  "Language": [
+   "Japanese",
+   "EnglishAmerican",
+   "French",
+   "German",
+   "Italian",
+   "Spanish",
+   "Chinese",
+   "Korean",
+   "Dutch",
+   "Portuguese",
+   "Russian",
+   "Taiwanese",
+   "EnglishBritish",
+   "FrenchCanadian",
+   "SpanishLatin",
+   "ChineseSimplified",
+   "ChineseTraditional",
+   "PortugueseBrazilian",
+   "Polish",
+   "Thai"
+  ],
+  "Region": [
+   "Japan",
+   "Usa",
+   "Europe",
+   "Australia",
+   "China",
+   "Korea",
+   "Taiwan"
+  ],
+  "TimeZone": [
+   "Auto",
+   "Default",
+   "Cet",
+   "Cst6Cdt",
+   "Cuba",
+   "Eet",
+   "Egypt",
+   "Eire",
+   "Est",
+   "Est5Edt",
+   "Gb",
+   "GbEire",
+   "Gmt",
+   "GmtPlusZero",
+   "GmtMinusZero",
+   "GmtZero",
+   "Greenwich",
+   "Hongkong",
+   "Hst",
+   "Iceland",
+   "Iran",
+   "Israel",
+   "Jamaica",
+   "Japan",
+   "Kwajalein",
+   "Libya",
+   "Met",
+   "Mst",
+   "Mst7Mdt",
+   "Navajo",
+   "Nz",
+   "NzChat",
+   "Poland",
+   "Portugal",
+   "Prc",
+   "Pst8Pdt",
+   "Roc",
+   "Rok",
+   "Singapore",
+   "Turkey",
+   "Uct",
+   "Universal",
+   "Utc",
+   "WSu",
+   "Wet",
+   "Zulu"
+  ],
+  "AnisotropyMode": [
+   "Automatic",
+   "Default",
+   "X2",
+   "X4",
+   "X8",
+   "X16",
+   "X32",
+   "X64",
+   "None"
+  ],
+  "AstcDecodeMode": [
+   "Cpu",
+   "Gpu",
+   "CpuAsynchronous"
+  ],
+  "AstcRecompression": [
+   "Uncompressed",
+   "Bc1",
+   "Bc3"
+  ],
+  "FramePacingMode": [
+   "Target_Auto",
+   "Target_30",
+   "Target_60",
+   "Target_90",
+   "Target_120"
+  ],
+  "VSyncMode": [
+   "Immediate",
+   "Mailbox",
+   "Fifo",
+   "FifoRelaxed"
+  ],
+  "VramUsageMode": [
+   "Conservative",
+   "Aggressive"
+  ],
+  "RendererBackend": [
+   "OpenGL_GLSL",
+   "Vulkan",
+   "Null",
+   "OpenGL_GLASM",
+   "OpenGL_SPIRV"
+  ],
+  "GpuAccuracy": [
+   "Low",
+   "Medium",
+   "High"
+  ],
+  "DmaAccuracy": [
+   "Default",
+   "Unsafe",
+   "Safe"
+  ],
+  "CpuBackend": [
+   "Dynarmic",
+   "Nce"
+  ],
+  "CpuAccuracy": [
+   "Auto",
+   "Accurate",
+   "Unsafe",
+   "Paranoid",
+   "Debugging"
+  ],
+  "CpuClock": [
+   "Off",
+   "Boost",
+   "Fast"
+  ],
+  "MemoryLayout": [
+   "Memory_4Gb",
+   "Memory_6Gb",
+   "Memory_8Gb",
+   "Memory_10Gb",
+   "Memory_12Gb"
+  ],
+  "ConfirmStop": [
+   "Ask_Always",
+   "Ask_Based_On_Game",
+   "Ask_Never"
+  ],
+  "FullscreenMode": [
+   "Borderless",
+   "Exclusive"
+  ],
+  "NvdecEmulation": [
+   "Off",
+   "Cpu",
+   "Gpu"
+  ],
+  "ResolutionSetup": [
+   "Res1_4X",
+   "Res1_2X",
+   "Res3_4X",
+   "Res1X",
+   "Res5_4X",
+   "Res3_2X",
+   "Res2X",
+   "Res3X",
+   "Res4X",
+   "Res5X",
+   "Res6X",
+   "Res7X",
+   "Res8X"
+  ],
+  "ScalingFilter": [
+   "NearestNeighbor",
+   "Bilinear",
+   "Bicubic",
+   "Gaussian",
+   "Lanczos",
+   "ScaleForce",
+   "Fsr",
+   "Area",
+   "ZeroTangent",
+   "BSpline",
+   "Mitchell",
+   "Spline1",
+   "Mmpx",
+   "MaxEnum"
+  ],
+  "AntiAliasing": [
+   "None",
+   "Fxaa",
+   "Smaa",
+   "MaxEnum"
+  ],
+  "AspectRatio": [
+   "R16_9",
+   "R4_3",
+   "R21_9",
+   "R16_10",
+   "Stretch"
+  ],
+  "ConsoleMode": [
+   "Handheld",
+   "Docked"
+  ],
+  "AppletMode": [
+   "HLE",
+   "LLE"
+  ],
+  "SpirvOptimizeMode": [
+   "Never",
+   "OnLoad",
+   "Always"
+  ],
+  "GpuOverclock": [
+   "Normal",
+   "Medium",
+   "High"
+  ],
+  "GpuUnswizzleSize": [
+   "VerySmall",
+   "Small",
+   "Normal",
+   "Large",
+   "VeryLarge"
+  ],
+  "GpuUnswizzle": [
+   "VeryLow",
+   "Low",
+   "Normal",
+   "Medium",
+   "High"
+  ],
+  "GpuUnswizzleChunk": [
+   "VeryLow",
+   "Low",
+   "Normal",
+   "Medium",
+   "High"
+  ],
+  "TemperatureUnits": [
+   "Celsius",
+   "Fahrenheit"
+  ],
+  "ExtendedDynamicState": [
+   "Disabled",
+   "EDS1",
+   "EDS2",
+   "EDS3"
+  ],
+  "GpuLogLevel": [
+   "Off",
+   "Errors",
+   "Standard",
+   "Verbose",
+   "All"
+  ],
+  "GameListMode": [
+   "TreeView",
+   "GridView"
+  ],
+  "SpeedMode": [
+   "Standard",
+   "Turbo",
+   "Slow"
+  ]
+ }
+}
