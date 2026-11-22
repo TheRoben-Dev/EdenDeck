@@ -79,6 +79,38 @@ public sealed class EdenBackend : IEmulatorBackend
     /// <summary>Gives player 1 a controller mapping if Eden still has only the keyboard mapped.</summary>
     public bool EnsureControllerMapping(PadInfo pad) => EdenControllerDefaults.EnsurePlayer1(Paths.GlobalConfigFile, pad);
 
+    public int PlayerStyle() => EdenControls.PlayerStyle(Paths.GlobalConfigFile);
+
+    public void SetPlayerStyle(int style)
+    {
+        EnsureClosed();
+        EdenControls.SetPlayerStyle(Paths.GlobalConfigFile, style);
+    }
+
+    public IReadOnlyList<string> InputProfiles() => EdenControls.Profiles(Paths.InputProfileDir);
+
+    public void SaveInputProfile(string name)
+    {
+        EnsureClosed();
+        EdenControls.SaveProfile(Paths.GlobalConfigFile, Paths.InputProfileDir, name);
+    }
+
+    public string? GameInputProfile(string titleId) => EdenControls.GameProfile(Paths.PerGameConfigFile(titleId));
+
+    public void SetGameInputProfile(string titleId, string? name)
+    {
+        EnsureClosed();
+        EdenControls.SetGameProfile(Paths.PerGameConfigFile(titleId), name);
+    }
+
+    private static void EnsureClosed()
+    {
+        if (EdenProcess.IsRunning())
+        {
+            throw new EdenRunningException();
+        }
+    }
+
     /// <summary>True while player 1 is still on Eden's keyboard defaults.</summary>
     public bool ControllerNeedsMapping() => EdenControllerDefaults.NeedsMapping(QtIni.Load(Paths.GlobalConfigFile));
 

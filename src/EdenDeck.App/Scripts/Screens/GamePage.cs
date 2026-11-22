@@ -141,6 +141,20 @@ public partial class GamePage : Screen
         };
         keys.Changed += v => SetProfile(x => x with { KeySet = v == "" ? null : v });
         Add(keys);
+        if (!string.IsNullOrEmpty(_game.Base.TitleId))
+        {
+            var profiles = new List<(string, string)> { ("", "Global setup") };
+            profiles.AddRange(Host.Eden.InputProfiles().Select(n => (n, n)));
+            var tid = _game.Base.TitleId;
+            var ctl = new Stepper("Controller", profiles, Host.Eden.GameInputProfile(tid) ?? "",
+                "Which controller setup player 1 uses in this game. Save setups as profiles in Settings → Controller.")
+            {
+                Expands = true,
+                DetailFor = v => v == "" ? "Same mapping and controller style as everywhere else." : $"Uses your \"{v}\" profile (its mapping and controller style) only in this game.",
+            };
+            ctl.Changed += v => App.Guard(() => Host.Eden.SetGameInputProfile(tid, v == "" ? null : v));
+            Add(ctl);
+        }
         if (_game.Updates.Count > 0 || _game.Dlc.Count > 0)
         {
             Add(Toggle.Create("Update and DLC", p.LoadAddOns, on =>
