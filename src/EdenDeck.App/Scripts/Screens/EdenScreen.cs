@@ -59,6 +59,11 @@ public partial class EdenScreen : Screen
         }
         Add(new ActionButton("Use an Eden AppImage from this device", PickExternal,
             "Point Eden Deck at an Eden AppImage you already have."));
+        if (install.Current != null)
+        {
+            Add(new ActionButton("Open Eden", App.OpenEden,
+                "Opens Eden's own window for anything Eden Deck doesn't cover yet, like controller mapping. Close it to come back."));
+        }
 
         col.AddChild(Section("Your keys and firmware"));
         foreach (var s in Host.Eden.SystemFilesImpl.Status())

@@ -42,7 +42,8 @@ public partial class GamePage : Screen
         var view = GetViewportRect().Size;
         _card = new PanelContainer
         {
-            CustomMinimumSize = new Vector2(Mathf.Min(1180, view.X - 72), Mathf.Min(660, view.Y - 120)),
+            // Inset so the dimmed library shows all around: it reads as a card, not a page.
+            CustomMinimumSize = new Vector2(Mathf.Min(1120, view.X * 0.88f), Mathf.Min(600, (view.Y - 56) * 0.84f)),
             MouseFilter = MouseFilterEnum.Stop,
         };
         var cardBox = UiTheme.Box(UiTheme.Panel, 1, 22, UiTheme.Line);
@@ -59,41 +60,39 @@ public partial class GamePage : Screen
 
         // Left: what the game is.
         var info = Column(8);
-        info.CustomMinimumSize = new Vector2(380, 0);
+        info.CustomMinimumSize = new Vector2(300, 0);
+        info.ClipContents = true;
         info.SizeFlagsHorizontal = SizeFlags.Fill;
         split.AddChild(info);
-        var color = UiTheme.TileColor(_game.Base.Title);
-        var art = new Panel { CustomMinimumSize = new Vector2(380, 214), ClipContents = true };
-        var artBox = UiTheme.Box(color, 0, 16);
-        artBox.ShadowColor = new Color(0, 0, 0, 0.4f);
-        artBox.ShadowSize = 10;
-        artBox.ShadowOffset = new Vector2(0, 4);
-        art.AddThemeStyleboxOverride("panel", artBox);
-        var mono = UiTheme.Label(LibraryScreen.Monogram(_game.Base.Title), 150, color.Lightened(0.4f) with { A = 0.4f });
-        mono.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        mono.HorizontalAlignment = HorizontalAlignment.Center;
-        mono.VerticalAlignment = VerticalAlignment.Center;
-        art.AddChild(mono);
-        info.AddChild(art);
-        info.AddChild(UiTheme.Label(_game.Base.Title, UiTheme.TitleSize - 4, wrap: true));
+        var cart = new Cartridge(_game.Base.Title, LibraryScreen.Monogram(_game.Base.Title), large: true)
+        {
+            CustomMinimumSize = new Vector2(220, 300),
+            SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+        };
+        info.AddChild(cart);
+        info.AddChild(UiTheme.Label(_game.Base.Title, UiTheme.TitleSize - 8, wrap: true));
         var b = _game.Base;
         var facts = new List<string>
         {
             string.IsNullOrEmpty(b.TitleId) ? "Title ID unknown" : $"Title ID {b.TitleId}",
             Path.GetFileName(b.Path),
         };
-        if (_game.Updates.Count > 0)
-        {
-            facts.Add("Update: " + string.Join(", ", _game.Updates.Select(u => u.Version ?? Path.GetFileName(u.Path))));
-        }
-        if (_game.Dlc.Count > 0)
-        {
-            facts.Add($"{_game.Dlc.Count} DLC");
-        }
         foreach (var f in facts)
         {
             var l = UiTheme.Label(f, UiTheme.SmallSize + 1, UiTheme.Dim);
-            l.ClipText = true;
+            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            info.AddChild(l);
+        }
+        // Whether Eden will actually load the update / DLC that was found (its own add-on switches included).
+        foreach (var a in Host.Eden.AddOnStatus(_game, Host.Settings.LibraryFolders.Select(f => f.Path)))
+        {
+            var (mark, text, color) = a.State switch
+            {
+                EdenDeck.Backends.Eden.Config.AddOnState.Active => ("✓", $"{a.Label} · active", UiTheme.Good),
+                EdenDeck.Backends.Eden.Config.AddOnState.Disabled => ("!", $"{a.Label} · turned off in Eden's add-ons", UiTheme.Warn),
+                _ => ("!", $"{a.Label} · not loaded (folder isn't a library folder)", UiTheme.Warn),
+            };
+            var l = UiTheme.Label($"{mark}  {text}", UiTheme.SmallSize + 1, color, wrap: true);
             info.AddChild(l);
         }
 
@@ -124,6 +123,9 @@ public partial class GamePage : Screen
             _play.AddThemeColorOverride("font_hover_color", UiTheme.Bg);
         }
         Add(_play);
+
+        Add(new ActionButton("Open Eden", App.OpenEden,
+            "Opens Eden's own window (controller mapping, anything not here yet). Close it to come back."));
 
         col.AddChild(Section("Launch setup"));
         var p = Profile;

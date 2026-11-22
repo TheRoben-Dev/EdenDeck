@@ -125,6 +125,7 @@ public sealed class AppHost
         {
             // The base and its newest update decide which keys are needed (Eden loads both).
             Eden.CheckKeys(game.Base.Title, [game.Base.Path, .. game.Updates.Take(1).Select(u => u.Path)], profile.KeySet);
+            Eden.EnsureExternalContent(Settings.LibraryFolders.Select(f => f.Path));
         }
         return Backend(game.Base.BackendId).Launch.Plan(game.Base, profile, DefaultLaunchOptions());
     }

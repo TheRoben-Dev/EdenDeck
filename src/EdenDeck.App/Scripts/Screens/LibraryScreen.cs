@@ -7,7 +7,7 @@ namespace EdenDeck.App.Screens;
 /// <summary>Game grid, most recently played first.</summary>
 public partial class LibraryScreen : Screen
 {
-    private const int Columns = 5;
+    private const int Columns = 6;
     private Control? _first;
 
     public override IEnumerable<(string Action, string Label)> Hints =>
@@ -66,48 +66,22 @@ public partial class LibraryScreen : Screen
         }
         var b = new Button
         {
-            CustomMinimumSize = new Vector2(220, 150),
+            CustomMinimumSize = new Vector2(168, 246),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             TooltipText = $"{g.Base.Title}  ·  {g.GameId}",
         };
-        var color = UiTheme.TileColor(g.Base.Title);
-        var normal = UiTheme.Box(color, 0, 14);
-        normal.ShadowColor = new Color(0, 0, 0, 0.35f);
-        normal.ShadowSize = 6;
-        normal.ShadowOffset = new Vector2(0, 3);
-        b.AddThemeStyleboxOverride("normal", normal);
-        b.AddThemeStyleboxOverride("hover", UiTheme.Box(color.Lightened(0.08f), 0, 14));
-        b.AddThemeStyleboxOverride("pressed", UiTheme.Box(color.Darkened(0.2f), 0, 14));
-
-        // Placeholder art until real icons: big faded monogram in the corner.
-        var mono = UiTheme.Label(Monogram(g.Base.Title), 76, color.Lightened(0.35f) with { A = 0.35f });
-        mono.MouseFilter = MouseFilterEnum.Ignore;
-        mono.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
-        mono.GrowHorizontal = GrowDirection.Begin;
-        mono.OffsetTop = -8;
-        mono.OffsetRight = -12;
-        b.AddChild(mono);
-
-        var text = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
-        text.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        text.OffsetLeft = 16;
-        text.OffsetRight = -16;
-        text.OffsetBottom = -12;
-        text.AddThemeConstantOverride("separation", 2);
-        var title = UiTheme.Label(g.Base.Title, 20, Colors.White, wrap: true);
-        title.MouseFilter = MouseFilterEnum.Ignore;
-        title.MaxLinesVisible = 2;
-        title.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        text.AddChild(title);
-        if (extras.Count > 0)
+        // The button is only the hit area; the cartridge draws everything (focus included).
+        foreach (var state in new[] { "normal", "hover", "pressed", "focus", "disabled" })
         {
-            var chips = UiTheme.Label(string.Join("  ·  ", extras), 12, Colors.White with { A = 0.7f });
-            chips.MouseFilter = MouseFilterEnum.Ignore;
-            text.AddChild(chips);
+            b.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
         }
-        b.AddChild(text);
-
-        Anim.FocusPop(b, 1.04f);
+        var cart = new Cartridge(g.Base.Title, Monogram(g.Base.Title), extras.Count > 0 ? string.Join("  ·  ", extras) : null);
+        cart.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        b.AddChild(cart);
+        b.FocusEntered += () => cart.SetFocused(true);
+        b.FocusExited += () => cart.SetFocused(false);
+        b.MouseEntered += () => { if (!b.HasFocus()) { b.GrabFocus(); } };
+        Anim.PressFlash(b);
         b.Pressed += () => App.Push(new GamePage(g, b.GetGlobalRect()));
         b.SetMeta("game", g.GameId);
         return b;

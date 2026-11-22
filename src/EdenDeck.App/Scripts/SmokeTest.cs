@@ -27,8 +27,8 @@ public partial class SmokeTest : Node
         Step("joy-stick-left", () => Stick(-1f), wait: 0.25, expect: "Castle Defenders");
         Step("joy-stick-center", () => Stick(0f), expect: "Castle Defenders");
         // Holding a direction auto-repeats after a short delay.
-        Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Robot Rumble");
-        Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Robot Rumble");
+        Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
+        Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
         Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Starlight Saga");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Install or update");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");

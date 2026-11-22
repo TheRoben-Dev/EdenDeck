@@ -65,6 +65,31 @@ public sealed class EdenBackend : IEmulatorBackend
         KeyRequirements.Check(title, gameFiles, prod, set != null ? $"The keys in set \"{set.Label}\"" : "Your keys");
     }
 
+    /// <summary>Lets Eden load updates/DLC straight from the library folders (no NAND install).</summary>
+    public bool EnsureExternalContent(IEnumerable<string> libraryFolders) =>
+        EdenAddOns.EnsureExternalContentDirs(Paths.GlobalConfigFile, libraryFolders);
+
+    public IReadOnlyList<AddOnStatus> AddOnStatus(Core.Library.LibraryGame game, IEnumerable<string> libraryFolders) =>
+        EdenAddOns.Status(Paths.GlobalConfigFile, game, libraryFolders);
+
+    /// <summary>Gives player 1 a controller mapping if Eden still has only the keyboard mapped.</summary>
+    public bool EnsureControllerMapping(PadInfo pad) => EdenControllerDefaults.EnsurePlayer1(Paths.GlobalConfigFile, pad);
+
+    /// <summary>Plan to open Eden's own window (no game), for settings Eden Deck doesn't cover.</summary>
+    public Core.Launch.LaunchPlan PlanEdenUi()
+    {
+        var eden = Install.Current ?? throw new InvalidOperationException("No Eden install found. Install one in the Eden manager.");
+        var workDir = Path.Combine(_app.Runtime, "cwd");
+        return new Core.Launch.LaunchPlan
+        {
+            Executable = eden.ExecutablePath,
+            Arguments = [],
+            WorkingDirectory = workDir,
+            Prepare = [() => Directory.CreateDirectory(workDir)],
+            Notes = [$"Eden {eden.Channel} {eden.Version}: settings window"],
+        };
+    }
+
     /// <summary>Highest master key index in a prod.keys file, or -1 if unreadable.</summary>
     public static int MaxMasterKeyOf(string prodKeys)
     {

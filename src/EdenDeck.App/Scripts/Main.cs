@@ -516,12 +516,13 @@ public partial class Main : Control
     }
 
     /// <summary>Applies the game's settings and runs it. The app goes idle until Eden exits.</summary>
-    public async void Launch(LibraryGame game)
+    public void Launch(LibraryGame game)
     {
         if (Host == null || GameRunning)
         {
             return;
         }
+        var controllerNote = EnsureController();
         LaunchPlan plan;
         try
         {
@@ -539,7 +540,60 @@ public partial class Main : Control
             return;
         }
         Host.MarkPlayed(game);
-        var page = new RunningPage(game.Base.Title, plan.Notes);
+        var notes = controllerNote != null ? plan.Notes.Prepend(controllerNote).ToList() : plan.Notes;
+        RunEden(game.Base.Title, plan, notes, null);
+    }
+
+    /// <summary>Opens Eden's own window for anything Eden Deck doesn't cover; re-reads Eden's config after.</summary>
+    public void OpenEden()
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        LaunchPlan plan;
+        try
+        {
+            plan = Host.Eden.PlanEdenUi();
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            Error(e.Message);
+            return;
+        }
+        RunEden("Eden settings", plan, ["Change anything in Eden's window, then close it to come back. Eden Deck reads Eden's settings again afterwards."],
+            () =>
+            {
+                Host.Eden.ReloadPaths();
+                foreach (var screen in _stack)
+                {
+                    screen.Rebuild();  // pages show values read from Eden's config
+                }
+                Success("Back from Eden. Settings reloaded.");
+            });
+    }
+
+    /// <summary>Player 1 gets a controller mapping when Eden still has only the keyboard (Game Mode needs this).</summary>
+    private string? EnsureController()
+    {
+        if (Host == null || Pad.ActivePad() is not { } pad)
+        {
+            return null;
+        }
+        try
+        {
+            return Host.Eden.EnsureControllerMapping(pad) ? $"controller: mapped {pad.Name} as player 1 (Eden had only the keyboard)" : null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            GD.PushWarning($"controller mapping skipped: {e.Message}");
+            return null;
+        }
+    }
+
+    private async void RunEden(string title, LaunchPlan plan, IReadOnlyList<string> notes, Action? after)
+    {
+        var page = new RunningPage(title, notes);
         Push(page);
         GameRunning = true;
         Pad.ReleaseAll();
@@ -565,5 +619,6 @@ public partial class Main : Control
             Error($"Eden exited with code {code}.");
         }
         GetWindow().GrabFocus();
+        after?.Invoke();
     }
 }

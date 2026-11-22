@@ -36,10 +36,13 @@ public static class OptionRows
         return s;
     }
 
-    /// <summary>Per-game row: first entry is "Global (value)", which removes the override.</summary>
+    /// <summary>"1x (native)" -> "1x native", so it reads cleanly after "Global · ".</summary>
+    private static string Flat(string label) => label.Replace("(", "").Replace(")", "");
+
+    /// <summary>Per-game row: first entry is "Global · value", which removes the override.</summary>
     public static Stepper PerGame(OptionDefinition o, string? overrideValue, string? globalValue, Action<string?> changed)
     {
-        var values = new List<(string, string)> { (UseGlobal, $"Global ({LabelFor(o, globalValue)})") };
+        var values = new List<(string, string)> { (UseGlobal, "Global · " + Flat(LabelFor(o, globalValue))) };
         values.AddRange(Values(o));
         var s = new Stepper(o.Label, values, overrideValue ?? UseGlobal, o.Help) { Wrap = o.Type != OptionType.Int };
         s.Changed += v => changed(v == UseGlobal ? null : v);
