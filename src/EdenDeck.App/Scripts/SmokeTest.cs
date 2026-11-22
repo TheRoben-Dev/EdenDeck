@@ -22,9 +22,7 @@ public partial class SmokeTest : Node
         Directory.CreateDirectory(outDir);
         // The animated background costs a lot under software rendering (CI); it would skew the
         // hold-to-repeat timing. It is switched on for the theme screenshots further down.
-        // Let startup settle first (shader compiles on a slow runner can stall the first frames,
-        // which would merge the first presses into one frame).
-        Step("library", () => SetAnimatedBackground(false), wait: 3.0);
+        Step("library", () => SetAnimatedBackground(false));
         // Real joypad and keyboard events (not actions), through Pad's translation layer.
         Step("joy-dpad-right", () => Joy(JoyButton.DpadRight, true), wait: 0.25, expect: "Mountain Climb");
         Step("joy-dpad-release", () => Joy(JoyButton.DpadRight, false), expect: "Mountain Climb");

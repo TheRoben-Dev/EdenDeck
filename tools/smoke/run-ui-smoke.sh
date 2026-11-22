@@ -13,7 +13,10 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
+# Every XDG dir inside the fake home: CI runners set XDG_CONFIG_HOME, and a second run would
+# otherwise see the first run's play history (and library order).
 export HOME="$WORK/home" XDG_RUNTIME_DIR="$WORK/run"
+export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share" XDG_CACHE_HOME="$HOME/.cache"
 mkdir -p "$HOME/Games/Switch" "$HOME/.config/eden" "$XDG_RUNTIME_DIR" "$OUT"
 cp "$ROOT/tests/EdenDeck.Backends.Eden.Tests/Fixtures/nightly-467ab644/qt-config.ini" "$HOME/.config/eden/"
 i=0
