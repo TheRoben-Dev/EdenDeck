@@ -479,12 +479,14 @@ public partial class SettingsScreen : TwoPaneScreen
         var games = Try(() => StorageReport.Games(Host.Library.Where(g => g.Base.BackendId == eden.Id), eden.Paths), [], "game sizes", col);
         var shaders = Try(() => ShaderCache.All(eden.Paths).Sum(e => e.Bytes), 0L, "shader caches", col);
         var saves = Try(() => StorageReport.Saves(eden.Paths), 0L, "saves", col);
+        var backups = Try(() => eden.SaveBackupBytes(), 0L, "save backups", col);
         col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
         {
             $"Games {StorageReport.Format(games.Sum(g => g.Base + g.Updates + g.Dlc))}",
             $"Shader caches {StorageReport.Format(shaders)}",
             $"Mods {StorageReport.Format(games.Sum(g => g.Mods))}",
             $"Saves {StorageReport.Format(saves)}",
+            $"Save backups {StorageReport.Format(backups)}",
         }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         var older = games.Sum(g => g.OlderUpdates);
         if (older > 0)

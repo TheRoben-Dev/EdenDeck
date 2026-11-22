@@ -46,6 +46,9 @@ public sealed class EdenBackend : IEmulatorBackend
 
     public string SaveBackupDir(string titleId) => EdenSaves.BackupDir(_app.Data, titleId);
 
+    /// <summary>All of Scanline's save backups, every game.</summary>
+    public long SaveBackupBytes() => Storage.ShaderCache.DirBytes(System.IO.Path.Combine(_app.Data, "saves"));
+
     public SaveBackup? BackupSaves(string titleId, bool automatic = false) => EdenSaves.Backup(Paths, _app.Data, titleId, automatic);
 
     /// <summary>Restores a backup (Eden must be closed); returns the backup of what was replaced.</summary>
