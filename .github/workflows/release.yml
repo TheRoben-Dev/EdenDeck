@@ -117,6 +117,8 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/pkg"
           tar xzf dist/EdenDeck-$VERSION-linux-x86_64.tar.gz -C "$RUNNER_TEMP/pkg"
+          HOME="$RUNNER_TEMP/insthome" EDENDECK_RELEASE_URL="file://$PWD/dist" bash dist/install.sh
+          test -x "$RUNNER_TEMP/insthome/Applications/EdenDeck/EdenDeck.x86_64"
           tools/smoke/run-ui-smoke.sh "$RUNNER_TEMP/pkg/EdenDeck/EdenDeck.x86_64" "$RUNNER_TEMP/shots"
           "$RUNNER_TEMP/pkg/EdenDeck/edendeck" help
 
@@ -128,11 +130,19 @@ jobs:
           cat > notes.md <<NOTES
           Portable Linux build for SteamOS, Bazzite and other x86_64 distros.
 
-          **Install:** download \`EdenDeck-$VERSION-linux-x86_64.tar.gz\`, extract it anywhere (for example \`~/Applications\`), and run \`EdenDeck/EdenDeck.x86_64\`. In Desktop Mode, add that file to Steam as a non-Steam game to use it from Game Mode.
+          **Install or update** (Desktop Mode, in a terminal, no root needed):
+
+          \`\`\`sh
+          curl -fsSL https://github.com/TheRoben-Dev/EdenDeck/releases/latest/download/install.sh | bash
+          \`\`\`
+
+          This installs to \`~/Applications/EdenDeck\`, adds Eden Deck to your app menu and puts \`edendeck\` on your PATH. For Game Mode, add Eden Deck to Steam with *Add a Non-Steam Game*.
+
+          **Manual install:** download \`EdenDeck-linux-x86_64.tar.gz\`, extract it anywhere and run \`EdenDeck/EdenDeck.x86_64\`.
 
           **First run:** on the Eden tab, install Eden (Stable is recommended), then import your own \`prod.keys\` and firmware. Add your game folder on the Library tab.
 
-          Eden Deck never downloads keys, firmware or games. Verify the download with \`SHA256SUMS\`.
+          Eden Deck never downloads keys, firmware or games. Downloads are listed in \`SHA256SUMS\`, and the installer checks them.
           NOTES
           gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Eden Deck $VERSION" --notes-file notes.md
 
