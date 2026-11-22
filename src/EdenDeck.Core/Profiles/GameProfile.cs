@@ -29,6 +29,9 @@ public sealed record GameProfile
 
     public string? ControllerProfile { get; init; }
 
+    /// <summary>Let Eden load this game's update and DLC files from the library (no NAND install).</summary>
+    public bool LoadAddOns { get; init; } = true;
+
     public DateTimeOffset? LastPlayed { get; init; }
 }
 

@@ -52,39 +52,61 @@ public sealed class ControllerAndAddOnTests : IDisposable
         Assert.Equal("[Controls]\n", File.ReadAllText(cfg));
     }
 
+    private LibraryGame Game(string lib, string other)
+    {
+        GameEntry E(string path, ContentKind kind, string? ver = null) =>
+            new() { BackendId = "eden", TitleId = "0100000000010000", Title = "G", Path = path, Kind = kind, Version = ver };
+        foreach (var f in new[] { Path.Combine(lib, "g.nsp"), Path.Combine(lib, "u.nsp"), Path.Combine(other, "d.nsp") })
+        {
+            File.WriteAllText(f, "x");
+        }
+        return new LibraryGame(E(Path.Combine(lib, "g.nsp"), ContentKind.Base),
+            [E(Path.Combine(lib, "u.nsp"), ContentKind.Update, "196608")],
+            [E(Path.Combine(other, "d.nsp"), ContentKind.Dlc)]);
+    }
+
     [Fact]
-    public void ExternalContentDirsAreAppendOnly()
+    public void LaunchStagesOnlyThisGamesAddOnsAndDropsLibraryFolders()
     {
         var cfg = Path.Combine(_dir, "qt-config.ini");
         var mine = Directory.CreateDirectory(Path.Combine(_dir, "mine")).FullName;
         var lib = Directory.CreateDirectory(Path.Combine(_dir, "lib")).FullName;
-        File.WriteAllText(cfg, $"[UI]\nPaths\\external_content_dirs\\1\\path={mine}\nPaths\\external_content_dirs\\size=1\n");
+        var other = Directory.CreateDirectory(Path.Combine(_dir, "other")).FullName;
+        var staging = Path.Combine(_dir, "staging");
+        var game = Game(lib, other);
+        // 0.2.3 appended the library folder after the user's own entry.
+        File.WriteAllText(cfg, $"[UI]\nPaths\\external_content_dirs\\1\\path={mine}\nPaths\\external_content_dirs\\2\\path={lib}\nPaths\\external_content_dirs\\size=2\n");
 
-        Assert.True(EdenAddOns.EnsureExternalContentDirs(cfg, [lib, mine, Path.Combine(_dir, "missing")]));
-        Assert.Equal([mine, lib], EdenAddOns.ExternalContentDirs(QtIni.Load(cfg)));
-        Assert.False(EdenAddOns.EnsureExternalContentDirs(cfg, [lib + "/"]));
+        Assert.True(EdenAddOns.PrepareLaunch(cfg, staging, game, enabled: true, [lib]));
+        Assert.Equal([mine, staging], EdenAddOns.ExternalContentDirs(QtIni.Load(cfg)));
+        Assert.Equal(["d.nsp", "u.nsp"], Directory.GetFiles(staging).Select(Path.GetFileName).Order());
+        Assert.Equal(Path.Combine(lib, "u.nsp"), new FileInfo(Path.Combine(staging, "u.nsp")).LinkTarget);
+
+        // Turned off for the game: staging is emptied, config already right.
+        Assert.False(EdenAddOns.PrepareLaunch(cfg, staging, game, enabled: false, [lib]));
+        Assert.Empty(Directory.GetFiles(staging));
+        Assert.True(File.Exists(Path.Combine(lib, "u.nsp")));  // the real file is untouched
     }
 
     [Fact]
-    public void AddOnStatusReflectsFoldersAndDisabledList()
+    public void AddOnStatusReflectsToggleAndDisabledList()
     {
         var cfg = Path.Combine(_dir, "qt-config.ini");
-        var lib = Directory.CreateDirectory(Path.Combine(_dir, "lib", "Game")).FullName;
+        var lib = Directory.CreateDirectory(Path.Combine(_dir, "lib")).FullName;
         var other = Directory.CreateDirectory(Path.Combine(_dir, "other")).FullName;
-        GameEntry E(string path, ContentKind kind, string? ver = null) =>
-            new() { BackendId = "eden", TitleId = "0100000000010000", Title = "G", Path = path, Kind = kind, Version = ver };
-        var game = new LibraryGame(E(Path.Combine(lib, "g.nsp"), ContentKind.Base),
-            [E(Path.Combine(lib, "u.nsp"), ContentKind.Update, "196608")],
-            [E(Path.Combine(other, "d.nsp"), ContentKind.Dlc)]);
+        var game = Game(lib, other);
+        var staging = Path.Combine(_dir, "staging");
 
         File.WriteAllText(cfg, "[UI]\n");
-        var s = EdenAddOns.Status(cfg, game, [Path.Combine(_dir, "lib")]);
+        var s = EdenAddOns.Status(cfg, game, enabled: true, staging);
         Assert.Equal(("Update 3 (v196608)", AddOnState.Active), (s[0].Label, s[0].State));
-        Assert.Equal(("1 DLC", AddOnState.NotLoaded), (s[1].Label, s[1].State));
+        Assert.Equal(("1 DLC", AddOnState.Active), (s[1].Label, s[1].State));
+        s = EdenAddOns.Status(cfg, game, enabled: false, staging);
+        Assert.Equal(AddOnState.NotLoaded, s[0].State);
 
         var tid = DisabledAddOns.ParseTitleId("0100000000010000");
         File.WriteAllText(cfg, $"[DisabledAddOns]\n1\\title_id={tid}\n1\\disabled\\1\\d=Update@196608\n1\\disabled\\size=1\nsize=1\n");
-        s = EdenAddOns.Status(cfg, game, [Path.Combine(_dir, "lib"), other]);
+        s = EdenAddOns.Status(cfg, game, enabled: true, staging);
         Assert.Equal(AddOnState.Disabled, s[0].State);
         Assert.Equal(AddOnState.Active, s[1].State);
     }
