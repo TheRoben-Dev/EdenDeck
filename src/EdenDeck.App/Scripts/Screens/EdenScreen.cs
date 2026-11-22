@@ -8,24 +8,72 @@ using Godot;
 namespace EdenDeck.App.Screens;
 
 /// <summary>
-/// Eden manager: install/update from Eden's official feed, rollback, and import of the user's
-/// own keys and firmware (default and per-game sets). Nothing here downloads keys or firmware.
+/// Eden manager in two panes (see <see cref="TwoPaneScreen"/>): install/update from Eden's official
+/// feed and rollback, import of the user's own keys and firmware (default and per-game sets), frame
+/// generation status, and paths. Nothing here downloads keys or firmware.
 /// </summary>
-public partial class EdenScreen : Screen
+public partial class EdenScreen : TwoPaneScreen
 {
-    private Control? _first;
+    protected override string Heading => "Eden";
+
+    protected override IReadOnlyList<(string Name, string Summary)> Categories
+    {
+        get
+        {
+            var cur = Host.Eden.Install.Current;
+            var sets = Host.Eden.KeySets.List().Count;
+            return
+            [
+                ("Emulator", cur != null ? $"Eden {Cap(cur.Channel)} {cur.Version}: install, update, roll back or open Eden." : "Eden isn't installed yet: install it here."),
+                ("Keys and firmware", "Your own prod.keys and firmware, used by every game."),
+                ("Key sets", sets == 0 ? "Older or newer keys for specific games." : $"{sets} key set{(sets == 1 ? "" : "s")} for specific games."),
+                ("Frame generation", "Lossless Scaling frame generation (lsfg-vk): what's found and what's missing."),
+                ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
+            ];
+        }
+    }
+
+    /// <summary>A dot on categories that need attention.</summary>
+    protected override string? Badge(string name) => name switch
+    {
+        "Emulator" when Host.Eden.Install.Current == null || App.EdenUpdate != null => "•",
+        "Keys and firmware" when Host.Eden.SystemFilesImpl.Status().Any(s => !s.Present && s.Kind != "title.keys") => "•",
+        "Frame generation" when Host.Eden.FindLsfgVk().Kind != LsfgVk.Kind.V2 || !Host.Eden.LosslessDllAvailable() => "•",
+        _ => null,
+    };
 
     protected override void Build()
     {
-        var col = Column(8);
-        AddChild(Scroller(col));
-        var items = new List<Control>();
-        void Add(Control c)
-        {
-            col.AddChild(c);
-            items.Add(c);
-        }
+        App.CheckForEdenUpdate();
+        base.Build();
+    }
 
+    protected override void BuildCategory(string name, VBoxContainer col, Action<Control> Add)
+    {
+        switch (name)
+        {
+            case "Emulator":
+                BuildEmulator(col, Add);
+                break;
+            case "Keys and firmware":
+                BuildKeys(col, Add);
+                break;
+            case "Key sets":
+                BuildKeySets(col, Add);
+                break;
+            case "Frame generation":
+                BuildFrameGen(col, Add);
+                break;
+            case "Advanced":
+                BuildAdvanced(col, Add);
+                break;
+        }
+    }
+
+    private Label Note(string text, Color? color = null) => UiTheme.Label(text, UiTheme.SmallSize + 1, color ?? UiTheme.Dim, wrap: true);
+
+    private void BuildEmulator(VBoxContainer col, Action<Control> Add)
+    {
         var install = Host.Eden.Install;
         if (App.EdenUpdate is { } upd && install.Current is { } now)
         {
@@ -34,35 +82,28 @@ public partial class EdenScreen : Screen
             banner.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.PanelHi, 2, 12, UiTheme.Warn));
             var inner = Column(8);
             inner.AddChild(UiTheme.Label($"Eden {Cap(upd.Channel)} {upd.Version} is available", UiTheme.FontSize + 2, UiTheme.Warn));
-            inner.AddChild(UiTheme.Label($"You have {now.Version}. The update is checksum-verified and your current version is kept for rollback.",
-                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-            var go = new ActionButton($"Update to {upd.Version}", () => Install(upd), "Downloads from Eden's official site.");
-            inner.AddChild(go);
-            items.Add(go);
+            inner.AddChild(Note($"You have {now.Version}. The update is checksum-verified and your current version is kept for rollback."));
             banner.AddChild(inner);
             col.AddChild(banner);
             Anim.FadeIn(banner);
+            Add(new ActionButton($"Update to {upd.Version}", () => Install(upd), "Downloads from Eden's official site."));
         }
-        App.CheckForEdenUpdate();
-        col.AddChild(Section("Emulator"));
         if (install.Current is { } cur)
         {
             col.AddChild(UiTheme.Label($"Eden {Cap(cur.Channel)} {cur.Version}", 24));
-            col.AddChild(UiTheme.Label((cur.ManagedByEdenDeck ? "Installed by Eden Deck · " : "Your own copy · ") + cur.ExecutablePath,
-                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            col.AddChild(Note((cur.ManagedByEdenDeck ? "Installed by Eden Deck · " : "Your own copy · ") + cur.ExecutablePath));
         }
         else
         {
             col.AddChild(UiTheme.Label("Eden isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install Stable to get started. Nightly has the newest features."));
         }
-        col.AddChild(UiTheme.Label($"Settings format: {Host.Eden.Schema.Label}", UiTheme.SmallSize + 1, UiTheme.Dim));
-
         foreach (var channel in install.Channels)
         {
             var ch = channel;
             Add(new ActionButton($"Install or update {Cap(ch)}", () => CheckAndInstall(ch),
                 ch == "nightly"
-                    ? "Newest features (frame generation, SGSR). Downloaded from Eden's official site and checksum-verified."
+                    ? "Newest features. Downloaded from Eden's official site and checksum-verified."
                     : "Recommended. Downloaded from Eden's official site and checksum-verified."));
         }
         if (install.Previous is { } prev)
@@ -74,34 +115,35 @@ public partial class EdenScreen : Screen
                 Rebuild();
             }), "Switches back to the version you used before the last update."));
         }
-        Add(new ActionButton("Use an Eden AppImage from this device", PickExternal,
-            "Point Eden Deck at an Eden AppImage you already have."));
         if (install.Current != null)
         {
             Add(new ActionButton("Open Eden", App.OpenEden,
-                "Opens Eden's own window for anything Eden Deck doesn't cover yet, like controller mapping. Close it to come back."));
+                "Opens Eden's own window for anything Eden Deck doesn't cover yet. Close it to come back."));
         }
+    }
 
-        col.AddChild(Section("Your keys and firmware"));
+    private void BuildKeys(VBoxContainer col, Action<Control> Add)
+    {
         foreach (var s in Host.Eden.SystemFilesImpl.Status())
         {
-            var row = UiTheme.Label($"{(s.Present ? "✓" : s.Kind == "title.keys" ? "·" : "✗")}  {s.Kind}   {s.Detail}", UiTheme.SmallSize + 2, s.Present ? UiTheme.Good : s.Kind == "title.keys" ? UiTheme.Dim : UiTheme.Warn, wrap: true);
-            col.AddChild(row);
+            col.AddChild(UiTheme.Label($"{(s.Present ? "✓" : s.Kind == "title.keys" ? "·" : "✗")}  {s.Kind}   {s.Detail}", UiTheme.SmallSize + 2,
+                s.Present ? UiTheme.Good : s.Kind == "title.keys" ? UiTheme.Dim : UiTheme.Warn, wrap: true));
         }
         var defaultMax = EdenBackend.MaxMasterKeyOf(Path.Combine(Host.Eden.Paths.KeysDir, "prod.keys"));
         if (defaultMax >= 0)
         {
-            col.AddChild(UiTheme.Label($"Your keys cover games up to firmware {KeyRequirements.FirmwareFor(defaultMax)} (master key {defaultMax:x2}).",
-                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            col.AddChild(Note($"Your keys cover games up to firmware {KeyRequirements.FirmwareFor(defaultMax)} (master key {defaultMax:x2})."));
         }
         Add(new ActionButton("Import prod.keys", ImportKeys,
             "Copies your own prod.keys (and title.keys from the same folder, if present) into Eden."));
         Add(new ActionButton("Import firmware folder", ImportFirmware,
             "Copies your own firmware .nca files into Eden. The current firmware is backed up first."));
+        col.AddChild(Note("Eden Deck never downloads keys, firmware or games. Use your own dumps."));
+    }
 
-        col.AddChild(Section("Key sets for specific games"));
-        col.AddChild(UiTheme.Label("Some games need older or newer keys. Add a set here, then choose it on the game's page.",
-            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    private void BuildKeySets(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Note("Some games need older or newer keys. Add a set here, then choose it on the game's page. It's swapped in only while that game runs."));
         foreach (var k in Host.Eden.KeySets.List())
         {
             var set = k;
@@ -118,10 +160,53 @@ public partial class EdenScreen : Screen
                 set.Directory));
         }
         Add(new ActionButton("Add key set", AddKeySet, "Pick a prod.keys file. The folder name becomes the set's name."));
+    }
 
-        Focus.Column(items);
-        Anim.Stagger(items, 0.015);
-        _first = items.FirstOrDefault();
+    private void BuildFrameGen(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Note("Eden's own frame generation only exists on Android, so Eden Deck uses lsfg-vk with your copy of Lossless Scaling. " +
+                          "It doubles 30 fps games to 60 and never goes above 60. Turn it on per game on the game's page."));
+        var lsfg = Host.Eden.FindLsfgVk();
+        var (lsfgText, lsfgColor) = lsfg.Kind switch
+        {
+            LsfgVk.Kind.V2 => ($"✓  lsfg-vk   {lsfg.Manifest}", UiTheme.Good),
+            LsfgVk.Kind.Legacy => ($"✗  lsfg-vk   version 1.x found ({lsfg.Manifest}); Eden Deck needs 2.x", UiTheme.Warn),
+            _ => ("✗  lsfg-vk   not installed", UiTheme.Warn),
+        };
+        col.AddChild(UiTheme.Label(lsfgText, UiTheme.SmallSize + 2, lsfgColor, wrap: true));
+        var dll = Host.Eden.LosslessDllPath();
+        col.AddChild(UiTheme.Label(dll != null ? $"✓  Lossless.dll   {dll}" : "✗  Lossless.dll   not found in your Steam libraries",
+            UiTheme.SmallSize + 2, dll != null ? UiTheme.Good : UiTheme.Warn, wrap: true));
+        if (dll == null)
+        {
+            col.AddChild(Note("Install Lossless Scaling from your Steam library (it's a paid app). SD card libraries are found too."));
+        }
+        if (lsfg.Kind != LsfgVk.Kind.V2)
+        {
+            col.AddChild(Note("lsfg-vk 2.x isn't installed yet. Bundling it inside Eden Deck is coming in a later update."));
+        }
+        if (lsfg.Kind == LsfgVk.Kind.V2 && dll != null)
+        {
+            col.AddChild(Note("Everything is in place. Your own lsfg-vk settings aren't changed; Eden Deck only turns it on for Eden games that need it.", UiTheme.Good));
+        }
+        Add(new ActionButton("Check again", () =>
+        {
+            Rebuild();
+            App.Toast("Checked lsfg-vk and Lossless.dll.");
+        }, "Looks for lsfg-vk and Lossless.dll again, after installing either."));
+    }
+
+    private void BuildAdvanced(VBoxContainer col, Action<Control> Add)
+    {
+        Add(new ActionButton("Use an Eden AppImage from this device", PickExternal,
+            "Point Eden Deck at an Eden AppImage you already have."));
+        col.AddChild(Section("Details"));
+        col.AddChild(Note($"Settings format: {Host.Eden.Schema.Label}"));
+        var p = Host.Eden.Paths;
+        col.AddChild(Note($"Data: {p.DataDir}"));
+        col.AddChild(Note($"Config: {p.ConfigDir}"));
+        col.AddChild(Note($"Keys: {p.KeysDir}"));
+        col.AddChild(Note($"Firmware: {p.FirmwareDir}"));
     }
 
     private static string Cap(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
@@ -199,5 +284,4 @@ public partial class EdenScreen : Screen
         return File.Exists(t) ? t : null;
     }
 
-    public override void FocusDefault() => _first?.GrabFocus();
 }
