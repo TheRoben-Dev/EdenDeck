@@ -75,7 +75,23 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
                     }
                     : new Dictionary<string, string?> { ["frame_gen"] = "false" };
                 prepare.Add(() => _backend.EdenSettings.WritePerGameRaw(game.TitleId, values));
-                notes.Add($"frame gen: {decision.Reason}");
+                if (decision.Enabled)
+                {
+                    // Eden Nightly only generates frames when it finds the user's own Lossless.dll.
+                    // Copy it before the key-set farm links data/ entries (prepare runs in order).
+                    var dll = _backend.EnsureLosslessDll();
+                    notes.Add(dll.Installed
+                        ? $"frame gen: {decision.Reason} (Lossless.dll ready)"
+                        : $"warning: frame gen ({decision.Reason}) won't run. {dll.Message}");
+                    if (!dll.Installed)
+                    {
+                        notes.Add("frame gen check: with the Steam performance overlay on, the FPS reads 60 when frame gen runs");
+                    }
+                }
+                else
+                {
+                    notes.Add($"frame gen: {decision.Reason}");
+                }
             }
         }
         else if (!string.IsNullOrEmpty(game.TitleId) && _backend.Schema.Find("frame_gen") != null &&
