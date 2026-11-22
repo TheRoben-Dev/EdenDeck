@@ -1,3 +1,4 @@
+using EdenDeck.Core.Launch;
 using EdenDeck.Backends.Eden.Config;
 using EdenDeck.Host.Updates;
 using EdenDeck.App.Ui;
@@ -46,7 +47,21 @@ public partial class SettingsScreen : TwoPaneScreen
                 BuildEdenOptions(col, Add, o => o.Group == "Graphics" && !AdvancedOptions.Contains(o.Id));
                 break;
             case "System":
-                BuildEdenOptions(col, Add, o => o.Group == "System" && !AdvancedOptions.Contains(o.Id));
+                Add(Toggle.Create("Console mode follows the screen", Host.Settings.ConsoleModeFollowsScreen, on =>
+                    {
+                        Host.SaveSettings(Host.Settings with { ConsoleModeFollowsScreen = on });
+                        Rebuild();
+                    },
+                    "Docked when a TV or monitor is connected, handheld on the built-in screen. Picked each time a game starts; a console mode set on a game's card still wins.",
+                    ScreenDetect.External() switch
+                    {
+                        true => "A TV or monitor is connected now: games start docked.",
+                        false => "Built-in screen only right now: games start handheld.",
+                        null => "This device doesn't say which screen is in use, so Eden's setting below is used.",
+                    },
+                    "Eden's console mode below is used for every game."));
+                BuildEdenOptions(col, Add, o => o.Group == "System" && !AdvancedOptions.Contains(o.Id)
+                    && !(o.Id == "use_docked_mode" && Host.Settings.ConsoleModeFollowsScreen && ScreenDetect.External() != null));
                 break;
             case "Library":
                 BuildLibrary(col, Add);

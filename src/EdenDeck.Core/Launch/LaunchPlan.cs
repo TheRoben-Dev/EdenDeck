@@ -15,6 +15,12 @@ public sealed record LaunchOptions
 
     /// <summary>False when the app's Animations setting is off: the in-game CRT filter holds still too.</summary>
     public bool CrtMotion { get; init; } = true;
+
+    /// <summary>
+    /// Console mode for this launch only: true docked (a TV is connected), false handheld, null to
+    /// leave Eden's own setting. A per-game console mode set by hand still wins.
+    /// </summary>
+    public bool? Docked { get; init; }
 }
 
 /// <summary>

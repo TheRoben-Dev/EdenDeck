@@ -123,6 +123,29 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             }
         }
 
+        // Console mode follows the screen: docked on a TV, handheld on the built-in panel. Written to
+        // Eden's global setting for this launch and put back afterwards (Eden saves its config on
+        // exit, so the restore runs after that).
+        if (options.Docked is { } docked && _backend.Schema.Find("use_docked_mode") != null)
+        {
+            var want = docked ? "Docked" : "Handheld";
+            var perGame = string.IsNullOrEmpty(game.TitleId) ? null : _backend.EdenSettings.ReadPerGame(game.TitleId).GetValueOrDefault("use_docked_mode");
+            if (perGame != null)
+            {
+                notes.Add($"console mode: {perGame} (set for this game)");
+            }
+            else
+            {
+                var before = _backend.EdenSettings.ReadGlobal().GetValueOrDefault("use_docked_mode");
+                notes.Add($"console mode: {want} ({(docked ? "TV connected" : "built-in screen")})");
+                if ((before ?? "Docked") != want)
+                {
+                    prepare.Add(() => _backend.EdenSettings.WriteGlobal(new Dictionary<string, string?> { ["use_docked_mode"] = want }));
+                    cleanup.Add(() => _backend.EdenSettings.WriteGlobal(new Dictionary<string, string?> { ["use_docked_mode"] = before }));
+                }
+            }
+        }
+
         if (options.LayerDirectory is { } layerDir && File.Exists(Path.Combine(layerDir, "VkLayer_SCANLINE_overlay.json")))
         {
             layers.Add("VK_LAYER_SCANLINE_overlay");

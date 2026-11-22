@@ -48,6 +48,9 @@ public sealed record AppSettings
     /// <summary>Zip a game's saves before each play (the last few are kept per game).</summary>
     public bool BackupSavesOnLaunch { get; init; } = true;
 
+    /// <summary>Docked console mode when a TV is connected, handheld on the built-in screen (per launch).</summary>
+    public bool ConsoleModeFollowsScreen { get; init; } = true;
+
     /// <summary>Check GitHub Releases for a new Scanline version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
 
@@ -164,6 +167,7 @@ public sealed class AppHost
         LayerKillSwitch = Settings.LayerKillSwitch,
         Fullscreen = true,
         CrtMotion = !Settings.ReduceMotion,
+        Docked = Settings.ConsoleModeFollowsScreen ? ScreenDetect.External() : null,
     };
 
     public LaunchPlan PlanLaunch(LibraryGame game)
