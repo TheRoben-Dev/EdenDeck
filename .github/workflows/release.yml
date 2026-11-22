@@ -106,7 +106,7 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         run: |
           dotnet publish src/EdenDeck.Cli -c Release -r linux-x64 --self-contained \
-            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o build/cli
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o build/cli
 
       - name: Package
         if: steps.version.outputs.skip != 'true'

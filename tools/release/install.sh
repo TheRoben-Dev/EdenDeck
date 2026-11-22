@@ -18,20 +18,33 @@ BIN="$HOME/.local/bin"
 
 [ "$(uname -m)" = "x86_64" ] || { echo "Eden Deck needs an x86_64 system." >&2; exit 1; }
 
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
-echo "Downloading Eden Deck…"
-curl -fL --progress-bar -o "$TMP/$ASSET" "$BASE/$ASSET"
-curl -fsSL -o "$TMP/SHA256SUMS" "$BASE/SHA256SUMS"
-(cd "$TMP" && grep " $ASSET\$" SHA256SUMS | sha256sum -c --quiet -) || { echo "Checksum mismatch, not installing." >&2; exit 1; }
+# Stage next to the install folder, not in /tmp: /tmp is a small RAM disk on Bazzite and
+# SteamOS, and staging on the same filesystem makes the final swap a cheap rename.
+PARENT=$(dirname "$DEST")
+mkdir -p "$PARENT"
+NEED_MB=450   # download + extracted copy + the previous install during the swap
+AVAIL_MB=$(df -Pm "$PARENT" | awk 'NR==2 {print $4}')
+if [ -n "$AVAIL_MB" ] && [ "$AVAIL_MB" -lt "$NEED_MB" ]; then
+  echo "Not enough free space in $PARENT: ${AVAIL_MB} MB free, about ${NEED_MB} MB needed." >&2
+  echo "Free up some space, or install elsewhere: EDENDECK_INSTALL_DIR=/path/to/EdenDeck" >&2
+  exit 1
+fi
+STAGE=$(mktemp -d "$PARENT/.edendeck-install.XXXXXX")
+trap 'rm -rf "$STAGE"' EXIT
 
-mkdir -p "$TMP/x"
-tar -xzf "$TMP/$ASSET" -C "$TMP/x"
-mkdir -p "$(dirname "$DEST")"
-rm -rf "$DEST.new"
-mv "$TMP/x/EdenDeck" "$DEST.new"
-rm -rf "$DEST"
-mv "$DEST.new" "$DEST"
+fail() { echo "$1" >&2; exit 1; }
+echo "Downloading Eden Deck…"
+curl -fL --progress-bar -o "$STAGE/$ASSET" "$BASE/$ASSET" || fail "Download failed."
+curl -fsSL -o "$STAGE/SHA256SUMS" "$BASE/SHA256SUMS" || fail "Download failed."
+(cd "$STAGE" && grep " $ASSET\$" SHA256SUMS | sha256sum -c --quiet -) || fail "Checksum mismatch, not installing."
+
+mkdir -p "$STAGE/x"
+tar -xzf "$STAGE/$ASSET" -C "$STAGE/x" || fail "Extracting failed (is the disk full?). Nothing was changed."
+rm -f "$STAGE/$ASSET"
+if [ -d "$DEST" ]; then
+  mv "$DEST" "$STAGE/old"
+fi
+mv "$STAGE/x/EdenDeck" "$DEST"
 
 mkdir -p "$APPS" "$BIN"
 ln -sf "$DEST/edendeck" "$BIN/edendeck"
