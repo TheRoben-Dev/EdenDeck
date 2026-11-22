@@ -76,6 +76,13 @@ public partial class SmokeTest : Node
                 Press("ui_down");
             }
         }, expect: "Library");
+        // Inside a pane, left stays in the pane; only B goes back to the categories.
+        Step("library-pane-left", () =>
+        {
+            Press(Pad.Accept);
+            Press("ui_left");
+        }, expect: "Games/Switch");
+        Step("library-pane-back", () => Press(Pad.Back), expect: "Library");
         // Finger drag over the options pane scrolls it and must not press the row it started on.
         Step("touch-drag-scroll", () =>
         {

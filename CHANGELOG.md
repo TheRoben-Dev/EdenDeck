@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.3.3
+- Settings and Eden: when you enter a category, the category list slides aside and dims so you can see where you are. Left no longer jumps back out; press B.
+
 ## 0.3.2
 - The Eden tab is reorganised into two panes like Settings: Emulator, Keys and firmware, Key sets, Frame generation and Advanced. A dot marks anything that needs attention.
 - New Frame generation page: shows whether lsfg-vk and your Lossless.dll are found, and what's missing.
