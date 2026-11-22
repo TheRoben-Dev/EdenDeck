@@ -37,7 +37,7 @@ public static class SteamArt
 
     /// <summary>Renders the set for <paramref name="title"/> into <paramref name="dir"/> (capsule.png, wide.png, hero.png, logo.png, icon.png).</summary>
     /// <summary>Bump when the look changes: sets rendered by an older version are drawn again.</summary>
-    public const int Version = 2;
+    public const int Version = 3;
 
     public static async Task Render(Node host, string title, string dir, string? iconPath = null, int settleFrames = 12)
     {

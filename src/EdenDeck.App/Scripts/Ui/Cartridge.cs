@@ -108,11 +108,10 @@ public partial class Cartridge : Control
 
         if (_icon != null)
         {
-            // Square icon centred on the label, framed by the label colour.
-            var side = Mathf.Min(labelRect.Size.X, labelRect.Size.Y) - 6 * s;
-            var at = labelRect.Position + (labelRect.Size - new Vector2(side, side)) / 2;
-            DrawRect(new Rect2(at - Vector2.One * 2 * s, new Vector2(side, side) + Vector2.One * 4 * s), tile.Darkened(0.5f));
-            DrawTextureRect(_icon, new Rect2(at, new Vector2(side, side)), false);
+            // The square icon fills the whole label (cropped to its shape, centred), corners rounded like the label.
+            var pts = RoundedRect(labelRect, 7 * s);
+            var uvs = CoverUvs(pts, labelRect);
+            DrawPolygon(pts, new[] { Colors.White }, uvs, _icon);
         }
         var monoSize = (int)(labelRect.Size.Y * 0.42f);
         var ms = font.GetStringSize(_monogram, HorizontalAlignment.Left, -1, monoSize);
@@ -148,6 +147,33 @@ public partial class Cartridge : Control
             DrawString(font, new Vector2(10 * s, textTop + lines.Count * lineH + font.GetAscent(chipSize) + 1), _chips,
                 HorizontalAlignment.Left, textW, chipSize, UiTheme.AccentText with { A = 0.85f });
         }
+    }
+
+    private static Vector2[] RoundedRect(Rect2 r, float radius)
+    {
+        var pts = new List<Vector2>();
+        void Arc(Vector2 c, float from)
+        {
+            for (var i = 0; i <= 5; i++)
+            {
+                var a = from + i * Mathf.Pi / 2 / 5;
+                pts.Add(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius);
+            }
+        }
+        Arc(r.Position + new Vector2(radius, radius), Mathf.Pi);
+        Arc(new Vector2(r.End.X - radius, r.Position.Y + radius), -Mathf.Pi / 2);
+        Arc(r.End - new Vector2(radius, radius), 0);
+        Arc(new Vector2(r.Position.X + radius, r.End.Y - radius), Mathf.Pi / 2);
+        return pts.ToArray();
+    }
+
+    /// <summary>UVs that map a square texture onto <paramref name="r"/> cover-style: fills it, cropping the overflow evenly.</summary>
+    internal static Vector2[] CoverUvs(Vector2[] pts, Rect2 r)
+    {
+        var aspect = r.Size.X / r.Size.Y;
+        var span = aspect >= 1 ? new Vector2(1, 1 / aspect) : new Vector2(aspect, 1);
+        var start = (Vector2.One - span) / 2;
+        return pts.Select(p => start + (p - r.Position) / r.Size * span).ToArray();
     }
 
     /// <summary>Rounded rectangle with the top-left corner cut diagonally.</summary>
