@@ -31,6 +31,7 @@ public partial class CartStage : PolyStage
     private readonly Control? _clip;
     private readonly bool _single;
     private readonly SubViewport _atlas;
+    private readonly LabelArt _labels;
 
     private static ArrayMesh? _shellMesh;
 
@@ -75,7 +76,8 @@ public partial class CartStage : PolyStage
             RenderTargetUpdateMode = SubViewport.UpdateMode.Once,
             Disable3D = true,
         };
-        _atlas.AddChild(new LabelArt(titles, labelFont, icon));
+        _labels = new LabelArt(titles, labelFont, icon);
+        _atlas.AddChild(_labels);
         AddChild(_atlas);
         var atlasTex = _atlas.GetTexture();
 
@@ -106,6 +108,17 @@ public partial class CartStage : PolyStage
             Part(body, label, labelMat, new Vector3(0, 0.08f, 0.0815f));
             _carts.Add(new Cart { Tile = null, Root = root, Phase = i * 0.73f });
         }
+    }
+
+    /// <summary>Puts a game's own icon on cart <paramref name="index"/>'s label (redraws the label atlas once).</summary>
+    public void SetIcon(int index, Image? icon)
+    {
+        if (index < 0 || index >= _carts.Count || icon == null || icon.IsEmpty())
+        {
+            return;
+        }
+        _labels.SetIcon(index, icon);
+        _atlas.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
     }
 
     /// <summary>Cart outline: 0.8 x 1.0 with the top-left corner cut (Scanline's cartridge shape), extruded.</summary>
@@ -242,21 +255,31 @@ public partial class CartStage : PolyStage
     {
         private readonly List<string> _titles;
         private readonly Font? _font;
-        private readonly ImageTexture? _icon;
+        private readonly ImageTexture?[] _icons;
 
         public LabelArt(List<string> titles, Font? font, Image? icon = null)
         {
             _titles = titles;
             _font = font;
-            if (icon != null && !icon.IsEmpty())
+            _icons = new ImageTexture?[titles.Count];
+            // 32x32, drawn with nearest filtering: chunky pixels that suit the era.
+            TextureFilter = TextureFilterEnum.Nearest;
+            if (icon != null && !icon.IsEmpty() && titles.Count > 0)
             {
-                // 32x32, drawn with nearest filtering: chunky pixels that suit the era.
-                var small = (Image)icon.Duplicate();
-                small.Resize(32, 32, Image.Interpolation.Bilinear);
-                _icon = ImageTexture.CreateFromImage(small);
-                TextureFilter = TextureFilterEnum.Nearest;
+                SetIcon(0, icon);
             }
             Size = new Vector2(AtlasCols * CellW, Math.Max(1, (titles.Count + AtlasCols - 1) / AtlasCols) * CellH);
+        }
+
+        public void SetIcon(int index, Image icon)
+        {
+            var small = (Image)icon.Duplicate();
+            if (small.GetWidth() != 32 || small.GetHeight() != 32)
+            {
+                small.Resize(32, 32, Image.Interpolation.Bilinear);
+            }
+            _icons[index] = ImageTexture.CreateFromImage(small);
+            QueueRedraw();
         }
 
         public override void _Draw()
@@ -265,7 +288,7 @@ public partial class CartStage : PolyStage
             for (var i = 0; i < _titles.Count; i++)
             {
                 var o = new Vector2(i % AtlasCols * CellW, i / AtlasCols * CellH);
-                Paint(o, _titles[i], font);
+                Paint(o, _titles[i], font, _icons[i]);
             }
         }
 
@@ -279,14 +302,14 @@ public partial class CartStage : PolyStage
             return h;
         }
 
-        private void Paint(Vector2 o, string title, Font font)
+        private void Paint(Vector2 o, string title, Font font, ImageTexture? icon)
         {
-            if (_icon != null)
+            if (icon != null)
             {
                 // The label quad is wider than the cell is tall, so a square on it covers 58x80 cell pixels.
                 DrawRect(new Rect2(o, new Vector2(CellW, CellH)), Colors.Black);
                 const float iconW = CellW * 0.56f / 0.62f;  // label quad is 0.62 x 0.56 over a 64 x 80 cell
-                DrawTextureRect(_icon, new Rect2(o.X + (CellW - iconW) / 2, o.Y, iconW, CellH), false);
+                DrawTextureRect(icon, new Rect2(o.X + (CellW - iconW) / 2, o.Y, iconW, CellH), false);
                 return;
             }
             var h = Hash(title);

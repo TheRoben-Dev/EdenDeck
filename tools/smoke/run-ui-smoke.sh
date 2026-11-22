@@ -36,6 +36,10 @@ CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
 dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
 dotnet "$CLI" scan
+# One game with an icon already read (normally from the game's control data with the player's
+# keys): its cartridge shows it pixelated on the label.
+mkdir -p "$XDG_DATA_HOME/scanline/icons"
+cp "$ROOT/tools/smoke/icon.jpg" "$XDG_DATA_HOME/scanline/icons/0100000000010000.jpg"
 if [ -n "${SMOKE_THEME:-}" ]; then  # e.g. SMOKE_THEME=nightgrid for theme screenshots
   python3 - "$HOME/.config/scanline/settings.json" "$SMOKE_THEME" <<'PY'
 import json, sys
