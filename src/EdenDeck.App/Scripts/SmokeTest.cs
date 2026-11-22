@@ -72,6 +72,8 @@ public partial class SmokeTest : Node
             Press("ui_right");
             Press("ui_left");
         }, expect: "CRT effect");
+        // Add to Steam: the button is there (CI has no Steam, so pressing it only explains why).
+        Step("game-steam", () => FindFocusable(GetTree().Root, "Puts this game in your Steam library")?.GrabFocus(), expect: "Add to Steam");
         Step("back-to-library", () => Press(Pad.Back));
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
@@ -125,6 +127,7 @@ public partial class SmokeTest : Node
         });
         Step("settings-back-to-category", () => Press(Pad.Back), expect: "Graphics");
         // Themes switch in place: still on Settings, focus stays on the Theme row.
+        Step("steam-category", () => FindFocusable(GetTree().Root, "Scanline and your games in your Steam library")?.GrabFocus(), expect: "Steam");
         Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         Step("theme-focus", () =>
         {

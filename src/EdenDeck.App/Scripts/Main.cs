@@ -210,6 +210,24 @@ public partial class Main : Control
                 CheckForAppUpdate(silent: true);
             }
             CheckForEdenUpdate();
+            ApplySteamShortcuts();
+        }
+    }
+
+    /// <summary>Writes any Add to Steam shortcuts still waiting, when Steam is closed (never fatal).</summary>
+    private void ApplySteamShortcuts()
+    {
+        if (Host is not { } host || !host.Steam.Available || host.Steam.SteamRunning || host.Steam.Pending().Count == 0)
+        {
+            return;
+        }
+        try
+        {
+            host.Steam.Apply();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            AppLog.Warn($"steam: couldn't write shortcuts at startup: {e.Message}");
         }
     }
 
@@ -861,6 +879,44 @@ public partial class Main : Control
             or KeyNotFoundException or TaskCanceledException;
 
     public void Confirm(string message, string yes, Action onYes) => Push(new ConfirmPage(message, yes, onYes));
+
+    /// <summary>
+    /// Adds (or refreshes) a Steam shortcut. With Steam closed it's written right away; with Steam
+    /// running (always, in Game Mode) Steam has to restart to pick it up, so the player chooses
+    /// between restarting now and collecting a few more first.
+    /// </summary>
+    public void AddToSteam(string key, EdenDeck.Core.Steam.SteamShortcut shortcut)
+    {
+        var steam = Host!.Steam;
+        if (steam.Unavailable is { } why)
+        {
+            Error(why);
+            return;
+        }
+        var written = false;
+        if (!Guard(() => written = steam.Add(key, shortcut)))
+        {
+            return;
+        }
+        if (written)
+        {
+            Toast($"Added {shortcut.AppName} to Steam.");
+            return;
+        }
+        OfferSteamRestart($"{shortcut.AppName} is ready for Steam. Steam picks up new shortcuts when it restarts.");
+    }
+
+    /// <summary>Asks to restart Steam now so pending shortcuts get written.</summary>
+    public void OfferSteamRestart(string message)
+    {
+        var pending = Host!.Steam.Pending().Count;
+        Push(new ChoicePage(
+            message + (GameMode ? " Scanline closes with it and Steam comes right back." : " Scanline closes with it; Steam opens again by itself."),
+            ("Restart Steam now", () => Guard(() => Host.Steam.RestartSteamAndApply())),
+            ($"Later ({pending} waiting)", () => Toast("Saved. Restart Steam from any game page or Settings → Steam when you're ready."))));
+    }
+
+    private static bool GameMode => EdenDeck.Host.SteamService.GameMode;
 
     /// <summary>Runs background work behind a busy page. Progress is 0..1 or negative for indeterminate.</summary>
     public async void Busy<T>(string title, Func<IProgress<double>, CancellationToken, Task<T>> work, Action<T> done, bool cancellable = true)

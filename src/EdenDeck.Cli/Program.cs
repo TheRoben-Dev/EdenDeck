@@ -12,7 +12,7 @@ return await Cli.Run(args);
 internal static class Cli
 {
     private const string Usage = """
-        EdenDeck command line
+        Scanline command line
 
           scanline launch <game-id|path>           apply the game's settings and start it
           scanline scan                            rescan library folders
@@ -29,8 +29,12 @@ internal static class Cli
           scanline keyset list
           scanline game set <game-id> [--keyset <id>|--no-keyset] [--framegen off|builtin] [--fps <native fps>]
           scanline game show <game-id>
+          scanline steam add <game-id|path|--app|--all>   Steam shortcut that starts the game with its settings
+          scanline steam remove <game-id|--app>
+          scanline steam list                      shortcuts Scanline manages
+          scanline steam apply                     write them into Steam now (Steam must be closed)
 
-        EdenDeck never downloads keys, firmware or games.
+        Scanline never downloads keys, firmware or games.
         """;
 
     public static async Task<int> Run(string[] args)
@@ -54,6 +58,7 @@ internal static class Cli
                 "firmware" when args.Length >= 3 && args[1] == "import" => ImportFirmware(host, args[2]),
                 "keyset" when args.Length >= 2 => KeySet(host, args[1..]),
                 "game" when args.Length >= 3 => Game(host, args[1..]),
+                "steam" when args.Length >= 2 => Steam(host, args[1..]),
                 _ => Fail(Usage),
             };
         }
@@ -197,6 +202,65 @@ internal static class Cli
         var n = host.Eden.SystemFilesImpl.ImportFirmware(folder);
         Console.WriteLine($"Firmware imported ({n} files).");
         return 0;
+    }
+
+    private static int Steam(AppHost host, string[] a)
+    {
+        var steam = host.Steam;
+        switch (a[0])
+        {
+            case "add" when a.Length >= 2:
+            {
+                if (steam.Unavailable is { } why)
+                {
+                    return Fail(why);
+                }
+                var items = a[1] switch
+                {
+                    "--app" => [("app", steam.ForApp())],
+                    "--all" => host.Library.Select(g => (g.GameId, steam.ForGame(g))).ToList(),
+                    var id => [(host.FindGame(id)?.GameId ?? throw new KeyNotFoundException($"Game not found: {id}"), steam.ForGame(host.FindGame(id)!))],
+                };
+                var written = false;
+                foreach (var (key, shortcut) in items)
+                {
+                    written = steam.Add(key, shortcut);
+                    Console.WriteLine($"{shortcut.AppName}: {shortcut.Exe} {shortcut.LaunchOptions}".TrimEnd());
+                }
+                Console.WriteLine(written ? "Added to Steam. Start Steam to see it." : "Saved. Steam is running: close Steam, then run `scanline steam apply` (or add it from the app, which restarts Steam for you).");
+                return 0;
+            }
+            case "remove" when a.Length >= 2:
+            {
+                var key = a[1] == "--app" ? "app" : host.FindGame(a[1])?.GameId ?? a[1];
+                if (!steam.Remove(key))
+                {
+                    return Fail($"Scanline has no Steam shortcut for {a[1]}.");
+                }
+                Console.WriteLine(steam.SteamRunning ? "Will be removed the next time Steam is closed and shortcuts are applied." : "Removed from Steam.");
+                return 0;
+            }
+            case "list":
+                foreach (var e in steam.Wanted())
+                {
+                    Console.WriteLine($"{e.Key,-32} {e.Shortcut.AppName}{(e.Remove ? "  (to remove)" : "")}  appid {e.Shortcut.AppId}");
+                }
+                return 0;
+            case "apply":
+                if (a.Contains("--after-steam-exits"))
+                {
+                    return steam.ApplyAfterSteamExits(restart: a.Contains("--restart"));
+                }
+                var n = steam.Apply();
+                if (n < 0)
+                {
+                    return Fail("Steam is running. Close it first: Steam menu > Exit.");
+                }
+                Console.WriteLine($"Done ({n} Steam account file(s) changed).");
+                return 0;
+            default:
+                return Fail(Usage);
+        }
     }
 
     private static int KeySet(AppHost host, string[] a)

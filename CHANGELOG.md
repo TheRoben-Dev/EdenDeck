@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.3
+- New: **Add to Steam.** A game's card has an **Add to Steam** button, and Settings → Steam can add Scanline itself or every game at once. Games show up in Steam's library and Game Mode under the Scanline tag, and starting one there opens it straight in Eden with that game's settings, keys, CRT effect and frame generation. Steam only reads new shortcuts when it starts, so if it's running Scanline offers to restart it for you (or adds them the next time Scanline starts with Steam closed). Your own non-Steam shortcuts are left alone, and a backup of Steam's file is kept.
+- From a terminal: `scanline steam add <game|--app|--all>`, `scanline steam remove`, `scanline steam list`.
+
 ## 0.4.2
 - **lsfg-vk now comes with Scanline.** Frame generation works without installing anything besides your own Lossless Scaling from Steam. If you already have lsfg-vk 2.x installed, yours is used instead, and your lsfg-vk settings are never changed. Frames made by frame generation also get the game's CRT effect.
 - The Eden tab's Frame generation page says when the included lsfg-vk is in use.

@@ -17,6 +17,7 @@ public partial class SettingsScreen : TwoPaneScreen
         ("System", "Console mode and speed limit for all games."),
         ("Library", "Game folders and rescanning."),
         ("Appearance", "Theme, CRT effect and animations."),
+        ("Steam", "Scanline and your games in your Steam library."),
         ("Updates", "Version, changelog and updates."),
         ("Advanced", "Overlay layer and expert Eden options."),
     ];
@@ -47,6 +48,9 @@ public partial class SettingsScreen : TwoPaneScreen
                 break;
             case "Appearance":
                 BuildAppearance(col, Add);
+                break;
+            case "Steam":
+                BuildSteam(col, Add);
                 break;
             case "Updates":
                 BuildUpdates(col, Add);
@@ -234,6 +238,55 @@ public partial class SettingsScreen : TwoPaneScreen
             Anim.Enabled = on;
         }, "Sliding focus, smooth scrolling and page transitions.", null,
             "Everything changes instantly, nothing slides or fades."));
+    }
+
+    private void BuildSteam(VBoxContainer col, Action<Control> Add)
+    {
+        var steam = Host.Steam;
+        col.AddChild(UiTheme.Label("Games you add show up in Steam's library and Game Mode. Starting one there opens it straight in Eden with its settings from Scanline. Use Add to Steam on a game's page for one game.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        if (steam.Unavailable is { } why)
+        {
+            col.AddChild(UiTheme.Label(why, UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            return;
+        }
+        var managed = steam.Wanted().Count(e => !e.Remove);
+        var pending = steam.Pending();
+        col.AddChild(UiTheme.Label(
+            pending.Count > 0
+                ? $"{managed} shortcut(s) from Scanline, {pending.Count} waiting for Steam to restart."
+                : $"{managed} shortcut(s) from Scanline, all in Steam.",
+            UiTheme.SmallSize + 2, pending.Count > 0 ? UiTheme.Warn : UiTheme.Good, wrap: true));
+        Add(new ActionButton(steam.Has("app") ? "Update the Scanline shortcut" : "Add Scanline to Steam",
+            () => App.AddToSteam("app", steam.ForApp()),
+            "A Steam shortcut for Scanline itself, so it starts in Game Mode with full controller support."));
+        Add(new ActionButton($"Add all {Host.Library.Count} games to Steam", () =>
+        {
+            if (!App.Guard(() =>
+            {
+                foreach (var g in Host.Library)
+                {
+                    steam.Add(g.GameId, steam.ForGame(g));
+                }
+            }))
+            {
+                return;
+            }
+            if (steam.Pending().Count > 0)
+            {
+                App.OfferSteamRestart($"{Host.Library.Count} games are ready for Steam. Steam picks up new shortcuts when it restarts.");
+            }
+            else
+            {
+                App.Toast($"Added {Host.Library.Count} games to Steam.");
+                RefreshPane();
+            }
+        }, "One Steam shortcut per game in your library. Games already added are updated, not duplicated."));
+        if (pending.Count > 0)
+        {
+            Add(new ActionButton($"Restart Steam to add {pending.Count}", () => App.OfferSteamRestart("Steam picks up new shortcuts when it restarts."),
+                "Closes Steam, writes the shortcuts and lets Steam start again."));
+        }
     }
 
     private void BuildUpdates(VBoxContainer col, Action<Control> Add)
