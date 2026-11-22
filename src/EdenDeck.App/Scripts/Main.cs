@@ -541,7 +541,7 @@ public partial class Main : Control
         }
         Host.MarkPlayed(game);
         var notes = controllerNote != null ? plan.Notes.Prepend(controllerNote).ToList() : plan.Notes;
-        RunEden(game.Base.Title, plan, notes, null);
+        RunEden(game.Base.Title, plan, notes, null, game);
     }
 
     /// <summary>Opens Eden's own window for anything Eden Deck doesn't cover; re-reads Eden's config after.</summary>
@@ -576,13 +576,20 @@ public partial class Main : Control
     /// <summary>Player 1 gets a controller mapping when Eden still has only the keyboard (Game Mode needs this).</summary>
     private string? EnsureController()
     {
-        if (Host == null || Pad.ActivePad() is not { } pad)
+        if (Host == null)
         {
             return null;
         }
         try
         {
-            return Host.Eden.EnsureControllerMapping(pad) ? $"controller: mapped {pad.Name} as player 1 (Eden had only the keyboard)" : null;
+            if (Pad.ActivePad() is { } pad && Host.Eden.EnsureControllerMapping(pad))
+            {
+                return $"controller: mapped {pad.Name} as player 1 (Eden had only the keyboard)";
+            }
+            // Still on the keyboard and nothing we can map: say what we see, so it can be mapped in Eden.
+            return Host.Eden.ControllerNeedsMapping()
+                ? $"controller: Eden still uses the keyboard for player 1. Eden Deck sees: {Pad.DescribePads()}. Map it once with Open Eden → Controls."
+                : null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -591,8 +598,9 @@ public partial class Main : Control
         }
     }
 
-    private async void RunEden(string title, LaunchPlan plan, IReadOnlyList<string> notes, Action? after)
+    private async void RunEden(string title, LaunchPlan plan, IReadOnlyList<string> notes, Action? after, LibraryGame? game = null)
     {
+        var started = DateTime.UtcNow;
         var page = new RunningPage(title, notes);
         Push(page);
         GameRunning = true;
@@ -614,11 +622,77 @@ public partial class Main : Control
         GameRunning = false;
         PopTo(page);
         Pop();
-        if (code != 0)
+        GetWindow().GrabFocus();
+        var seconds = (DateTime.UtcNow - started).TotalSeconds;
+        // A game that closes within a minute, or any non-zero exit, is almost always a failed start:
+        // say so and show why, instead of silently dropping back to the card.
+        if (game != null && (code != 0 || seconds < 60))
+        {
+            ShowEdenExit(game, code, seconds, log);
+        }
+        else if (code != 0)
         {
             Error($"Eden exited with code {code}.");
         }
-        GetWindow().GrabFocus();
         after?.Invoke();
+    }
+
+    private void ShowEdenExit(LibraryGame game, int code, double seconds, List<string> output)
+    {
+        var tail = EdenLogTail(output);
+        var how = code == 0 ? "closed" : code > 128 ? $"crashed (signal {code - 128})" : $"exited with code {code}";
+        var msg = $"Eden {how} after {seconds:0} s.\n\n" + (tail.Length > 0 ? "Last lines of Eden's log:\n" + tail : "Eden wrote nothing to its log.");
+        var options = new List<(string, Action)> { ("OK", () => { }) };
+        var profile = Host!.Profiles.Get(game.GameId);
+        if (profile.LoadAddOns && (game.Updates.Count > 0 || game.Dlc.Count > 0))
+        {
+            options.Add(("Try without update and DLC", () =>
+            {
+                Host.Profiles.Set(game.GameId, profile with { LoadAddOns = false });
+                foreach (var s in _stack)
+                {
+                    s.Rebuild();
+                }
+                Launch(game);
+            }));
+        }
+        Push(new ChoicePage(msg, [.. options]));
+    }
+
+    /// <summary>The interesting end of Eden's log: errors first, else the last lines (file log, then stdout).</summary>
+    private string EdenLogTail(List<string> output)
+    {
+        IEnumerable<string> lines = [];
+        try
+        {
+            var dir = Path.Combine(Host!.Eden.Paths.DataDir, "log");
+            var file = Directory.Exists(dir)
+                ? new DirectoryInfo(dir).GetFiles("*.txt").OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault()
+                : null;
+            if (file != null && DateTime.UtcNow - file.LastWriteTimeUtc < TimeSpan.FromMinutes(5))
+            {
+                lines = File.ReadLines(file.FullName).TakeLast(400).ToList();
+            }
+        }
+        catch (IOException)
+        {
+        }
+        if (!lines.Any())
+        {
+            lock (output)
+            {
+                lines = output.TakeLast(400).ToList();
+            }
+        }
+        var list = lines.ToList();
+        var errors = list.Where(l => l.Contains("<Critical>") || l.Contains("<Error>")).TakeLast(6).ToList();
+        var pick = errors.Count > 0 ? errors : list.TakeLast(6).ToList();
+        // Drop the "[  12.345678] Core.Foo <Error> file.cpp:Func:123: " prefix noise down to the message.
+        return string.Join("\n", pick.Select(l =>
+        {
+            var i = l.IndexOf(": ", l.IndexOf('>') + 1, StringComparison.Ordinal);
+            var m = l.Contains('>') && i > 0 ? l[(i + 2)..] : l;
+            return "• " + (m.Length > 160 ? m[..160] + "…" : m);
+        }));
     }
 }

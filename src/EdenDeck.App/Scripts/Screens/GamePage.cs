@@ -84,13 +84,13 @@ public partial class GamePage : Screen
             info.AddChild(l);
         }
         // Whether Eden will actually load the update / DLC that was found (its own add-on switches included).
-        foreach (var a in Host.Eden.AddOnStatus(_game, Host.Settings.LibraryFolders.Select(f => f.Path)))
+        foreach (var a in Host.Eden.AddOnStatus(_game, Profile.LoadAddOns))
         {
             var (mark, text, color) = a.State switch
             {
                 EdenDeck.Backends.Eden.Config.AddOnState.Active => ("✓", $"{a.Label} · active", UiTheme.Good),
                 EdenDeck.Backends.Eden.Config.AddOnState.Disabled => ("!", $"{a.Label} · turned off in Eden's add-ons", UiTheme.Warn),
-                _ => ("!", $"{a.Label} · not loaded (folder isn't a library folder)", UiTheme.Warn),
+                _ => ("·", $"{a.Label} · off for this game", UiTheme.Dim),
             };
             var l = UiTheme.Label($"{mark}  {text}", UiTheme.SmallSize + 1, color, wrap: true);
             info.AddChild(l);
@@ -135,6 +135,14 @@ public partial class GamePage : Screen
             "Use one of your own key sets (and its firmware) just for this game. Add sets on the Eden tab.");
         keys.Changed += v => SetProfile(x => x with { KeySet = v == "" ? null : v });
         Add(keys);
+        if (_game.Updates.Count > 0 || _game.Dlc.Count > 0)
+        {
+            Add(Toggle.Create("Update and DLC", p.LoadAddOns, on =>
+            {
+                SetProfile(x => x with { LoadAddOns = on });
+                Rebuild();
+            }, "Loads this game's update and DLC files straight from your library. Nothing is installed or copied."));
+        }
 
         var nightly = Host.Eden.Schema.Channel == "nightly";
         var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Eden built-in")],

@@ -123,9 +123,10 @@ public sealed class AppHost
         var profile = Profiles.Get(game.GameId);
         if (game.Base.BackendId == Eden.Id)
         {
-            // The base and its newest update decide which keys are needed (Eden loads both).
-            Eden.CheckKeys(game.Base.Title, [game.Base.Path, .. game.Updates.Take(1).Select(u => u.Path)], profile.KeySet);
-            Eden.EnsureExternalContent(Settings.LibraryFolders.Select(f => f.Path));
+            // The base and (if loaded) its newest update decide which keys are needed.
+            var updates = profile.LoadAddOns ? game.Updates.Take(1).Select(u => u.Path) : [];
+            Eden.CheckKeys(game.Base.Title, [game.Base.Path, .. updates], profile.KeySet);
+            Eden.PrepareAddOns(game, profile.LoadAddOns, Settings.LibraryFolders.Select(f => f.Path));
         }
         return Backend(game.Base.BackendId).Launch.Plan(game.Base, profile, DefaultLaunchOptions());
     }

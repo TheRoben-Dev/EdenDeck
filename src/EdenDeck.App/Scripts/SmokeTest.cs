@@ -52,7 +52,9 @@ public partial class SmokeTest : Node
         });
         Step("back-to-library", () => Press(Pad.Back));
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
-        Step("returned", () => { }, wait: 3.0);
+        // The fake Eden exits at once: Eden Deck reports the early exit instead of silently returning.
+        Step("returned", () => { }, wait: 3.0, expect: "OK");
+        Step("early-exit-ok", () => Press(Pad.Accept), expect: "Castle Defenders");
         Step("eden", () => Press(Pad.TabNext));
         Step("settings", () => Press(Pad.TabNext));
         // Finger drag over the list scrolls it and must not press the row it started on.

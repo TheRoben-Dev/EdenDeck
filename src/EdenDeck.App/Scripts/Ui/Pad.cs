@@ -287,14 +287,38 @@ public static class Pad
     /// <summary>The pad to give Eden as player 1: Steam's virtual gamepad first (Game Mode), else the first known one.</summary>
     public static EdenDeck.Backends.Eden.Config.PadInfo? ActivePad()
     {
-        var pads = Input.GetConnectedJoypads().Select(d =>
-        {
-            var info = Input.GetJoyInfo(d);
-            int Id(string k) => info.TryGetValue(k, out var v) ? v.AsInt32() : 0;
-            return new EdenDeck.Backends.Eden.Config.PadInfo(Input.GetJoyGuid(d), Input.GetJoyName(d), Id("vendor_id"), Id("product_id"));
-        }).Where(p => p.Guid.Length == 32).ToList();
+        var pads = AllPads().Select(p => p with { Guid = SdlGuid(p) }).Where(p => p.Guid.Length == 32).ToList();
         return pads.FirstOrDefault(p => p.Vendor == 0x28de && p.Product == 0x11ff)
                ?? pads.FirstOrDefault(EdenDeck.Backends.Eden.Config.EdenControllerDefaults.HasKnownLayout);
+    }
+
+    public static List<EdenDeck.Backends.Eden.Config.PadInfo> AllPads() => Input.GetConnectedJoypads().Select(d =>
+    {
+        var info = Input.GetJoyInfo(d);
+        int Id(string k) => info.TryGetValue(k, out var v) ? v.AsInt32() : 0;
+        return new EdenDeck.Backends.Eden.Config.PadInfo(Input.GetJoyGuid(d), Input.GetJoyName(d), Id("vendor_id"), Id("product_id"));
+    }).ToList();
+
+    /// <summary>
+    /// The GUID as SDL builds it for a USB pad, when Godot doesn't report one in that form:
+    /// bus 0003, vendor and product little-endian, version 0001 (what the Steam Virtual Gamepad uses).
+    /// </summary>
+    private static string SdlGuid(EdenDeck.Backends.Eden.Config.PadInfo p)
+    {
+        if (p.Guid.Length == 32 && p.Guid.All(Uri.IsHexDigit) || p.Vendor == 0 || p.Product == 0)
+        {
+            return p.Guid;
+        }
+        static string Le(int v) => $"{v & 0xff:x2}{(v >> 8) & 0xff:x2}";
+        return $"03000000{Le(p.Vendor)}0000{Le(p.Product)}000001000000";
+    }
+
+    /// <summary>One line per connected pad, for diagnostics ("name 28de:11ff guid").</summary>
+    public static string DescribePads()
+    {
+        var pads = AllPads();
+        return pads.Count == 0 ? "no controller detected" :
+            string.Join("; ", pads.Select(p => $"{p.Name} [{p.Vendor:x4}:{p.Product:x4}, {(p.Guid.Length > 0 ? p.Guid : "no guid")}]"));
     }
 
     /// <summary>Which button set to draw: handhelds show Xbox glyphs even when Steam sends keys.</summary>

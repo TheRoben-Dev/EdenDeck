@@ -66,14 +66,21 @@ public sealed class EdenBackend : IEmulatorBackend
     }
 
     /// <summary>Lets Eden load updates/DLC straight from the library folders (no NAND install).</summary>
-    public bool EnsureExternalContent(IEnumerable<string> libraryFolders) =>
-        EdenAddOns.EnsureExternalContentDirs(Paths.GlobalConfigFile, libraryFolders);
+    /// <summary>Folder of links to the launched game's update/DLC, listed in Eden's external content dirs.</summary>
+    public string AddOnStagingDir => Path.Combine(_app.Data, "addons");
 
-    public IReadOnlyList<AddOnStatus> AddOnStatus(Core.Library.LibraryGame game, IEnumerable<string> libraryFolders) =>
-        EdenAddOns.Status(Paths.GlobalConfigFile, game, libraryFolders);
+    /// <summary>Stages this game's update/DLC for Eden (or nothing, if turned off for the game).</summary>
+    public bool PrepareAddOns(Core.Library.LibraryGame game, bool enabled, IEnumerable<string> libraryFolders) =>
+        EdenAddOns.PrepareLaunch(Paths.GlobalConfigFile, AddOnStagingDir, game, enabled, libraryFolders);
+
+    public IReadOnlyList<AddOnStatus> AddOnStatus(Core.Library.LibraryGame game, bool enabled) =>
+        EdenAddOns.Status(Paths.GlobalConfigFile, game, enabled, AddOnStagingDir);
 
     /// <summary>Gives player 1 a controller mapping if Eden still has only the keyboard mapped.</summary>
     public bool EnsureControllerMapping(PadInfo pad) => EdenControllerDefaults.EnsurePlayer1(Paths.GlobalConfigFile, pad);
+
+    /// <summary>True while player 1 is still on Eden's keyboard defaults.</summary>
+    public bool ControllerNeedsMapping() => EdenControllerDefaults.NeedsMapping(QtIni.Load(Paths.GlobalConfigFile));
 
     /// <summary>Plan to open Eden's own window (no game), for settings Eden Deck doesn't cover.</summary>
     public Core.Launch.LaunchPlan PlanEdenUi()
