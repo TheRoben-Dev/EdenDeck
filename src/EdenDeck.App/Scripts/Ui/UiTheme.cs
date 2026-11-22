@@ -276,6 +276,25 @@ public static class UiTheme
     public const int TitleSize = 34;
     public const int SmallSize = 15;
 
+    /// <summary>
+    /// Builds something with another theme's colours and font in place (for offscreen artwork),
+    /// then puts the live theme back. Only what <paramref name="build"/> reads right away is affected.
+    /// </summary>
+    public static T With<T>(string themeId, Func<T> build)
+    {
+        var (spec, font) = (Spec, _font);
+        Spec = Themes.FirstOrDefault(t => t.Id == themeId) ?? Themes[0];
+        _font = Spec.FontKind switch { "chakra" => ChakraFont(), "pixel" => PixelFont(), _ => font };
+        try
+        {
+            return build();
+        }
+        finally
+        {
+            (Spec, _font) = (spec, font);
+        }
+    }
+
     /// <summary>The font in use (theme default or Godot's fallback).</summary>
     public static Font CurrentFont => _font ?? ThemeDB.FallbackFont;
 

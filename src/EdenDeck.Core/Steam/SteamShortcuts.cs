@@ -231,4 +231,73 @@ public sealed class SteamShortcuts
 
     /// <summary>Where Steam looks for this shortcut's artwork (portrait capsule, hero, logo, wide capsule).</summary>
     public static string GridDir(string configDir) => Path.Combine(configDir, "grid");
+
+    /// <summary>Artwork files Scanline ships (in its steam-art folder) and the grid name suffix Steam reads for each.</summary>
+    public static readonly IReadOnlyList<(string Source, string Suffix)> ArtworkFiles =
+    [
+        ("capsule.png", "p.png"),   // portrait capsule, 600x900
+        ("wide.png", ".png"),       // wide capsule, 920x430
+        ("hero.png", "_hero.png"),  // library hero, 3840x1240
+        ("logo.png", "_logo.png"),  // logo over the hero
+    ];
+
+    /// <summary>
+    /// Puts the artwork for one shortcut into Steam's grid folder (or takes it out with
+    /// <paramref name="remove"/>). Art the player picked in Steam is never replaced or deleted: a file is
+    /// only written where there is none, or where it is still exactly what Scanline wrote last time
+    /// (remembered in grid/.scanline-art-&lt;appid&gt;). Steam reads grid files live, so this is safe
+    /// while Steam runs. Returns how many files were written or removed.
+    /// </summary>
+    public static int InstallArtwork(string configDir, uint appId, string artDir, bool remove = false)
+    {
+        var grid = GridDir(configDir);
+        var marker = Path.Combine(grid, $".scanline-art-{appId}");
+        var ours = File.Exists(marker)
+            ? File.ReadAllLines(marker).Select(l => l.Split(' ', 2)).Where(p => p.Length == 2).ToDictionary(p => p[1], p => p[0])
+            : new Dictionary<string, string>();
+        var written = new Dictionary<string, string>();
+        var changed = 0;
+        foreach (var (source, suffix) in ArtworkFiles)
+        {
+            var src = Path.Combine(artDir, source);
+            var name = appId.ToString(System.Globalization.CultureInfo.InvariantCulture) + suffix;
+            var dest = Path.Combine(grid, name);
+            var exists = File.Exists(dest);
+            var mine = exists && ours.TryGetValue(name, out var h) && h == Hash(dest);
+            if (remove)
+            {
+                if (mine)
+                {
+                    File.Delete(dest);
+                    changed++;
+                }
+                continue;
+            }
+            if (!File.Exists(src) || (exists && !mine))
+            {
+                continue;  // nothing shipped for it, or the player's own art
+            }
+            var bytes = File.ReadAllBytes(src);
+            if (!exists || !File.ReadAllBytes(dest).AsSpan().SequenceEqual(bytes))
+            {
+                Directory.CreateDirectory(grid);
+                var tmp = dest + ".scanline.tmp";
+                File.WriteAllBytes(tmp, bytes);
+                File.Move(tmp, dest, overwrite: true);
+                changed++;
+            }
+            written[name] = Hash(dest);
+        }
+        if (written.Count > 0)
+        {
+            File.WriteAllLines(marker, written.Select(kv => $"{kv.Value} {kv.Key}"));
+        }
+        else if (File.Exists(marker))
+        {
+            File.Delete(marker);
+        }
+        return changed;
+    }
+
+    private static string Hash(string file) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(file)));
 }

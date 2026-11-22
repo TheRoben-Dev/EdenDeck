@@ -27,19 +27,27 @@ public partial class PolyBackdrop : PolyStage
     private readonly ShaderMaterial _floor;
     private readonly Vector3 _camBase = new(0, 1.4f, 11);
     private readonly Vector3 _lookAt = new(0, 0.3f, 0);
+
     private float _lean;
     private float _leanTarget;
     private Vector2 _laidOutFor;
     private Vector2 _pressAt;
     private bool _pressed;
 
-    public PolyBackdrop(ThemeSpec spec) : base(transparent: false)
+    /// <param name="showcase">Clearer view for still artwork: fog starts further out, so the floor and the far shapes show.</param>
+    public PolyBackdrop(ThemeSpec spec, bool showcase = false) : base(transparent: false)
     {
         Resolution = 0.34f;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         Look.Fog = spec.Bg;
-        Look.FogNear = 4;
-        Look.FogFar = 24;
+        if (showcase)
+        {
+            // Look down at the floor so the grid fills the lower part of the picture.
+            _camBase = new Vector3(0, 2.0f, 11);
+            _lookAt = new Vector3(0, -0.9f, 0);
+        }
+        Look.FogNear = showcase ? 10 : 4;
+        Look.FogFar = showcase ? 48 : 24;
         Look.Ambient = spec.Bg.Lerp(new Color(0.42f, 0.42f, 0.5f), 0.8f);
         var env = new Godot.Environment { BackgroundMode = Godot.Environment.BGMode.Color, BackgroundColor = spec.Bg };
         World.AddChild(new WorldEnvironment { Environment = env });
@@ -55,7 +63,8 @@ public partial class PolyBackdrop : PolyStage
             (Torus(1.4f, 2.2f, 8, 4), new Vector3(10, 3.5f, -18), spec.Info.Darkened(0.3f), new Vector3(0.2f, 0.05f, 0.13f)),
             (Sphere(1.8f, 4, 2), new Vector3(2, 6.5f, -22), spec.Accent.Lerp(spec.Info, 0.5f).Darkened(0.3f), new Vector3(0.07f, 0.23f, 0.05f)),
         ];
-        foreach (var s in shapes)
+        // Artwork leaves them out: lit from the low showcase camera they read as dark blobs behind the wordmark.
+        foreach (var s in showcase ? [] : shapes)
         {
             var mi = Part(World, s.Mesh, Look.Mat(s.Color), s.Pos);
             _shapes.Add((mi, s.Spin));

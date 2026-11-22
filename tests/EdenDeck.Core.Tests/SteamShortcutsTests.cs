@@ -111,4 +111,35 @@ public class SteamShortcutsTests : IDisposable
         Assert.Empty(s.Entries);
         Assert.False(SteamShortcuts.SteamRunning(_home));
     }
+
+    [Fact]
+    public void InstallsArtworkWithoutReplacingThePlayersOwn()
+    {
+        var art = Path.Combine(_home, "steam-art");
+        var config = Path.Combine(_home, "config");
+        Directory.CreateDirectory(art);
+        foreach (var (source, _) in SteamShortcuts.ArtworkFiles)
+        {
+            File.WriteAllText(Path.Combine(art, source), "ours " + source);
+        }
+        const uint id = 0x80001234;
+        var grid = SteamShortcuts.GridDir(config);
+        Assert.Equal(4, SteamShortcuts.InstallArtwork(config, id, art));
+        Assert.Equal("ours capsule.png", File.ReadAllText(Path.Combine(grid, $"{id}p.png")));
+        Assert.Equal("ours hero.png", File.ReadAllText(Path.Combine(grid, $"{id}_hero.png")));
+        Assert.Equal(0, SteamShortcuts.InstallArtwork(config, id, art));  // nothing changed
+
+        // The player swaps the hero in Steam; a newer Scanline updates only its own files.
+        File.WriteAllText(Path.Combine(grid, $"{id}_hero.png"), "player's hero");
+        File.WriteAllText(Path.Combine(art, "capsule.png"), "ours v2");
+        Assert.Equal(1, SteamShortcuts.InstallArtwork(config, id, art));
+        Assert.Equal("ours v2", File.ReadAllText(Path.Combine(grid, $"{id}p.png")));
+        Assert.Equal("player's hero", File.ReadAllText(Path.Combine(grid, $"{id}_hero.png")));
+
+        // Removing takes away only what Scanline put there.
+        Assert.Equal(3, SteamShortcuts.InstallArtwork(config, id, art, remove: true));
+        Assert.False(File.Exists(Path.Combine(grid, $"{id}p.png")));
+        Assert.Equal("player's hero", File.ReadAllText(Path.Combine(grid, $"{id}_hero.png")));
+        Assert.False(File.Exists(Path.Combine(grid, $".scanline-art-{id}")));
+    }
 }
