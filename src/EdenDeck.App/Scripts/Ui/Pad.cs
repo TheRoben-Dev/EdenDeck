@@ -227,17 +227,22 @@ public static class Pad
         {
             return;
         }
+        var before = _heldFor;
         _heldFor += (float)delta;
         if (_heldFor < RepeatDelay)
         {
             return;
         }
-        _sinceRepeat += (float)delta;
-        if (_sinceRepeat >= RepeatRate)
+        // Count only the time past the delay, and keep the remainder after each repeat, so the
+        // repeat rate doesn't depend on the frame rate (low-processor mode and slow frames would
+        // otherwise drop repeats). At most 3 per frame, so a hitch doesn't fling focus.
+        _sinceRepeat += before < RepeatDelay ? _heldFor - RepeatDelay : (float)delta;
+        for (var n = 0; n < 3 && _sinceRepeat >= RepeatRate; n++)
         {
-            _sinceRepeat = 0;
+            _sinceRepeat -= RepeatRate;
             Tap(dir);
         }
+        _sinceRepeat = Math.Min(_sinceRepeat, RepeatRate);
     }
 
     private static string? CurrentDirection()
