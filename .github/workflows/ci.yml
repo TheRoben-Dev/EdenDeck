@@ -215,13 +215,16 @@ jobs:
           VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
           VK_LOADER_DEBUG: layer
         run: |
-          # The way Scanline launches Eden with the bundled copy. Without LSFGVK_ENV / a profile
-          # lsfg-vk stays passive, so vkcube must render normally with both layers in the chain.
+          # The way Scanline launches Eden with the bundled copy. lsfg-vk sets itself up on device
+          # creation and needs VK_KHR_external_semaphore_fd, which lavapipe lacks, so it stops
+          # vkcube there; real GPUs (RADV on the Deck) have it. What this checks is that the loader
+          # finds and loads the bundled manifest and library, in the right order.
           export VK_ADD_LAYER_PATH="$PWD/build/lsfg-vk:$PWD/layer/build"
           export VK_INSTANCE_LAYERS=VK_LAYER_LSFGVK_frame_generation:VK_LAYER_SCANLINE_overlay
-          timeout 120 xvfb-run -a vkcube --c 60 > loader.log 2>&1 || { tail -50 loader.log; exit 1; }
-          grep -E 'Insert instance layer|Inserted device layer|VK_LAYER_LSFGVK|VK_LAYER_SCANLINE' loader.log | head -20
-          grep -q 'vkCreateSwapchainKHR ok' loader.log
+          timeout 120 xvfb-run -a vkcube --c 60 > loader.log 2>&1 || true
+          grep -E 'Insert instance layer|Inserted device layer|lsfg-vk|scanline-layer' loader.log | head -20
+          grep -q 'Inserted device layer "VK_LAYER_LSFGVK_frame_generation"' loader.log
+          grep -q 'vkCreateDevice ok' loader.log
           python3 - <<'PY'
           import re
           log = open("loader.log").read()
