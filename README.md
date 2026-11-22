@@ -34,6 +34,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - 🧩 **Mod and cheat manager** with conflict warnings and one-tap enable/disable
 - ✨ **Upscaling and frame generation** using Eden's built-in FSR/SGSR and Lossless Scaling frame gen (your own copy), plus lsfg-vk for Eden Stable
 - 📊 **In-game overlay and quick menu** through Scanline's own Vulkan layer
+- 📺 **CRT effect for games**, per game, the same look as the app's own CRT effect (drawn by the layer, also over generated frames)
 - 🎯 **Frame generation capped at 60 FPS**, because the goal is smooth 60 FPS Switch games and nothing more
 - 🔄 **In-app self-updates** from this repo's GitHub Releases
 

@@ -20,7 +20,7 @@ inline void Log(const char* fmt, ...) {
         return f ? f : stderr;
     }();
     std::lock_guard lk(lock);
-    std::fputs("[edendeck-layer] ", out);
+    std::fputs("[scanline-layer] ", out);
     va_list args;
     va_start(args, fmt);
     std::vfprintf(out, fmt, args);

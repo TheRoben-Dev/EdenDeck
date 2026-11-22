@@ -32,6 +32,9 @@ public sealed record GameProfile
     /// <summary>Let Eden load this game's update and DLC files from the library (no NAND install).</summary>
     public bool LoadAddOns { get; init; } = true;
 
+    /// <summary>In-game CRT filter drawn by Scanline's Vulkan layer: 0 off, 1 subtle, 2 medium, 3 strong.</summary>
+    public int Crt { get; init; }
+
     public DateTimeOffset? LastPlayed { get; init; }
 }
 

@@ -12,6 +12,9 @@ public sealed record LaunchOptions
     public bool LayerKillSwitch { get; init; }
 
     public bool Fullscreen { get; init; } = true;
+
+    /// <summary>False when the app's Animations setting is off: the in-game CRT filter holds still too.</summary>
+    public bool CrtMotion { get; init; } = true;
 }
 
 /// <summary>

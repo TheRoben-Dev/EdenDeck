@@ -548,4 +548,37 @@ public class LaunchTests : IDisposable
         Assert.StartsWith("VK_LAYER_SCANLINE_overlay", plan.Environment["VK_INSTANCE_LAYERS"]);
         Assert.Equal("1", plan.Environment["DISABLE_SCANLINE_LAYER"]);
     }
+
+    [Fact]
+    public void CrtEffectGoesToTheLayerWithALiveControlFile()
+    {
+        var layerDir = Path.Combine(_env.Home, "layer");
+        Directory.CreateDirectory(layerDir);
+        File.WriteAllText(Path.Combine(layerDir, "VkLayer_SCANLINE_overlay.json"), "{}");
+        var b = Backend("nightly");
+        var plan = b.Launch.Plan(Game(), new GameProfile { Crt = 2 }, new LaunchOptions { LayerDirectory = layerDir, CrtMotion = false });
+        Assert.Equal("2", plan.Environment["SCANLINE_CRT"]);
+        Assert.Equal("0", plan.Environment["SCANLINE_CRT_MOTION"]);
+        var control = plan.Environment["SCANLINE_CRT_CONTROL"];
+        foreach (var step in plan.Prepare)
+        {
+            step();
+        }
+        Assert.Equal("level=2\nmotion=0\n", File.ReadAllText(control));
+        Assert.Contains(plan.Notes, n => n == "CRT effect: Medium");
+
+        // Off still gets the control file (so the quick menu can turn it on), with no note.
+        var off = b.Launch.Plan(Game(), new GameProfile(), new LaunchOptions { LayerDirectory = layerDir });
+        Assert.Equal("0", off.Environment["SCANLINE_CRT"]);
+        Assert.DoesNotContain(off.Notes, n => n.Contains("CRT"));
+
+        // No layer: the game runs without it, with a warning.
+        var missing = b.Launch.Plan(Game(), new GameProfile { Crt = 3 }, new LaunchOptions { LayerDirectory = Path.Combine(_env.Home, "nope") });
+        Assert.False(missing.Environment.ContainsKey("SCANLINE_CRT"));
+        Assert.Contains(missing.Notes, n => n.StartsWith("warning: CRT effect needs"));
+
+        // Kill switch: nothing CRT-related reaches the layer.
+        var killed = b.Launch.Plan(Game(), new GameProfile { Crt = 3 }, new LaunchOptions { LayerDirectory = layerDir, LayerKillSwitch = true });
+        Assert.False(killed.Environment.ContainsKey("SCANLINE_CRT"));
+    }
 }

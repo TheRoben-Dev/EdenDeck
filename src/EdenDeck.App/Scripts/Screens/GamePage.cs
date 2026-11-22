@@ -220,6 +220,29 @@ public partial class GamePage : Screen
             col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
 
+        var crt = new Stepper("CRT effect", [("0", "Off"), ("1", "Subtle"), ("2", "Medium"), ("3", "Strong")],
+            Math.Clamp(p.Crt, 0, 3).ToString(),
+            "Makes the game look like an old TV, the same as the app's CRT effect.")
+        {
+            Expands = true,
+            DetailFor = v => v switch
+            {
+                "0" => "No effect. The game looks the way Eden draws it.",
+                "1" => "Faint scanlines, a slight wobble and a gentle tube curve.",
+                "2" => "Scanlines, a wobbling picture, a rolling band, colour fringes and dark edges.",
+                _ => "The full old-TV look. Fine detail gets a little softer.",
+            },
+        };
+        crt.Changed += v => SetProfile(x => x with { Crt = int.Parse(v) });
+        Add(crt);
+        var layer = Host.DefaultLaunchOptions();
+        if (layer.LayerKillSwitch || layer.LayerDirectory == null)
+        {
+            col.AddChild(UiTheme.Label(layer.LayerKillSwitch
+                ? "The CRT effect is drawn by Scanline's in-game layer, which is switched off in Settings."
+                : "The CRT effect is drawn by Scanline's in-game layer, which this install doesn't have.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+
         col.AddChild(Section("Eden settings for this game"));
         if (string.IsNullOrEmpty(b.TitleId))
         {

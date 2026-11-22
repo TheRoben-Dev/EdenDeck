@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.1
+- New: **CRT effect for games.** Each game's card has a CRT effect setting with the same levels as the app's (Off, Subtle, Medium, Strong): scanlines, a wobbling picture, a rolling band, colour fringes, tube curve and dark edges, drawn over the game by Scanline's Vulkan layer. It's off by default, holds still when Animations is off, and also covers frames made by frame generation. If the layer can't run, the game just plays without it.
+
 ## 0.4.0
 - **Eden Deck is now Scanline.** New name, same app. Your settings, key sets, installed Eden, game profiles and controller setups move over automatically on first start, and the app moves itself to `~/Applications/Scanline`. The old folder stays as a link, so Steam shortcuts you made before (including `edendeck launch …` ones) keep working. The launcher is now `scanline`; `edendeck` still works. The app log moves to `~/.local/share/scanline/logs/app.log`.
 - Themes and accent colours now apply with a quick restart: pick one under Settings → Appearance and choose **Restart to apply**. The app saves it, restarts and comes back to the same page. Switching live could leave game cards unable to open until the next start.
