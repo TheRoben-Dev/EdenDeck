@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.5.1
+- Game icons now **fill the cartridge label**, cropped evenly to its shape, instead of sitting between black bars. Same on the 3D carts and the Steam art (Steam art for games you already added is drawn again the next time Scanline starts).
+
 ## 0.5.0
 - New: **Mods & cheats** on every game card.
   - **Mods:** switch each mod on or off (the same switches as Eden's add-ons list), install one from a .zip or a folder (Scanline finds the mod inside however the archive is laid out, and refuses mods made for another game), or remove one. When two mods change the same file, Scanline tells you which one wins.
