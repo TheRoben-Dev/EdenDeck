@@ -446,8 +446,42 @@ public partial class Main : Control
         }
     }
 
+    private CancellationTokenSource? _gameCts;
+    private double _chordHeld;
+
+    /// <summary>How long View+Start (Select+Start) must be held to close the running game.</summary>
+    public const double CloseChordSeconds = 2.0;
+
+    /// <summary>Closes the running game: SIGTERM to Eden (so it saves), then a kill after a few seconds.</summary>
+    public void CloseGame()
+    {
+        if (_gameCts is { IsCancellationRequested: false } c)
+        {
+            c.Cancel();
+        }
+    }
+
+    /// <summary>
+    /// The close chord is read from the pad state directly: Godot still sees the controller
+    /// while Eden has focus, and the chord works even though app input is ignored during a game.
+    /// </summary>
+    private void WatchCloseChord(double delta)
+    {
+        var held = Input.GetConnectedJoypads().Any(d => Input.IsJoyButtonPressed(d, JoyButton.Back) && Input.IsJoyButtonPressed(d, JoyButton.Start));
+        _chordHeld = held ? _chordHeld + delta : 0;
+        if (_chordHeld >= CloseChordSeconds)
+        {
+            _chordHeld = double.NegativeInfinity;  // once per hold
+            CloseGame();
+        }
+    }
+
     public override void _Process(double delta)
     {
+        if (GameRunning)
+        {
+            WatchCloseChord(delta);
+        }
         if (!GameRunning && _appFocused)
         {
             TouchScroll.Process(delta);
@@ -779,18 +813,34 @@ public partial class Main : Control
         Pad.ReleaseAll();
         var log = new List<string>();
         int code;
+        using var cts = new CancellationTokenSource();
+        _gameCts = cts;
         try
         {
-            code = await Task.Run(() => new ProcessLauncher(l => { lock (log) log.Add(l); }).RunAsync(plan));
+            code = await Task.Run(() => new ProcessLauncher(l => { lock (log) log.Add(l); }).RunAsync(plan, cts.Token));
+        }
+        catch (OperationCanceledException)
+        {
+            // Closed from Eden Deck (button chord or the Close game button): not a failure.
+            _gameCts = null;
+            GameRunning = false;
+            PopTo(page);
+            Pop();
+            GetWindow().GrabFocus();
+            Toast($"Closed {title}.");
+            after?.Invoke();
+            return;
         }
         catch (Exception e) when (IsUserFacing(e) || e is System.ComponentModel.Win32Exception)
         {
+            _gameCts = null;
             GameRunning = false;
             PopTo(page);
             Pop();
             Error($"Could not start Eden: {e.Message}");
             return;
         }
+        _gameCts = null;
         GameRunning = false;
         PopTo(page);
         Pop();

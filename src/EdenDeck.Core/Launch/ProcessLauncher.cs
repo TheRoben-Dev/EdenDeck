@@ -71,8 +71,10 @@ public sealed class ProcessLauncher
         }
         try
         {
-            // SIGTERM first so the emulator can save its config; then kill.
-            Process.Start("kill", ["-TERM", p.Id.ToString()])?.WaitForExit(1000);
+            // SIGTERM first (to the AppImage runtime and the emulator it started) so the emulator
+            // can save its config; then kill whatever is left.
+            var pids = Descendants(p.Id).Prepend(p.Id).Select(i => i.ToString()).ToList();
+            Process.Start("kill", ["-TERM", .. pids])?.WaitForExit(1000);
             if (!p.WaitForExit((int)(grace ?? TimeSpan.FromSeconds(5)).TotalMilliseconds))
             {
                 p.Kill(entireProcessTree: true);
@@ -81,6 +83,51 @@ public sealed class ProcessLauncher
         catch (InvalidOperationException)
         {
         }
+    }
+
+    /// <summary>All descendant process ids of a process (Linux /proc), children first.</summary>
+    public static List<int> Descendants(int root)
+    {
+        var parents = new Dictionary<int, int>();
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories("/proc"))
+            {
+                if (!int.TryParse(Path.GetFileName(dir), out var pid))
+                {
+                    continue;
+                }
+                try
+                {
+                    // /proc/<pid>/stat: "pid (comm) state ppid ..."; comm may contain spaces, so split after ')'.
+                    var stat = File.ReadAllText(Path.Combine(dir, "stat"));
+                    var rest = stat[(stat.LastIndexOf(')') + 2)..].Split(' ');
+                    parents[pid] = int.Parse(rest[1]);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException or IndexOutOfRangeException)
+                {
+                }
+            }
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return [];
+        }
+        var result = new List<int>();
+        var queue = new Queue<int>([root]);
+        while (queue.Count > 0)
+        {
+            var cur = queue.Dequeue();
+            foreach (var (pid, ppid) in parents)
+            {
+                if (ppid == cur && !result.Contains(pid))
+                {
+                    result.Add(pid);
+                    queue.Enqueue(pid);
+                }
+            }
+        }
+        return result;
     }
 
     private void RunCleanup(LaunchPlan plan)

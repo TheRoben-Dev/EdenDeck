@@ -105,6 +105,22 @@ public static class EdenOptions
             OffDetail = "Single core: very slow, only for troubleshooting.",
             DefaultValue = "true",
         },
+        new()
+        {
+            Id = "vibration_enabled", Group = "Controls", Label = "Rumble", Type = OptionType.Bool,
+            Help = "Lets games vibrate your controller.",
+            OnDetail = "Games rumble on supported pads (the Steam Deck included).",
+            OffDetail = "No vibration at all, saves a little battery.",
+            DefaultValue = "true",
+        },
+        new()
+        {
+            Id = "motion_enabled", Group = "Controls", Label = "Motion controls", Type = OptionType.Bool,
+            Help = "Passes your controller's gyro to games that use motion (aiming, puzzles).",
+            OnDetail = "Gyro works where the game supports it. On Steam Deck, Steam Input must pass the gyro through.",
+            OffDetail = "Games see no motion; turn off if the camera drifts.",
+            DefaultValue = "true",
+        },
     ];
 
     public static OptionDefinition? Find(string id) => All.FirstOrDefault(o => o.Id == id);

@@ -1,3 +1,4 @@
+using EdenDeck.Backends.Eden.Config;
 using EdenDeck.Host.Updates;
 using EdenDeck.App.Ui;
 using EdenDeck.Core.Library;
@@ -60,6 +61,36 @@ public partial class SettingsScreen : Screen
             Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
                 App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
         }
+
+        col.AddChild(Section("Controller"));
+        var styles = new (int Style, string Label, string Detail)[]
+        {
+            (ControllerStyle.ProController, "Pro Controller", "Games see one full controller. Works everywhere; Eden keeps your Console mode setting."),
+            (ControllerStyle.Handheld, "Handheld", "Games see a Switch in handheld mode with Joy-Cons attached, like the Steam Deck. Eden also switches Console mode to Handheld."),
+            (ControllerStyle.DualJoycons, "Dual Joy-Cons", "Two detached Joy-Cons used together. Only for games that ask for that style."),
+        };
+        var current = Host.Eden.PlayerStyle();
+        var style = new Stepper("Player 1 controller", styles.Select(x => (x.Style.ToString(), x.Label)),
+            styles.Any(x => x.Style == current) ? current.ToString() : ControllerStyle.ProController.ToString(),
+            "Which Switch controller Eden pretends player 1 is. Your button mapping stays the same.")
+        {
+            Expands = true,
+            DetailFor = v => styles.FirstOrDefault(x => x.Style.ToString() == v).Detail,
+        };
+        style.Changed += v => App.Guard(() =>
+        {
+            Host.Eden.SetPlayerStyle(int.Parse(v));
+            Rebuild();  // Console mode row may change with it
+        });
+        Add(style);
+        Add(new ActionButton("Map buttons in Eden", App.OpenEden,
+            "Opens Eden's Controls page for button mapping, other players and anything not shown here."));
+        var styleName = styles.FirstOrDefault(x => x.Style == current).Label ?? "Player 1";
+        Add(new ActionButton($"Save player 1 as profile \"{styleName}\"", () => App.Guard(() =>
+        {
+            Host.Eden.SaveInputProfile(styleName);
+            App.Success($"Saved profile \"{styleName}\". Pick it on a game's page to use it just for that game.");
+        }), "Saves the current mapping and controller style as an Eden input profile you can pick per game."));
 
         col.AddChild(Section("Appearance"));
         var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label)), UiTheme.Name,

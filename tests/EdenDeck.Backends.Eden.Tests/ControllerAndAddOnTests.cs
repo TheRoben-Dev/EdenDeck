@@ -110,4 +110,31 @@ public sealed class ControllerAndAddOnTests : IDisposable
         Assert.Equal(AddOnState.Disabled, s[0].State);
         Assert.Equal(AddOnState.Active, s[1].State);
     }
+
+    [Fact]
+    public void ControllerStyleAndProfilesUseEdensKeys()
+    {
+        var cfg = Path.Combine(_dir, "qt-config.ini");
+        var input = Path.Combine(_dir, "input");
+        var custom = Path.Combine(_dir, "custom", "0100000000010000.ini");
+        File.WriteAllText(cfg, "[Controls]\nplayer_0_button_a\\default=false\nplayer_0_button_a=\"engine:sdl,port:0,button:1\"\nplayer_0_connected=true\n");
+
+        Assert.Equal(ControllerStyle.ProController, EdenControls.PlayerStyle(cfg));
+        EdenControls.SetPlayerStyle(cfg, ControllerStyle.Handheld);
+        Assert.Equal(ControllerStyle.Handheld, EdenControls.PlayerStyle(cfg));
+        Assert.Equal("false", QtIni.Load(cfg).Get("Controls", "player_0_type\\default"));
+
+        EdenControls.SaveProfile(cfg, input, "Handheld");
+        Assert.Equal(["Handheld"], EdenControls.Profiles(input));
+        var profile = QtIni.Load(Path.Combine(input, "Handheld.ini"));
+        Assert.Equal("engine:sdl,port:0,button:1", profile.Get("Controls", "button_a"));
+        Assert.Equal("4", profile.Get("Controls", "type"));
+        Assert.Null(profile.Get("Controls", "connected"));
+        Assert.Throws<ArgumentException>(() => EdenControls.SaveProfile(cfg, input, "../evil"));
+
+        EdenControls.SetGameProfile(custom, "Handheld");
+        Assert.Equal("Handheld", EdenControls.GameProfile(custom));
+        EdenControls.SetGameProfile(custom, null);
+        Assert.Null(EdenControls.GameProfile(custom));
+    }
 }

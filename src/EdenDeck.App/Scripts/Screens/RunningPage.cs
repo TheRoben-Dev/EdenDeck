@@ -28,12 +28,16 @@ public partial class RunningPage : Screen
         {
             col.AddChild(UiTheme.Label("• " + n, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
-        col.AddChild(UiTheme.Label("Close Eden to come back here.", UiTheme.SmallSize + 1, UiTheme.Dim));
+        col.AddChild(UiTheme.Label("Close Eden to come back here, or hold View + Start (Select + Start) for 2 seconds to close the game from anywhere.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        // Reachable by touch or mouse when Eden isn't in front (controller input goes to the game).
+        _close = new ActionButton("Close game", App.CloseGame, "Asks Eden to quit, and force-closes it if it doesn't within a few seconds.");
+        col.AddChild(_close);
     }
 
-    public override void FocusDefault()
-    {
-    }
+    private ActionButton? _close;
+
+    public override void FocusDefault() => _close?.GrabFocus();
 
     public override bool OnBack() => true;
 }
