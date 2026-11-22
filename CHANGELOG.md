@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.3.1
+- Every theme has its own slow animated background: drifting lights, a pulsing grid, phosphor rain, pixel clouds, a scrolling 16-bit floor, an LCD shimmer or spinning low-poly shapes. It stops while a game runs, and you can turn it off under Settings → Appearance.
+- The CRT effect looks like a real TV now: the picture wobbles and curves, a band rolls down the screen, colours fringe and the edges darken. Pick Subtle, Medium or Strong.
+- Touch: swiping no longer presses the button you started on, touching a scrolling list just stops it, and the mouse cursor is never shown.
+
 ## 0.3.0
 - Settings are reorganised into two panes, console style: Controller, Graphics, System, Library, Appearance, Updates and Advanced on the left, their options on the right. B goes back to the list.
 - Games copied without a file extension (like "Metroid Dread" instead of "Metroid Dread.nsp") are detected, and the library offers a one-press "Fix name".
