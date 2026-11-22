@@ -306,10 +306,12 @@ public partial class CartStage : PolyStage
         {
             if (icon != null)
             {
-                // The label quad is wider than the cell is tall, so a square on it covers 58x80 cell pixels.
-                DrawRect(new Rect2(o, new Vector2(CellW, CellH)), Colors.Black);
-                const float iconW = CellW * 0.56f / 0.62f;  // label quad is 0.62 x 0.56 over a 64 x 80 cell
-                DrawTextureRect(icon, new Rect2(o.X + (CellW - iconW) / 2, o.Y, iconW, CellH), false);
+                // Fill the whole label: the quad is 0.62 x 0.56 (wider than tall), so the square icon is
+                // cropped top and bottom to that shape, centred, then stretched over the 64 x 80 cell.
+                const float labelAspect = 0.62f / 0.56f;
+                var iconSize = icon.GetSize();
+                var srcH = iconSize.Y / labelAspect;
+                DrawTextureRectRegion(icon, new Rect2(o, new Vector2(CellW, CellH)), new Rect2(0, (iconSize.Y - srcH) / 2, iconSize.X, srcH));
                 return;
             }
             var h = Hash(title);
