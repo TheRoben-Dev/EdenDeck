@@ -17,7 +17,11 @@ public static class LsfgVk
 
     public enum Kind { None, V2, Legacy }
 
-    public sealed record Install(Kind Kind, string? Manifest);
+    /// <param name="Bundled">The copy that ships inside Scanline (an explicit layer Scanline enables per launch).</param>
+    public sealed record Install(Kind Kind, string? Manifest, bool Bundled = false);
+
+    /// <summary>File name of the bundled layer's manifest, in the app's vulkan/lsfg-vk folder.</summary>
+    public const string BundledManifestName = "VkLayer_LSFGVK_frame_generation.json";
 
     /// <summary>Vulkan loader implicit layer search dirs (user first).</summary>
     public static IEnumerable<string> ImplicitLayerDirs(Func<string, string?> env)
@@ -35,8 +39,27 @@ public static class LsfgVk
         yield return "/usr/share/vulkan/implicit_layer.d";
     }
 
+    /// <summary>
+    /// Finds lsfg-vk: an installed 2.x implicit layer (a package, Flatpak extension or the Decky
+    /// plugin) wins, so the user's own setup is never replaced; otherwise the copy bundled with
+    /// Scanline in <paramref name="bundledDir"/>; otherwise a 1.x install (too old) or nothing.
+    /// </summary>
+    public static Install Find(Func<string, string?> env, string? bundledDir = null)
+    {
+        var installed = FindInstalled(env);
+        if (installed.Kind == Kind.V2)
+        {
+            return installed;
+        }
+        if (bundledDir != null && File.Exists(Path.Combine(bundledDir, BundledManifestName)))
+        {
+            return new(Kind.V2, Path.Combine(bundledDir, BundledManifestName), Bundled: true);
+        }
+        return installed;
+    }
+
     /// <summary>Finds an installed lsfg-vk implicit layer (e.g. from a package or the Decky plugin).</summary>
-    public static Install Find(Func<string, string?> env)
+    public static Install FindInstalled(Func<string, string?> env)
     {
         Install? legacy = null;
         foreach (var dir in ImplicitLayerDirs(env).Distinct())

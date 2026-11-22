@@ -32,7 +32,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - 🕹️ **Controller mapping** written straight into Eden's own input profiles, with Steam Input handled properly
 - 🚂 **Per-game "Add to Steam"** so each game launches from Game Mode with its own settings applied
 - 🧩 **Mod and cheat manager** with conflict warnings and one-tap enable/disable
-- ✨ **Upscaling and frame generation** using Eden's built-in FSR/SGSR and Lossless Scaling frame gen (your own copy), plus lsfg-vk for Eden Stable
+- ✨ **Upscaling and frame generation** using Eden's built-in FSR/SGSR, and Lossless Scaling frame gen (your own copy) through lsfg-vk, which comes included
 - 📊 **In-game overlay and quick menu** through Scanline's own Vulkan layer
 - 📺 **CRT effect for games**, per game, the same look as the app's own CRT effect (drawn by the layer, also over generated frames)
 - 🎯 **Frame generation capped at 60 FPS**, because the goal is smooth 60 FPS Switch games and nothing more
@@ -106,8 +106,7 @@ repeats. Scanline drives them through Eden's own per-game settings.
 
 **Frame generation.** One engine per game:
 
-- **Eden's built-in frame gen** (Nightly). This needs your own copy of [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam. Scanline finds its `Lossless.dll` and puts it where Eden expects it, and never ships or downloads Lossless Scaling files.
-- **lsfg-vk** for Eden Stable, with the same Lossless Scaling requirement.
+- **Lossless Scaling frame gen through lsfg-vk**, on Eden Stable and Nightly (Eden's own frame gen only exists in its Android build). This needs your own copy of [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam: Scanline finds its `Lossless.dll` and never ships or downloads Lossless Scaling files. lsfg-vk itself (GPL-3.0) comes **included** with Scanline and is used when you don't have it installed; an lsfg-vk 2.x you installed yourself takes priority, and your own lsfg-vk config is never touched.
 - **FSR 3.1 frame generation** in Scanline's own layer, as an experimental option for players without Lossless Scaling.
 
 **The 60 FPS rule.** Frame generation exists here to get Switch games to a smooth 60 FPS, and **output is hard-capped at 60 FPS**:
@@ -176,7 +175,7 @@ Development happens in phases. Each phase lands as a pull request that merges on
 - [ ] **Phase 4 — Mods and cheats**
   Mod and cheat manager, archive installer, conflict detection, version checks, backups, optional GameBanana browser.
 - [ ] **Phase 5 — Upscaling and frame generation**
-  Eden's built-in FSR/SGSR upscaling, Lossless Scaling frame generation through lsfg-vk (Eden's own frame gen is Android-only; 60 FPS cap), lsfg-vk bundled in the app, then the in-game overlay and quick menu.
+  Eden's built-in FSR/SGSR upscaling, Lossless Scaling frame generation through lsfg-vk (Eden's own frame gen is Android-only; 60 FPS cap), lsfg-vk bundled in the app (done in 0.4.2), then the in-game overlay and quick menu.
 - [ ] **Phase 6 — Packaging and updates**
   Flatpak and AppImage, in-app self-updates from GitHub Releases, rollback, user docs.
 

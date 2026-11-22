@@ -79,7 +79,10 @@ public sealed class EdenBackend : IEmulatorBackend
     }
 
     /// <summary>Installed lsfg-vk layer, if any.</summary>
-    public LsfgVk.Install FindLsfgVk() => LsfgVk.Find(Env ?? Environment.GetEnvironmentVariable);
+    /// <summary>Where the lsfg-vk bundled with Scanline lives (vulkan/lsfg-vk next to the app), if any.</summary>
+    public string? BundledLsfgDir { get; set; }
+
+    public LsfgVk.Install FindLsfgVk() => LsfgVk.Find(Env ?? Environment.GetEnvironmentVariable, BundledLsfgDir);
 
     /// <summary>Read-only check for the game page: is frame gen going to find Lossless.dll?</summary>
     public bool LosslessDllAvailable() => LosslessDll.IsInstalled(Paths.LosslessDir) || LosslessDll.FindInSteam(Home) != null;

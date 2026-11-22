@@ -86,6 +86,20 @@ jobs:
           cmake -S layer -B layer/build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build layer/build
 
+      - name: Cache bundled lsfg-vk
+        if: steps.version.outputs.skip != 'true'
+        id: lsfg-cache
+        uses: actions/cache@v4
+        with:
+          path: build/lsfg-vk
+          key: lsfg-vk-${{ runner.os }}-${{ hashFiles('tools/release/build-lsfg-vk.sh') }}
+
+      - name: Build bundled lsfg-vk
+        if: steps.version.outputs.skip != 'true' && steps.lsfg-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get install -y --no-install-recommends clang
+          tools/release/build-lsfg-vk.sh build/lsfg-vk
+
       - name: Tests
         if: steps.version.outputs.skip != 'true'
         run: |
@@ -110,7 +124,7 @@ jobs:
 
       - name: Package
         if: steps.version.outputs.skip != 'true'
-        run: tools/release/package-linux.sh "$VERSION" build/godot build/cli/scanline layer/build dist
+        run: tools/release/package-linux.sh "$VERSION" build/godot build/cli/scanline layer/build dist build/lsfg-vk
 
       - name: Smoke test the packaged build
         if: steps.version.outputs.skip != 'true'
@@ -127,6 +141,9 @@ jobs:
           test -x "$RUNNER_TEMP/insthome/Applications/EdenDeck/EdenDeck.x86_64"
           "$RUNNER_TEMP/insthome/Applications/EdenDeck/edendeck" help >/dev/null
           tar tzf dist/EdenDeck-linux-x86_64.tar.gz | grep -qx 'EdenDeck/EdenDeck.x86_64'
+          test -f "$RUNNER_TEMP/pkg/Scanline/vulkan/lsfg-vk/liblsfg-vk-layer.so"
+          test -f "$RUNNER_TEMP/pkg/Scanline/vulkan/lsfg-vk/LICENSE.md"
+          ls dist/lsfg-vk-*-source.tar.gz
           tools/smoke/run-ui-smoke.sh "$RUNNER_TEMP/pkg/Scanline/Scanline.x86_64" "$RUNNER_TEMP/shots"
           "$RUNNER_TEMP/pkg/Scanline/scanline" help
 

@@ -72,7 +72,7 @@ public sealed class AppHost
     {
         if (paths == null)
         {
-            AppPaths.MigrateFromEdenDeck();  // Scanline's folders -> Scanline's, once
+            AppPaths.MigrateFromEdenDeck();  // Eden Deck's folders -> Scanline's, once
         }
         Paths = paths ?? new AppPaths();
         Directory.CreateDirectory(Paths.Config);
@@ -82,6 +82,10 @@ public sealed class AppHost
         Profiles = new ProfileStore(Paths.ProfilesFile);
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
+        if ((Settings.LayerDirectory ?? AutoLayerDirectory()) is { } vk)
+        {
+            Eden.BundledLsfgDir = Path.Combine(vk, "lsfg-vk");
+        }
         Library = LoadJson<List<LibraryGame>>(Paths.LibraryCacheFile) ?? [];
         _misnamed = LoadJson<List<MisnamedFile>>(MisnamedCacheFile) ?? [];
         Updater = new AppUpdater();

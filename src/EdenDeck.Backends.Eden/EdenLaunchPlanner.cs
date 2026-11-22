@@ -60,6 +60,10 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
         // frame_gen keys do nothing and lsfg-vk (Vulkan layer, same Lossless shaders) does the work.
         var decision = FrameGenPolicy.Decide(profile.FrameGen, profile.NativeFps);
         var lsfg = _backend.FindLsfgVk();
+        // Explicit layers for this launch, closest to the game first. The bundled lsfg-vk goes above
+        // Scanline's layer so its generated frames pass through ours (CRT filter, stats).
+        var layers = new List<string>();
+        var layerPaths = new List<string>();
         if (decision.Enabled)
         {
             var dll = _backend.EnsureLosslessDll();
@@ -70,7 +74,12 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
                 {
                     env[k] = v;
                 }
-                notes.Add($"frame gen: lsfg-vk, {decision.Reason}");
+                if (lsfg.Bundled)
+                {
+                    layers.Add(LsfgVk.LayerName);
+                    layerPaths.Add(Path.GetDirectoryName(lsfg.Manifest!)!);
+                }
+                notes.Add($"frame gen: lsfg-vk{(lsfg.Bundled ? " (bundled)" : "")}, {decision.Reason}");
             }
             else if (dllPath == null)
             {
@@ -116,8 +125,8 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
 
         if (options.LayerDirectory is { } layerDir && File.Exists(Path.Combine(layerDir, "VkLayer_SCANLINE_overlay.json")))
         {
-            env["VK_ADD_LAYER_PATH"] = Append(layerDir, Environment.GetEnvironmentVariable("VK_ADD_LAYER_PATH"));
-            env["VK_INSTANCE_LAYERS"] = Append("VK_LAYER_SCANLINE_overlay", Environment.GetEnvironmentVariable("VK_INSTANCE_LAYERS"));
+            layers.Add("VK_LAYER_SCANLINE_overlay");
+            layerPaths.Add(layerDir);
             if (options.LayerStatsPath != null)
             {
                 env["SCANLINE_LAYER_STATS"] = options.LayerStatsPath;
@@ -155,6 +164,12 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
         else if (profile.Crt > 0)
         {
             notes.Add("warning: CRT effect needs Scanline's Vulkan layer, which wasn't found. The game runs without it.");
+        }
+
+        if (layers.Count > 0)
+        {
+            env["VK_ADD_LAYER_PATH"] = Append(string.Join(':', layerPaths.Distinct()), Environment.GetEnvironmentVariable("VK_ADD_LAYER_PATH"));
+            env["VK_INSTANCE_LAYERS"] = Append(string.Join(':', layers), Environment.GetEnvironmentVariable("VK_INSTANCE_LAYERS"));
         }
 
         var args = new List<string>();

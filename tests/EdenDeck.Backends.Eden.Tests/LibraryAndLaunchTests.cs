@@ -581,4 +581,36 @@ public class LaunchTests : IDisposable
         var killed = b.Launch.Plan(Game(), new GameProfile { Crt = 3 }, new LaunchOptions { LayerDirectory = layerDir, LayerKillSwitch = true });
         Assert.False(killed.Environment.ContainsKey("SCANLINE_CRT"));
     }
+
+    [Fact]
+    public void BundledLsfgVkIsEnabledAboveTheScanlineLayerOnlyWhenNothingIsInstalled()
+    {
+        var b = IsolatedBackend("nightly");
+        FakeSteamLossless([(byte)'M', (byte)'Z']);
+        var vk = Path.Combine(_env.Home, "app", "vulkan");
+        var bundled = Path.Combine(vk, "lsfg-vk");
+        Directory.CreateDirectory(bundled);
+        File.WriteAllText(Path.Combine(vk, "VkLayer_SCANLINE_overlay.json"), "{}");
+        File.WriteAllText(Path.Combine(bundled, "VkLayer_LSFGVK_frame_generation.json"), "{}");
+        b.BundledLsfgDir = bundled;
+        var fg = new GameProfile { FrameGen = FrameGenMode.Builtin, NativeFps = 30 };
+
+        Assert.True(b.FindLsfgVk().Bundled);
+        var plan = b.Launch.Plan(Game(), fg, new LaunchOptions { LayerDirectory = vk });
+        Assert.StartsWith("VK_LAYER_LSFGVK_frame_generation:VK_LAYER_SCANLINE_overlay", plan.Environment["VK_INSTANCE_LAYERS"]);
+        Assert.StartsWith($"{bundled}:{vk}", plan.Environment["VK_ADD_LAYER_PATH"]);
+        Assert.Equal("1", plan.Environment["LSFGVK_ENV"]);
+        Assert.Contains(plan.Notes, n => n.Contains("lsfg-vk (bundled)"));
+
+        // Frame gen off: the bundled layer isn't loaded at all.
+        var off = b.Launch.Plan(Game(), new GameProfile(), new LaunchOptions { LayerDirectory = vk });
+        Assert.StartsWith("VK_LAYER_SCANLINE_overlay", off.Environment["VK_INSTANCE_LAYERS"]);
+
+        // The user's own lsfg-vk 2.x install wins over the bundled copy.
+        FakeLsfgVk();
+        Assert.False(b.FindLsfgVk().Bundled);
+        var own = b.Launch.Plan(Game(), fg, new LaunchOptions { LayerDirectory = vk });
+        Assert.StartsWith("VK_LAYER_SCANLINE_overlay", own.Environment["VK_INSTANCE_LAYERS"]);
+        Assert.Equal("1", own.Environment["LSFGVK_ENV"]);
+    }
 }
