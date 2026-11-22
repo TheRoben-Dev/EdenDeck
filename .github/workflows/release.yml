@@ -1,0 +1,124 @@
+name: Release
+
+# Push a tag vX.Y.Z (matching <Version> in Directory.Build.props) to publish a GitHub Release
+# with the portable Linux build. The build is smoke-tested before anything is published.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: 4.7.2
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  linux:
+    name: Build, test and publish Linux release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          tag=${GITHUB_REF_NAME#v}
+          props=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props)
+          if [ "$tag" != "$props" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match Directory.Build.props <Version>$props</Version>"
+            exit 1
+          fi
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Cache Godot editor and export templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-dl
+          key: godot-mono-${{ env.GODOT_VERSION }}
+
+      - name: Download Godot .NET ${{ env.GODOT_VERSION }}
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-dl && cd ~/godot-dl
+          base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          curl -fsSL --retry 3 -o editor.zip "$base/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip"
+          curl -fsSL --retry 3 -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz"
+          curl -fsSL --retry 3 -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+          grep -E " (Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip|Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz)$" SHA512-SUMS.txt \
+            | sed -e "s/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip/editor.zip/" -e "s/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz/templates.tpz/" \
+            | sha512sum -c -
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build g++ libvulkan-dev xvfb libgl1-mesa-dri libglu1-mesa
+          cd ~/godot-dl
+          unzip -q -o editor.zip -d editor
+          echo "GODOT=$(ls ~/godot-dl/editor/*/Godot_v*_mono_linux.x86_64)" >> "$GITHUB_ENV"
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
+          mkdir -p "$dest"
+          unzip -q -o -j templates.tpz 'templates/linux_*x86_64*' 'templates/version.txt' -d "$dest"
+
+      - name: Vulkan layer
+        run: |
+          cmake -S layer -B layer/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build layer/build
+
+      - name: Tests
+        run: |
+          dotnet build EdenDeck.sln -c Release
+          dotnet test EdenDeck.sln -c Release --no-build
+
+      - name: Export app
+        working-directory: src/EdenDeck.App
+        run: |
+          timeout 300 "$GODOT" --headless --import
+          mkdir -p ../../build/godot
+          timeout 600 "$GODOT" --headless --export-release Linux ../../build/godot/EdenDeck.x86_64 2>&1 | tee export.log
+          test -x ../../build/godot/EdenDeck.x86_64
+          ! grep -E "^ERROR" export.log
+
+      - name: Headless launcher
+        run: |
+          dotnet publish src/EdenDeck.Cli -c Release -r linux-x64 --self-contained \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o build/cli
+
+      - name: Package
+        run: tools/release/package-linux.sh "$VERSION" build/godot build/cli/edendeck layer/build dist
+
+      - name: Smoke test the packaged build
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkg"
+          tar xzf dist/EdenDeck-$VERSION-linux-x86_64.tar.gz -C "$RUNNER_TEMP/pkg"
+          tools/smoke/run-ui-smoke.sh "$RUNNER_TEMP/pkg/EdenDeck/EdenDeck.x86_64" "$RUNNER_TEMP/shots"
+          "$RUNNER_TEMP/pkg/EdenDeck/edendeck" help
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<NOTES
+          Portable Linux build for SteamOS, Bazzite and other x86_64 distros.
+
+          **Install:** download \`EdenDeck-$VERSION-linux-x86_64.tar.gz\`, extract it anywhere (for example \`~/Applications\`), and run \`EdenDeck/EdenDeck.x86_64\`. In Desktop Mode, add that file to Steam as a non-Steam game to use it from Game Mode.
+
+          **First run:** on the Eden tab, install Eden (Stable is recommended), then import your own \`prod.keys\` and firmware. Add your game folder on the Library tab.
+
+          Eden Deck never downloads keys, firmware or games. Verify the download with \`SHA256SUMS\`.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Eden Deck $VERSION" --notes-file notes.md --verify-tag
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
