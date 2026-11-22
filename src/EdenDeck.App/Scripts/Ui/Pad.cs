@@ -34,6 +34,9 @@ public static class Pad
     private const float StickDeadzone = 0.55f;
 
     public static PadFamily LastFamily { get; private set; } = PadFamily.Keyboard;
+
+    /// <summary>The joypad that was used last (for rumble), or null before any pad input.</summary>
+    public static int? LastDevice { get; private set; }
     public static event Action? FamilyChanged;
 
     private static string? _held;
@@ -141,6 +144,7 @@ public static class Pad
                 SetFamily(PadFamily.Keyboard);
                 return false;
             case InputEventJoypadButton jb:
+                LastDevice = jb.Device;
                 SetFamily(FamilyOf(jb.Device));
                 var action = ActionFor(jb.ButtonIndex, LastFamily);
                 if (action == null)
@@ -170,6 +174,7 @@ public static class Pad
                 }
                 if (Mathf.Abs(jm.AxisValue) > StickDeadzone)
                 {
+                    LastDevice = jm.Device;
                     SetFamily(FamilyOf(jm.Device));
                 }
                 return true;

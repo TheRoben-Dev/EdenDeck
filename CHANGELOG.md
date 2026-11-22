@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.5.2
+- New: **menu sounds and controller rumble**, like a console. Moving, pressing, going back, switching tabs, changing a value, errors and starting a game each get a short sound and a light buzz. Every theme has its own set: soft blips for Dark and CD era, chiptune chirps for the pixel themes, a neon buzz for Nightgrid and an echoing chime for 32-bit 3D. All made by Scanline itself, nothing downloaded. Set the volume or turn rumble off under Settings → Sound & feel. Games keep their own sound and rumble.
+
 ## 0.5.1
 - Game icons now **fill the cartridge label**, cropped evenly to its shape, instead of sitting between black bars. Same on the 3D carts and the Steam art (Steam art for games you already added is drawn again the next time Scanline starts).
 

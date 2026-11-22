@@ -18,6 +18,7 @@ public partial class SettingsScreen : TwoPaneScreen
         ("System", "Console mode and speed limit for all games."),
         ("Library", "Game folders and rescanning."),
         ("Appearance", "Theme, CRT effect and animations."),
+        ("Sound & feel", "Menu sounds and controller rumble."),
         ("Steam", "Scanline and your games in your Steam library."),
         ("Updates", "Version, changelog and updates."),
         ("Advanced", "Overlay layer and expert Eden options."),
@@ -52,6 +53,9 @@ public partial class SettingsScreen : TwoPaneScreen
                 break;
             case "Appearance":
                 BuildAppearance(col, Add);
+                break;
+            case "Sound & feel":
+                BuildFeedback(col, Add);
                 break;
             case "Steam":
                 BuildSteam(col, Add);
@@ -235,6 +239,34 @@ public partial class SettingsScreen : TwoPaneScreen
     private string? _pendingTheme;
     private string? _pendingBase;
     private Dictionary<string, string>? _pendingAccents;
+
+    private void BuildFeedback(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(UiTheme.Label("Each theme has its own set of sounds. In games, only the game's own sound and rumble play.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        var levels = new List<(string, string)> { ("0", "Off"), ("25", "Quiet"), ("50", "Medium"), ("75", "Loud"), ("100", "Full") };
+        var current = Host.Settings.SoundVolume;
+        var nearest = levels.OrderBy(l => Math.Abs(int.Parse(l.Item1) - current)).First().Item1;
+        var sound = new Stepper("Menu sounds", levels, nearest, "Short sounds when you move, press, go back or switch tabs.")
+        {
+            Expands = true,
+            DetailFor = v => v == "0" ? "Silent menus." : "Plays through your speakers or headphones at this level.",
+        };
+        sound.Changed += v =>
+        {
+            Host.SaveSettings(Host.Settings with { SoundVolume = int.Parse(v) });
+            App.ApplyFeedback(Host.Settings.SoundVolume, Host.Settings.Haptics);
+            EdenDeck.App.Ui.Feedback.Play(EdenDeck.App.Ui.Cue.Confirm);  // a sample at the new level
+        };
+        Add(sound);
+        Add(Toggle.Create("Controller rumble", Host.Settings.Haptics, on =>
+        {
+            Host.SaveSettings(Host.Settings with { Haptics = on });
+            App.ApplyFeedback(Host.Settings.SoundVolume, on);
+            EdenDeck.App.Ui.Feedback.Play(EdenDeck.App.Ui.Cue.Confirm);
+        }, "A light buzz in your hands for menu moves, presses and errors. On a Steam Deck it uses the trackpad haptics when Steam Input passes rumble through.",
+            "Rumbles on menu actions.", "No rumble in the menus."));
+    }
 
     private void BuildAppearance(VBoxContainer col, Action<Control> Add)
     {

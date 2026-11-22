@@ -173,8 +173,22 @@ public partial class Main : Control
 
         // Rows with an expanding explanation show it in place; the hint bar would only repeat it.
         GetViewport().GuiFocusChanged += c => _hints.SetHelp(c.HasMeta(Stepper.ExpandsMeta) ? "" : c.TooltipText);
+        // A tick when the player moves focus (not when a page puts focus somewhere itself).
+        GetViewport().GuiFocusChanged += _ =>
+        {
+            if (Time.GetTicksMsec() - _navAtMs < 250)
+            {
+                Feedback.Play(Cue.Move);
+            }
+        };
 
         Host = host;
+        _feedback = new Feedback(UiTheme.Name)
+        {
+            Volume = host?.Settings.SoundVolume ?? 50,
+            Haptics = host?.Settings.Haptics ?? true,
+        };
+        AddChild(_feedback);
         if (startupError is { } e)
         {
             GD.PushError(e.ToString());
@@ -200,7 +214,14 @@ public partial class Main : Control
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
         var art = Array.IndexOf(args, "--render-steam-art");
-        if (art >= 0 && art + 1 < args.Length)
+        var sounds = Array.IndexOf(args, "--render-sounds");
+        if (sounds >= 0 && sounds + 1 < args.Length)
+        {
+            // Development tool: every theme's sounds as .wav files, to listen to without the app.
+            Feedback.WriteAll(args[sounds + 1]);
+            GetTree().Quit();
+        }
+        else if (art >= 0 && art + 1 < args.Length)
         {
             AddChild(new SteamArtRenderer(args[art + 1], art + 2 < args.Length ? args[art + 2] : "Scanline", art + 3 < args.Length ? args[art + 3] : null));
         }
@@ -600,8 +621,32 @@ public partial class Main : Control
         }
     }
 
+    private ulong _navAtMs;
+    private Feedback? _feedback;
+
+    /// <summary>Applies the sound and rumble settings right away (Settings → Sound & feel).</summary>
+    public void ApplyFeedback(int volume, bool haptics)
+    {
+        if (_feedback != null)
+        {
+            _feedback.Volume = volume;
+            _feedback.Haptics = haptics;
+        }
+    }
+
     public override void _Input(InputEvent e)
     {
+        if (!GameRunning && e is InputEventAction or InputEventKey && e.IsPressed() && !e.IsEcho())
+        {
+            if (e.IsAction("ui_up") || e.IsAction("ui_down") || e.IsAction("ui_left") || e.IsAction("ui_right"))
+            {
+                _navAtMs = Time.GetTicksMsec();
+            }
+            else if (e.IsAction(Pad.Accept) && GetViewport().GuiGetFocusOwner() is BaseButton and not Stepper)
+            {
+                Feedback.Play(Cue.Confirm);
+            }
+        }
         switch (e)
         {
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
@@ -681,9 +726,15 @@ public partial class Main : Control
         var top = _stack[^1];
         if (e.IsActionPressed(Pad.Back))
         {
-            if (!top.OnBack() && _stack.Count > 1)
+            var handled = top.OnBack();
+            if (!handled && _stack.Count > 1)
             {
                 Pop();
+                handled = true;
+            }
+            if (handled)
+            {
+                Feedback.Play(Cue.Back);
             }
         }
         else if (e.IsActionPressed(Pad.TabPrev) && _stack.Count == 1)
@@ -715,6 +766,10 @@ public partial class Main : Control
     private void SwitchTab(int index)
     {
         AppLog.Info($"tab -> {TabNames[index]}");
+        if (index != _tab)
+        {
+            Feedback.Play(Cue.Tab);
+        }
         var dir = index == _tab ? 0 : (index - _tab + TabNames.Length) % TabNames.Length == 1 ? 1 : -1;
         _tab = index;
         foreach (var s in _stack)
@@ -864,10 +919,15 @@ public partial class Main : Control
     public void Error(string text)
     {
         AppLog.Warn("shown error: " + text);
+        Feedback.Play(Cue.Error);
         _toast.Show(text, UiTheme.Bad);
     }
 
-    public void Success(string text) => _toast.Show(text, UiTheme.Good);
+    public void Success(string text)
+    {
+        Feedback.Play(Cue.Success);
+        _toast.Show(text, UiTheme.Good);
+    }
 
     /// <summary>Runs an action and shows expected failures (I/O, bad files, Eden running) as a toast.</summary>
     public bool Guard(Action action)
@@ -1025,6 +1085,7 @@ public partial class Main : Control
             return;
         }
         Host.MarkPlayed(game);
+        Feedback.Play(Cue.Launch);
         var notes = controllerNote != null ? plan.Notes.Prepend(controllerNote).ToList() : plan.Notes;
         RunEden(game.Base.Title, plan, notes, null, game);
     }
