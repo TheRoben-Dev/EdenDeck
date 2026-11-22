@@ -36,12 +36,24 @@ public static class SteamArt
     };
 
     /// <summary>Renders the set for <paramref name="title"/> into <paramref name="dir"/> (capsule.png, wide.png, hero.png, logo.png, icon.png).</summary>
-    public static async Task Render(Node host, string title, string dir, int settleFrames = 12)
+    /// <summary>Bump when the look changes: sets rendered by an older version are drawn again.</summary>
+    public const int Version = 2;
+
+    public static async Task Render(Node host, string title, string dir, string? iconPath = null, int settleFrames = 12)
     {
         Directory.CreateDirectory(dir);
+        Image? icon = null;
+        if (iconPath != null && File.Exists(iconPath))
+        {
+            icon = new Image();
+            if (icon.LoadJpgFromBuffer(File.ReadAllBytes(iconPath)) != Error.Ok && icon.LoadPngFromBuffer(File.ReadAllBytes(iconPath)) != Error.Ok)
+            {
+                icon = null;
+            }
+        }
         foreach (var shot in Shots)
         {
-            var view = UiTheme.With("polygon", () => Build(shot, title));
+            var view = UiTheme.With("polygon", () => Build(shot, title, icon));
             host.AddChild(view);
             // Let the low-res stages size themselves and the carts settle into their pose.
             for (var i = 0; i < settleFrames; i++)
@@ -59,7 +71,13 @@ public static class SteamArt
             img.SavePng(tmp);
             File.Move(tmp, path, overwrite: true);
         }
+        File.WriteAllText(Path.Combine(dir, "version"), Version.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
+
+    /// <summary>True when <paramref name="dir"/> holds a set drawn by this version.</summary>
+    public static bool IsCurrent(string dir) =>
+        File.Exists(Path.Combine(dir, "capsule.png")) && File.Exists(Path.Combine(dir, "version")) &&
+        File.ReadAllText(Path.Combine(dir, "version")).Trim() == Version.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Title text size for a box: long names get smaller lettering and wrap.</summary>
     private static int TitleSize(string title, float scale)
@@ -69,7 +87,7 @@ public static class SteamArt
         return (int)(size * scale);
     }
 
-    private static SubViewport Build(Shot s, string title)
+    private static SubViewport Build(Shot s, string title, Image? icon)
     {
         var view = new SubViewport
         {
@@ -100,7 +118,7 @@ public static class SteamArt
         }
         foreach (var cart in s.Carts)
         {
-            root.AddChild(new CartStage(title, UiTheme.CurrentFont) { Position = cart.Position, Size = cart.Size });
+            root.AddChild(new CartStage(title, UiTheme.CurrentFont, icon) { Position = cart.Position, Size = cart.Size });
         }
         if (s.Title is { } box)
         {
@@ -132,17 +150,18 @@ public static class SteamArt
     }
 }
 
-/// <summary>Development tool (<c>-- --render-steam-art &lt;dir&gt; [title]</c>): renders Scanline's own set (or a sample game's) and quits.</summary>
+/// <summary>Development tool (<c>-- --render-steam-art &lt;dir&gt; [title] [icon]</c>): renders Scanline's own set (or a sample game's) and quits.</summary>
 public partial class SteamArtRenderer : Node
 {
     private readonly string _dir;
     private readonly string _title;
+    private readonly string? _icon;
 
-    public SteamArtRenderer(string dir, string title = "Scanline") => (_dir, _title) = (dir, title);
+    public SteamArtRenderer(string dir, string title = "Scanline", string? icon = null) => (_dir, _title, _icon) = (dir, title, icon);
 
     public override async void _Ready()
     {
-        await SteamArt.Render(this, _title, _dir, settleFrames: 45);
+        await SteamArt.Render(this, _title, _dir, _icon, settleFrames: 45);
         GD.Print($"steam-art: wrote {_dir}");
         GetTree().Quit();
     }
