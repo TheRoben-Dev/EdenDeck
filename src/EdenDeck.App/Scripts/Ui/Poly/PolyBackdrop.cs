@@ -142,7 +142,7 @@ public partial class PolyBackdrop : PolyStage
             _pressed = true;
             return;
         }
-        if (!_pressed || (mb.Position - _pressAt).Length() > TouchScroll.Deadzone || OverUi(mb.Position))
+        if (!_pressed || (mb.Position - _pressAt).Length() > TouchScroll.Deadzone || UiHit.OverUi(this, mb.Position))
         {
             _pressed = false;
             return;
@@ -164,42 +164,5 @@ public partial class PolyBackdrop : PolyStage
             }
         }
         hit?.Tap();
-    }
-
-    /// <summary>True when the point is over something the UI handles (buttons, rows, panels, overlays).</summary>
-    private bool OverUi(Vector2 at)
-    {
-        var main = Main.Instance;
-        bool Walk(Node n)
-        {
-            foreach (var child in n.GetChildren())
-            {
-                if (child is Control c)
-                {
-                    if (!c.Visible || c.IsAncestorOf(this) || c == this)
-                    {
-                        continue;
-                    }
-                    // Focusable controls, panels and full-screen catchers (overlay backdrops) count as UI;
-                    // plain layout controls, containers and scrollers don't, so empty space inside a list still reaches the props.
-                    var blocks = c.FocusMode != FocusModeEnum.None || c is PanelContainer or Panel ||
-                                 (c.MouseFilter == MouseFilterEnum.Stop && c is not Container && c.GetType() != typeof(Control));
-                    if (blocks && c.GetGlobalRect().HasPoint(at))
-                    {
-                        return true;
-                    }
-                }
-                if (child is CanvasItem { Visible: false })
-                {
-                    continue;
-                }
-                if (Walk(child))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return main != null && Walk(main);
     }
 }

@@ -61,7 +61,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
   - **Library grid:** scans your game folders and shows title, icon, title ID, version, update and DLC status.
   - **Game page:** launch, settings, key set, mods, cheats, controller profile, frame gen / upscaling, Add to Steam.
   - **Global settings**, **Eden manager**, **controller setup**.
-- Modern dark theme by default, with short smooth animations. Optional themes: retro terminal, Nightgrid, 8-bit, 16-bit, Pocket LCD, CD era and **32-bit 3D** (real low-poly 3D cartridges with era rendering and interactive props).
+- Modern dark theme by default, with short smooth animations. Optional themes: retro terminal, Nightgrid, 8-bit, 16-bit, Pocket LCD, CD era, **32-bit 3D** (real low-poly 3D cartridges with era rendering and interactive props) and **Console buddy** (soft pastels and Pip, an original little handheld mascot who naps, cheers and reacts to taps).
 - **Settings that matter, explained.** Only the Eden options worth changing (resolution scale, renderer, VSync, docked/handheld, shader cache, CPU accuracy and so on), each with a one-line explanation. Per-game overrides are written in Eden's own per-game config format.
 
 ### 3. Controllers and SteamOS integration

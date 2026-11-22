@@ -72,7 +72,13 @@ public partial class Main : Control
         {
             _crt.Paused = paused;
         }
+        if (_buddy != null && IsInstanceValid(_buddy))
+        {
+            _buddy.Paused = paused;
+        }
     }
+
+    private Buddy? _buddy;
 
     private bool _gameRunning;
 
@@ -276,6 +282,13 @@ public partial class Main : Control
             case Decor.PixelGrid:
                 _bgLayer.AddChild(new PixelGrid());
                 break;
+        }
+        // The console buddy theme's mascot, in the corner behind the UI.
+        _buddy = null;
+        if (UiTheme.Name == "buddy")
+        {
+            _buddy = new Buddy();
+            _bgLayer.AddChild(_buddy);
         }
         // Scanlines sit above everything (ZIndex), from the theme or the CRT setting.
         if (UiTheme.Spec.Decor == Decor.Scanlines || Host?.Settings.Crt == true)
@@ -975,6 +988,7 @@ public partial class Main : Control
         var started = DateTime.UtcNow;
         var page = new RunningPage(title, notes);
         Push(page);
+        Buddy.Instance?.Cheer();
         GameRunning = true;
         Pad.ReleaseAll();
         var log = new List<string>();
@@ -1012,6 +1026,10 @@ public partial class Main : Control
         Pop();
         GetWindow().GrabFocus();
         var seconds = (DateTime.UtcNow - started).TotalSeconds;
+        if (code == 0 && seconds >= 60)
+        {
+            Buddy.Instance?.Cheer();  // welcome back
+        }
         // A game that closes within a minute, or any non-zero exit, is almost always a failed start:
         // say so and show why, instead of silently dropping back to the card.
         if (game != null && (code != 0 || seconds < 60))

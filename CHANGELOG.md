@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.2
+- New theme: **Console buddy.** Soft pastels, round corners, a rounded font, drifting bubbles and Pip, a little pebble-shaped handheld who lives in the corner. Pip glances at whatever you've selected, blinks, dozes off when you leave it alone and wakes when you press something, cheers when a game starts and when you come back, and does a little something when you tap it. Pip holds still when Animations is off.
+- Accent colours on light themes are less darkened, so they stay bright.
+
 ## 0.4.1
 - New: **CRT effect for games.** Each game's card has a CRT effect setting with the same levels as the app's (Off, Subtle, Medium, Strong): scanlines, a wobbling picture, a rolling band, colour fringes, tube curve and dark edges, drawn over the game by Scanline's Vulkan layer. It's off by default, holds still when Animations is off, and also covers frames made by frame generation. If the layer can't run, the game just plays without it.
 

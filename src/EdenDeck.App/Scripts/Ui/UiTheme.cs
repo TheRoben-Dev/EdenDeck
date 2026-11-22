@@ -115,6 +115,14 @@ public static class UiTheme
             Shell = new("6c6f80"), Radius = 3, Hairline = 1, Bevel = 3, FontKind = "chakra", Upper = true,
             Glow = 0f, Wordmark = "SCANLINE", Tiles = (0.55f, 0.42f, 0, 360),
         },
+        new("buddy", "Console buddy", "Soft pastels, round corners and Pip, a little handheld friend who keeps you company.")
+        {
+            Bg = new("f7eee6"), Panel = new("fffaf6"), PanelHi = new("ffe8dc"), Line = new("e6d3c6"),
+            Accent = new("ff7a8a"), Text = new("4a3550"), Dim = new("907a8c"),
+            Good = new("2fa57c"), Warn = new("d98a1c"), Bad = new("e04a63"), Info = new("4f9ad9"),
+            Shell = new("f1ddd0"), Radius = 18, FontKind = "round", Glow = 0.10f, Light = true,
+            Wordmark = "scanline", Tiles = (0.32f, 0.93f, 0, 360),
+        },
     ];
 
     public static ThemeSpec Spec { get; private set; } = Themes[0];
@@ -171,7 +179,7 @@ public static class UiTheme
 
     /// <summary>The swatch's colour as used on <paramref name="theme"/>, or null for an unknown id.</summary>
     public static Color? AccentFor(ThemeSpec theme, string? id) =>
-        AccentSwatches.FirstOrDefault(s => s.Id == id) is { Id: not null } s ? (theme.Light ? s.Color.Darkened(0.62f) : s.Color) : null;
+        AccentSwatches.FirstOrDefault(s => s.Id == id) is { Id: not null } s ? (theme.Light ? s.Color.Darkened(0.3f) : s.Color) : null;
 
     /// <summary>
     /// Pocket LCD's whole point is its four-shade screen, so instead of an accent it offers other
@@ -218,6 +226,7 @@ public static class UiTheme
             "mono" => new FontVariation { BaseFont = new SystemFont { FontNames = MonoFonts }, SpacingGlyph = Nightgrid ? 1 : 0 },
             "pixel" => PixelFont(),
             "chakra" => ChakraFont(),
+            "round" => RoundFont(),
             _ => null,
         };
     }
@@ -252,11 +261,11 @@ public static class UiTheme
     /// <summary>Drops the cached fonts at quit (see Main._ExitTree).</summary>
     public static void ReleaseFonts()
     {
-        foreach (var f in new[] { _font, _pixel, _chakra })
+        foreach (var f in new[] { _font, _pixel, _chakra, _round })
         {
             f?.Dispose();
         }
-        _font = _pixel = _chakra = null;
+        _font = _pixel = _chakra = _round = null;
     }
 
     /// <summary>Chakra Petch SemiBold (SIL OFL 1.1, bundled under Assets/Fonts): squared-off, late-90s menu lettering.</summary>
@@ -270,6 +279,21 @@ public static class UiTheme
                 : new FontVariation { BaseFont = file, SpacingGlyph = 1, Fallbacks = [new SystemFont { FontNames = MonoFonts }] };
         }
         return _chakra;
+    }
+
+    private static Font? _round;
+
+    /// <summary>Fredoka Medium (SIL OFL 1.1, bundled under Assets/Fonts): soft, rounded lettering for the buddy theme.</summary>
+    private static Font RoundFont()
+    {
+        if (_round == null)
+        {
+            var file = ResourceLoader.Exists("res://Assets/Fonts/Fredoka-Medium.ttf") ? GD.Load<FontFile>("res://Assets/Fonts/Fredoka-Medium.ttf") : null;
+            _round = file == null
+                ? new SystemFont { FontNames = ["sans-serif"] }
+                : new FontVariation { BaseFont = file, Fallbacks = [new SystemFont { FontNames = ["sans-serif"] }] };
+        }
+        return _round;
     }
 
     public const int FontSize = 20;

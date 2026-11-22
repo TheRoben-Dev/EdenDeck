@@ -166,6 +166,30 @@ public partial class SmokeTest : Node
             SetTheme("dark");
         });
         Step("poly-restore-appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
+        // Console buddy theme: Pip sits in the corner; a tap on Pip gets a reaction and touches no UI.
+        Step("buddy-settings", () => SetTheme("buddy"), wait: 1.0);
+        Step("buddy-tap", () =>
+        {
+            if (EdenDeck.App.Ui.Buddy.Instance is not { } pip)
+            {
+                throw new InvalidOperationException("the buddy theme has no Pip");
+            }
+            var at = pip.GetGlobalRect().Position + pip.Size - new Vector2(40 + 80, 58 + 80);
+            Mouse(at, true);
+            Mouse(at, false);
+        }, wait: 0.3, expect: "Appearance");
+        Step("buddy-library", () =>
+        {
+            Tap(JoyButton.LeftShoulder);
+            Tap(JoyButton.LeftShoulder);
+        }, wait: 1.2, expect: "Castle Defenders");
+        Step("buddy-restore", () =>
+        {
+            Tap(JoyButton.RightShoulder);
+            Tap(JoyButton.RightShoulder);
+            SetTheme("dark");
+        });
+        Step("buddy-restore-appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         // Accent colour: pick one (applies live, focus stays on the row), then back to the theme's own.
         Step("accent-focus", () => FindFocusable(GetTree().Root, "The highlight colour for this theme")?.GrabFocus(), expect: "The highlight colour for this theme");
         Step("accent-pick", () => Press("ui_right"), wait: 0.8, expect: "The highlight colour for this theme");

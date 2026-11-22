@@ -232,6 +232,33 @@ public partial class AnimatedBackground : Control
     /// <summary>Shader body per theme id; unknown ids get the Dark one.</summary>
     internal static string Body(string id) => id switch
     {
+        // Soft pastel bubbles drifting up and swaying, like a lazy afternoon.
+        "buddy" => """
+            void fragment() {
+                vec2 p = UV * size;
+                vec2 cs = vec2(150.0, 150.0);
+                float a = 0.0;
+                vec3 col = vec3(0.0);
+                for (int layer = 0; layer < 2; layer++) {
+                    float fl = float(layer);
+                    float speed = 14.0 + fl * 10.0;
+                    vec2 q = p + vec2(0.0, t * speed + fl * 61.0);
+                    vec2 id = floor(q / cs);
+                    vec2 f = fract(q / cs) - 0.5;
+                    float h = hash(id + fl * 17.0);
+                    vec2 c = vec2(sin(t * 0.35 + h * 6.28) * 0.18, (hash(id + 3.1) - 0.5) * 0.3);
+                    float r = mix(0.10, 0.24, hash(id + 5.7)) * (1.0 - fl * 0.35);
+                    float d = length(f - c);
+                    float ring = smoothstep(r, r - 0.012, d) * (0.35 + 0.65 * smoothstep(r * 0.4, r, d));
+                    float on = step(0.45, h);
+                    vec3 tint = mix(mix(accent.rgb, info.rgb, hash(id + 9.0)), vec3(1.0), 0.45);
+                    float w = ring * on * (0.16 - fl * 0.05);
+                    a += w;
+                    col += tint * w;
+                }
+                COLOR = vec4(col / max(a, 0.0001), clamp(a, 0.0, 0.2));
+            }
+            """,
         // Pulsing dot grid: dots light up under a slow scan sweep and an expanding ring.
         "nightgrid" => """
             void fragment() {
