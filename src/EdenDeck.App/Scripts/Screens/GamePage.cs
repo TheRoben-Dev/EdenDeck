@@ -158,6 +158,20 @@ public partial class GamePage : Screen
             }
             App.AddToSteam(_game.GameId, Host.Steam.ForGame(_game));
         }, "Puts this game in your Steam library. Starting it there opens it straight in Eden with everything on this page applied."));
+        if (!string.IsNullOrEmpty(_game.Base.TitleId))
+        {
+            var mods = Try(() => Host.Eden.Mods(_game.Base.TitleId), [], "mods", col);
+            var modCount = mods.Count(m => m.Name != EdenDeck.Backends.Eden.Mods.ScanlineCheats.ModName);
+            var on = mods.Count(m => m.Enabled && m.Name != EdenDeck.Backends.Eden.Mods.ScanlineCheats.ModName);
+            var cheats = mods.Any(m => m.Enabled && m.Name == EdenDeck.Backends.Eden.Mods.ScanlineCheats.ModName);
+            var summary = modCount == 0 && !cheats ? "" : "  ·  " + string.Join(", ", new[]
+            {
+                modCount == 0 ? null : on == modCount ? $"{modCount} mod{(modCount == 1 ? "" : "s")}" : $"{on} of {modCount} mods on",
+                cheats ? "cheats on" : null,
+            }.Where(x => x != null));
+            Add(new ActionButton("Mods & cheats" + summary, () => App.Push(new ModsPage(_game, Rebuild)),
+                "Install and switch mods, and get cheats for the version you play."));
+        }
 
         col.AddChild(Section("Launch setup"));
         var p = Profile;
@@ -294,22 +308,6 @@ public partial class GamePage : Screen
         Focus.Column(items);
         Anim.Stagger(items, 0.02);
         Anim.Stagger(info.GetChildren().OfType<Control>().ToList(), 0.04);
-    }
-
-    /// <summary>Reads something for the card; a failure shows a note there instead of stopping the card from opening.</summary>
-    private static T Try<T>(Func<T> read, T fallback, string what, Control noteParent)
-    {
-        try
-        {
-            return read();
-        }
-        catch (Exception e)
-        {
-            GD.PushError($"GamePage: reading {what} failed: {e}");
-            EdenDeck.Host.AppLog.Error($"GamePage: reading {what} failed: {e}");
-            noteParent.AddChild(UiTheme.Label($"Couldn't read {what}: {e.Message}", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-            return fallback;
-        }
     }
 
     private void UpdateFrameGenNote()

@@ -74,6 +74,11 @@ public partial class SmokeTest : Node
         }, expect: "CRT effect");
         // Add to Steam: the button is there (CI has no Steam, so pressing it only explains why).
         Step("game-steam", () => FindFocusable(GetTree().Root, "Puts this game in your Steam library")?.GrabFocus(), expect: "Add to Steam");
+        // Mods & cheats: the smoke home has two mods for this game that replace the same file.
+        Step("game-mods", () => FindFocusable(GetTree().Root, "Install and switch mods")?.GrabFocus(), expect: "Mods & cheats  ·  2 mods");
+        Step("mods-page", () => Press(Pad.Accept), expect: "LayeredFS");
+        Step("mods-toggle", () => Press(Pad.Accept), expect: "LayeredFS");
+        Step("mods-back", () => Press(Pad.Back), expect: "Mods & cheats  ·  1 of 2 mods on");
         Step("back-to-library", () => Press(Pad.Back));
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.

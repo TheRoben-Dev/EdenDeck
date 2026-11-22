@@ -195,6 +195,22 @@ public abstract partial class Screen : MarginContainer
 
     // ---- small builders shared by screens ----
 
+    /// <summary>Reads something for the page; a failure shows a note there instead of stopping the page from opening.</summary>
+    protected T Try<T>(Func<T> read, T fallback, string what, Control noteParent)
+    {
+        try
+        {
+            return read();
+        }
+        catch (Exception e)
+        {
+            GD.PushError($"{GetType().Name}: reading {what} failed: {e}");
+            AppLog.Error($"{GetType().Name}: reading {what} failed: {e}");
+            noteParent.AddChild(UiTheme.Label($"Couldn't read {what}: {e.Message}", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            return fallback;
+        }
+    }
+
     protected static VBoxContainer Column(int separation = 10)
     {
         var v = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -225,6 +241,30 @@ public abstract partial class Screen : MarginContainer
         s.AddChild(gutter);
         s.AddChild(new ScrollFollower());
         return s;
+    }
+
+    /// <summary>
+    /// A card the size of the game card, centred, holding <paramref name="content"/>: for pages
+    /// opened from the game card, so they sit over the dimmed library the same way.
+    /// </summary>
+    protected Control CardFrame(Control content)
+    {
+        var center = new CenterContainer();
+        var view = GetViewportRect().Size;
+        var card = new PanelContainer
+        {
+            CustomMinimumSize = new Vector2(Mathf.Min(1120, view.X * 0.88f), Mathf.Min(600, (view.Y - 56) * 0.84f)),
+        };
+        var box = UiTheme.Box(UiTheme.Panel, 1, 22, UiTheme.Line);
+        box.ShadowColor = new Color(0, 0, 0, 0.55f);
+        box.ShadowSize = 28;
+        box.ShadowOffset = new Vector2(0, 10);
+        box.ContentMarginLeft = box.ContentMarginRight = 30;
+        box.ContentMarginTop = box.ContentMarginBottom = 26;
+        card.AddThemeStyleboxOverride("panel", box);
+        center.AddChild(card);
+        card.AddChild(content);
+        return center;
     }
 
     protected static Control Section(string text)
