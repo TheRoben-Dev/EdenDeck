@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.5.0
+- New: **Mods & cheats** on every game card.
+  - **Mods:** switch each mod on or off (the same switches as Eden's add-ons list), install one from a .zip or a folder (Scanline finds the mod inside however the archive is laid out, and refuses mods made for another game), or remove one. When two mods change the same file, Scanline tells you which one wins.
+  - **Get cheats:** downloads this game's cheats from the community cheat database, only when you press it, for the exact version your game runs, and tells you which versions have cheats. Turn on the ones you want and save; they're on the next time you play. Credit goes to each cheat's author; nothing is bundled with Scanline.
+
 ## 0.4.9
 - The library's cartridges now show **each game's own icon**, pixelated onto the label like the Steam art, in every theme (including the 3D carts) and on the game card. Icons come from your game files with your own keys and are cached; games without a readable icon keep their generated label.
 
