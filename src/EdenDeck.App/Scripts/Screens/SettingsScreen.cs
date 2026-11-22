@@ -363,6 +363,7 @@ public partial class SettingsScreen : TwoPaneScreen
             {
                 return;
             }
+            App.RenderSteamArt();
             if (steam.Pending().Count > 0)
             {
                 App.OfferSteamRestart($"{Host.Library.Count} games are ready for Steam. Steam picks up new shortcuts when it restarts.");

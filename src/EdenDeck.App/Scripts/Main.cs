@@ -202,7 +202,7 @@ public partial class Main : Control
         var art = Array.IndexOf(args, "--render-steam-art");
         if (art >= 0 && art + 1 < args.Length)
         {
-            AddChild(new SteamArtRenderer(args[art + 1]));
+            AddChild(art + 2 < args.Length ? new SteamArtRenderer(args[art + 1], args[art + 2]) : new SteamArtRenderer(args[art + 1]));
         }
         else if (smoke >= 0 && smoke + 1 < args.Length)
         {
@@ -216,6 +216,7 @@ public partial class Main : Control
             }
             CheckForEdenUpdate();
             ApplySteamShortcuts();
+            RenderSteamArt();
         }
     }
 
@@ -903,12 +904,53 @@ public partial class Main : Control
         {
             return;
         }
+        RenderSteamArt();
         if (written)
         {
             Toast($"Added {shortcut.AppName} to Steam.");
             return;
         }
         OfferSteamRestart($"{shortcut.AppName} is ready for Steam. Steam picks up new shortcuts when it restarts.");
+    }
+
+    private bool _renderingArt;
+
+    /// <summary>
+    /// Renders 32-bit 3D style artwork (cover, wide, hero, logo, icon) for every game Scanline has
+    /// added to Steam that doesn't have it yet, one at a time in the background, and puts it in
+    /// Steam's grid folder. Also catches up on games added from the command line.
+    /// </summary>
+    public async void RenderSteamArt()
+    {
+        if (_renderingArt || Host is not { } host || !host.Steam.Available)
+        {
+            return;
+        }
+        _renderingArt = true;
+        try
+        {
+            foreach (var e in host.Steam.Wanted().Where(e => !e.Remove && e.Key != EdenDeck.Host.SteamService.AppKey).ToList())
+            {
+                if (!host.Steam.HasArt(e.Key) && host.Steam.ArtDirFor(e.Key) is { } dir)
+                {
+                    while (GameRunning)
+                    {
+                        await ToSignal(GetTree().CreateTimer(5), SceneTreeTimer.SignalName.Timeout);
+                    }
+                    await SteamArt.Render(this, e.Shortcut.AppName, dir);
+                    AppLog.Info($"steam: rendered artwork for {e.Key}");
+                }
+                host.Steam.InstallArt(e.Key);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warn($"steam: artwork: {ex.Message}");
+        }
+        finally
+        {
+            _renderingArt = false;
+        }
     }
 
     /// <summary>Asks to restart Steam now so pending shortcuts get written.</summary>

@@ -24,12 +24,14 @@ public sealed class SteamService
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     private readonly string _registry;
+    private readonly string _artRoot;
     private readonly string _home;
     private readonly string? _appDir;
 
     public SteamService(AppPaths paths, string home, string? appDir)
     {
         _registry = Path.Combine(paths.Config, "steam-shortcuts.json");
+        _artRoot = Path.Combine(paths.Data, "steam-art");
         _home = home;
         _appDir = appDir;
     }
@@ -91,10 +93,29 @@ public sealed class SteamService
     /// <summary>Registry key of the shortcut for Scanline itself.</summary>
     public const string AppKey = "app";
 
-    /// <summary>Installs (or removes) Scanline's artwork for its own shortcut in every account. Never fatal.</summary>
-    private void Artwork(uint appId, bool remove)
+    /// <summary>
+    /// Where the artwork for a shortcut lives: Scanline's own ships with the app; a game's is rendered
+    /// by the app into &lt;data&gt;/steam-art/&lt;game&gt; (see the app's SteamArt) when it's added.
+    /// </summary>
+    public string? ArtDirFor(string key) =>
+        key == AppKey ? ArtDir : Path.Combine(_artRoot, string.Concat(key.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '_')));
+
+    /// <summary>True when the game's artwork has been rendered.</summary>
+    public bool HasArt(string key) => ArtDirFor(key) is { } d && File.Exists(Path.Combine(d, "capsule.png"));
+
+    /// <summary>Puts a managed shortcut's artwork into Steam (after the app rendered it). Never fatal.</summary>
+    public void InstallArt(string key)
     {
-        if (ArtDir is not { } art)
+        if (Wanted().FirstOrDefault(e => e.Key == key && !e.Remove) is { } e)
+        {
+            Artwork(e.Shortcut.AppId, ArtDirFor(key), remove: false);
+        }
+    }
+
+    /// <summary>Installs (or removes) artwork for one shortcut in every account. Never fatal.</summary>
+    private void Artwork(uint appId, string? art, bool remove)
+    {
+        if (art == null || !Directory.Exists(art))
         {
             return;
         }
@@ -161,10 +182,7 @@ public sealed class SteamService
     public bool Add(string key, SteamShortcut shortcut)
     {
         SaveWanted(Wanted().Where(e => e.Key != key).Append(new Entry(key, shortcut)));
-        if (key == AppKey)
-        {
-            Artwork(shortcut.AppId, remove: false);  // Steam picks up grid files without a restart
-        }
+        Artwork(shortcut.AppId, ArtDirFor(key), remove: false);  // Steam picks up grid files without a restart
         return !SteamRunning && Apply() >= 0;
     }
 
@@ -177,10 +195,7 @@ public sealed class SteamService
             return false;
         }
         SaveWanted(Wanted().Where(e => e.Key != key).Append(old with { Remove = true }));
-        if (key == AppKey)
-        {
-            Artwork(old.Shortcut.AppId, remove: true);
-        }
+        Artwork(old.Shortcut.AppId, ArtDirFor(key), remove: true);
         if (!SteamRunning)
         {
             Apply();
@@ -222,9 +237,9 @@ public sealed class SteamService
                 changed++;
             }
         }
-        foreach (var e in wanted.Where(e => e.Key == AppKey && !e.Remove))
+        foreach (var e in wanted.Where(e => !e.Remove))
         {
-            Artwork(e.Shortcut.AppId, remove: false);
+            Artwork(e.Shortcut.AppId, ArtDirFor(e.Key), remove: false);
         }
         // Removals are done once they've been written.
         if (wanted.Any(e => e.Remove))

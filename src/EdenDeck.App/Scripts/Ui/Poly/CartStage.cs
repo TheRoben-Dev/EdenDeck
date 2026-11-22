@@ -41,7 +41,7 @@ public partial class CartStage : PolyStage
     }
 
     /// <summary>Grid mode: one cart per tile, drawn inside <paramref name="clip"/> (the scroller).</summary>
-    public CartStage(IReadOnlyList<(Control Tile, string Title)> tiles, Control clip) : this(tiles.Select(t => t.Title).ToList(), single: false)
+    public CartStage(IReadOnlyList<(Control Tile, string Title)> tiles, Control clip) : this(tiles.Select(t => t.Title).ToList(), single: false, null)
     {
         _clip = clip;
         for (var i = 0; i < tiles.Count; i++)
@@ -51,11 +51,11 @@ public partial class CartStage : PolyStage
     }
 
     /// <summary>Single mode: one cart filling this control, turning slowly.</summary>
-    public CartStage(string title) : this([title], single: true)
+    public CartStage(string title, Font? labelFont = null) : this([title], single: true, labelFont)
     {
     }
 
-    private CartStage(List<string> titles, bool single) : base(transparent: true)
+    private CartStage(List<string> titles, bool single, Font? labelFont = null) : base(transparent: true)
     {
         _single = single;
         Resolution = 0.5f;
@@ -74,7 +74,7 @@ public partial class CartStage : PolyStage
             RenderTargetUpdateMode = SubViewport.UpdateMode.Once,
             Disable3D = true,
         };
-        _atlas.AddChild(new LabelArt(titles));
+        _atlas.AddChild(new LabelArt(titles, labelFont));
         AddChild(_atlas);
         var atlasTex = _atlas.GetTexture();
 
@@ -240,16 +240,18 @@ public partial class CartStage : PolyStage
     private partial class LabelArt : Control
     {
         private readonly List<string> _titles;
+        private readonly Font? _font;
 
-        public LabelArt(List<string> titles)
+        public LabelArt(List<string> titles, Font? font)
         {
             _titles = titles;
+            _font = font;
             Size = new Vector2(AtlasCols * CellW, Math.Max(1, (titles.Count + AtlasCols - 1) / AtlasCols) * CellH);
         }
 
         public override void _Draw()
         {
-            var font = UiTheme.CurrentFont;
+            var font = _font ?? UiTheme.CurrentFont;
             for (var i = 0; i < _titles.Count; i++)
             {
                 var o = new Vector2(i % AtlasCols * CellW, i / AtlasCols * CellH);
