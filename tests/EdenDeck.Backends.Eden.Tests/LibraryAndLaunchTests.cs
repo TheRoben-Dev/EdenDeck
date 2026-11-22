@@ -146,6 +146,47 @@ public class LibraryTests : IDisposable
     }
 
     [Fact]
+    public void BundledUpdateDoesNotHideTheBaseGame()
+    {
+        var dir = Path.Combine(_env.Home, "bundled");
+        Directory.CreateDirectory(dir);
+        // Update meta first in the container, base meta second.
+        FakeNsp.Write(Path.Combine(dir, "game+update.nsp"),
+            ("a.cnmt.nca", FakeNsp.NcaHeader(1, 0x0100ABCD00000800)), ("b.cnmt.nca", FakeNsp.NcaHeader(1, 0x0100ABCD00000000)));
+        var backend = new FakeBackend(new EdenLibraryScanner(() => FakeNsp.HeaderKey));
+        var g = Assert.Single(new LibraryService([backend]) { InProgressWindow = TimeSpan.Zero }.Scan([new LibraryFolder(dir)]));
+        Assert.Equal("0100ABCD00000000", g.Base.TitleId);
+    }
+
+    [Fact]
+    public void FindsGameFilesWithoutExtensionAndFixesTheirName()
+    {
+        var dir = Path.Combine(_env.Home, "noext");
+        Directory.CreateDirectory(dir);
+        var nsp = Path.Combine(dir, "Metroid Dread");
+        FakeNsp.Write(nsp, ("m.cnmt.nca", FakeNsp.NcaHeader(1, 0x0100ABCD00000000)));
+        using (var f = new FileStream(nsp, FileMode.Append)) { f.SetLength(f.Length + (2 << 20)); }
+        var xci = Path.Combine(dir, "Cart Game");
+        var bytes = new byte[2 << 20];
+        "HEAD"u8.CopyTo(bytes.AsSpan(0x100));
+        File.WriteAllBytes(xci, bytes);
+        File.WriteAllBytes(Path.Combine(dir, "notes"), new byte[2 << 20]);
+        var backend = new FakeBackend(new EdenLibraryScanner(() => FakeNsp.HeaderKey));
+        var service = new LibraryService([backend]) { InProgressWindow = TimeSpan.Zero };
+        Assert.Empty(service.Scan([new LibraryFolder(dir)]));
+        Assert.Equal(2, service.LastMisnamed.Count);
+        var dread = service.LastMisnamed.Single(m => m.Name == "Metroid Dread");
+        Assert.Equal(".nsp", dread.Extension);
+        Assert.Equal(".xci", service.LastMisnamed.Single(m => m.Name == "Cart Game").Extension);
+
+        LibraryService.FixName(dread);
+        Assert.True(File.Exists(nsp + ".nsp"));
+        var lib = service.Scan([new LibraryFolder(dir)]);
+        Assert.Single(lib);
+        Assert.Single(service.LastMisnamed);
+    }
+
+    [Fact]
     public void GroupsUpdatesAndDlcUnderBase()
     {
         var dir = Path.Combine(_env.Home, "games");

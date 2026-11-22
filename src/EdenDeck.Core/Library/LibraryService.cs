@@ -12,6 +12,12 @@ public sealed class LibraryService
     /// <summary>Files skipped by the last scan because they were still being written (copy in progress).</summary>
     public int LastSkippedInProgress { get; private set; }
 
+    /// <summary>Game files the last scan found under a name without the right extension (fixable by renaming).</summary>
+    public IReadOnlyList<MisnamedFile> LastMisnamed { get; private set; } = [];
+
+    /// <summary>Only files at least this big are sniffed for magic bytes (games are hundreds of MB and up).</summary>
+    private const long MinSniffSize = 1 << 20;
+
     /// <summary>Files changed this recently are treated as still copying (SFTP, network shares, downloads).</summary>
     public TimeSpan InProgressWindow { get; init; } = TimeSpan.FromSeconds(20);
 
@@ -24,6 +30,7 @@ public sealed class LibraryService
         // (Bazzite symlinks /home), nested library folders, or symlinked subfolders.
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var skipped = 0;
+        var misnamed = new List<MisnamedFile>();
         var cutoff = DateTime.UtcNow - InProgressWindow;
         foreach (var folder in CanonicalFolders(folders))
         {
@@ -44,7 +51,15 @@ public sealed class LibraryService
                     continue;
                 }
                 var backend = _backends.FirstOrDefault(b => b.FileExtensions.Contains(ext));
-                if (backend == null || !seen.Add(PathUtil.RealPath(file)))
+                if (backend == null)
+                {
+                    if (Sniff(file, cutoff) is { } fix && seen.Add(PathUtil.RealPath(file)))
+                    {
+                        misnamed.Add(fix);
+                    }
+                    continue;
+                }
+                if (!seen.Add(PathUtil.RealPath(file)))
                 {
                     continue;
                 }
@@ -68,7 +83,43 @@ public sealed class LibraryService
             }
         }
         LastSkippedInProgress = skipped;
+        LastMisnamed = misnamed;
         return Group(entries);
+    }
+
+    /// <summary>A big, settled file with no known extension: ask each backend what its bytes are.</summary>
+    private MisnamedFile? Sniff(string file, DateTime cutoff)
+    {
+        try
+        {
+            var info = new FileInfo(file);
+            if (info.Length < MinSniffSize || info.LastWriteTimeUtc > cutoff)
+            {
+                return null;
+            }
+            foreach (var b in _backends)
+            {
+                if (b.Library.DetectExtension(file) is { Length: > 1 } ext)
+                {
+                    return new MisnamedFile(file, file + ext, b.Id, ext);
+                }
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+        }
+        return null;
+    }
+
+    /// <summary>Renames a misnamed game file to its suggested name. Throws if that name is taken.</summary>
+    public static string FixName(MisnamedFile f)
+    {
+        if (File.Exists(f.SuggestedPath) || Directory.Exists(f.SuggestedPath))
+        {
+            throw new IOException($"{Path.GetFileName(f.SuggestedPath)} already exists next to it.");
+        }
+        File.Move(f.Path, f.SuggestedPath);
+        return f.SuggestedPath;
     }
 
     /// <summary>Resolves symlinks and drops folders that are missing, repeated or inside another recursive folder.</summary>
@@ -149,3 +200,10 @@ public sealed class LibraryService
 }
 
 public sealed record LibraryFolder(string Path, bool Recursive = true);
+
+/// <summary>A game file whose name lacks the extension Eden (and the scanner) need, e.g. "Metroid Dread" (an XCI).</summary>
+public sealed record MisnamedFile(string Path, string SuggestedPath, string BackendId, string Extension)
+{
+    public string Name => System.IO.Path.GetFileName(Path);
+    public string SuggestedName => System.IO.Path.GetFileName(SuggestedPath);
+}

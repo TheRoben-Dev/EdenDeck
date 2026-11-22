@@ -2,57 +2,167 @@ using EdenDeck.Backends.Eden.Config;
 using EdenDeck.Host.Updates;
 using EdenDeck.App.Ui;
 using EdenDeck.Core.Library;
+using EdenDeck.Core.Settings;
 using Godot;
 
 namespace EdenDeck.App.Screens;
 
-/// <summary>Library folders, Eden's global settings and Eden Deck's own options.</summary>
+/// <summary>Settings in two panes: categories on the left, the selected category on the right.</summary>
 public partial class SettingsScreen : Screen
 {
-    private Control? _first;
+    // Two panes, console style: categories on the left, the selected category's options on the
+    // right. Focusing a category shows its options; A or right moves into them, B or left on a
+    // plain row goes back to the category.
+    private static readonly (string Name, string Summary)[] Categories =
+    [
+        ("Controller", "Controller style, rumble, motion and button mapping."),
+        ("Graphics", "Resolution, upscaling, anti-aliasing and VSync for all games."),
+        ("System", "Console mode and speed limit for all games."),
+        ("Library", "Game folders and rescanning."),
+        ("Appearance", "Theme, CRT effect and animations."),
+        ("Updates", "Version, changelog and updates."),
+        ("Advanced", "Overlay layer and expert Eden options."),
+    ];
+
+    /// <summary>Eden options shown under Advanced instead of their group.</summary>
+    private static readonly HashSet<string> AdvancedOptions =
+        ["backend", "gpu_accuracy", "use_disk_shader_cache", "use_asynchronous_shaders", "cpu_accuracy", "use_multi_core"];
+
+    private int _category;
+    private readonly List<Button> _cats = new();
+    private VBoxContainer? _pane;
+    private ScrollContainer? _paneScroll;
+    private readonly List<Control> _paneItems = new();
 
     protected override void Build()
     {
-        var col = Column(8);
-        AddChild(Scroller(col));
-        var items = new List<Control>();
+        _cats.Clear();
+        var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
+        row.AddThemeConstantOverride("separation", 28);
+        AddChild(row);
+
+        var left = Column(6);
+        left.SizeFlagsHorizontal = SizeFlags.Fill;
+        left.CustomMinimumSize = new Vector2(280, 0);
+        row.AddChild(left);
+        left.AddChild(Section("Settings"));
+        for (var i = 0; i < Categories.Length; i++)
+        {
+            var index = i;
+            var b = new ActionButton(Categories[i].Name, () => EnterPane(), Categories[i].Summary);
+            b.FocusEntered += () => SelectCategory(index);
+            left.AddChild(b);
+            _cats.Add(b);
+        }
+
+        _pane = Column(8);
+        _paneScroll = Scroller(_pane);
+        row.AddChild(_paneScroll);
+        BuildPane();
+    }
+
+    private void SelectCategory(int index)
+    {
+        if (index == _category && _paneItems.Count > 0)
+        {
+            return;
+        }
+        _category = index;
+        BuildPane();
+        if (_paneScroll != null)
+        {
+            _paneScroll.ScrollVertical = 0;
+        }
+    }
+
+    private void EnterPane()
+    {
+        if (_paneItems.Count > 0)
+        {
+            _paneItems[0].GrabFocus();
+        }
+    }
+
+    public override bool OnBack()
+    {
+        var f = GetViewport()?.GuiGetFocusOwner();
+        if (f != null && _pane != null && _pane.IsAncestorOf(f) && _category < _cats.Count)
+        {
+            _cats[_category].GrabFocus();
+            return true;
+        }
+        return false;
+    }
+
+    private void BuildPane()
+    {
+        if (_pane == null)
+        {
+            return;
+        }
+        foreach (var c in _pane.GetChildren())
+        {
+            _pane.RemoveChild(c);
+            c.QueueFree();
+        }
+        _paneItems.Clear();
+        var col = _pane;
+        var items = _paneItems;
         void Add(Control c)
         {
             col.AddChild(c);
             items.Add(c);
         }
-
-        col.AddChild(Section("Library folders"));
-        foreach (var f in Host.Settings.LibraryFolders)
+        col.AddChild(UiTheme.Label(Categories[_category].Name, UiTheme.TitleSize));
+        switch (Categories[_category].Name)
         {
-            var folder = f;
-            Add(new ActionButton(folder.Path, () => App.Push(new ChoicePage(folder.Path,
-                ("Keep", () => { }),
-                ("Remove from library", () =>
-                {
-                    Host.SaveSettings(Host.Settings with { LibraryFolders = Host.Settings.LibraryFolders.Where(x => x.Path != folder.Path).ToList() });
-                    Rescan();
-                }))), "Your games are never moved or deleted; removing only stops scanning this folder."));
+            case "Controller":
+                BuildController(col, Add);
+                break;
+            case "Graphics":
+                BuildEdenOptions(col, Add, o => o.Group == "Graphics" && !AdvancedOptions.Contains(o.Id));
+                break;
+            case "System":
+                BuildEdenOptions(col, Add, o => o.Group == "System" && !AdvancedOptions.Contains(o.Id));
+                break;
+            case "Library":
+                BuildLibrary(col, Add);
+                break;
+            case "Appearance":
+                BuildAppearance(col, Add);
+                break;
+            case "Updates":
+                BuildUpdates(col, Add);
+                break;
+            case "Advanced":
+                BuildAdvanced(col, Add);
+                break;
         }
-        Add(new ActionButton("Add folder", () => App.Push(new FilePicker("Choose a game folder", pickFolder: true, dir =>
-        {
-            if (Host.Settings.LibraryFolders.All(x => x.Path != dir))
-            {
-                Host.SaveSettings(Host.Settings with { LibraryFolders = [.. Host.Settings.LibraryFolders, new LibraryFolder(dir)] });
-            }
-            Rescan();
-        }))));
-        Add(new ActionButton("Rescan library", Rescan));
 
-        col.AddChild(Section("Eden settings (all games)"));
-        col.AddChild(UiTheme.Label("Games can override these on their own page. Changes are saved straight to Eden's config, so close Eden first.",
-            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        for (var i = 0; i < _cats.Count; i++)
+        {
+            _cats[i].AddThemeColorOverride("font_color", i == _category ? UiTheme.AccentText : UiTheme.Text);
+        }
+        var cat = _cats[_category];
+        Focus.Column(_cats, right: items.FirstOrDefault());
+        Focus.Column(items, left: cat);
+        // Steppers and toggles use left/right for their value; B still goes back to the category.
+        Anim.Stagger(items, 0.015);
+    }
+
+    private void BuildEdenOptions(VBoxContainer col, Action<Control> Add, Func<OptionDefinition, bool> filter, bool showGroups = false, bool note = true)
+    {
+        if (note)
+        {
+            col.AddChild(UiTheme.Label("Games can override these on their own page. Changes are saved straight to Eden's config, so close Eden first.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
         var settings = Host.Eden.Settings;
         var global = settings.ReadGlobal();
         string? group = null;
-        foreach (var o in settings.Options)
+        foreach (var o in settings.Options.Where(filter))
         {
-            if (o.Group != group)
+            if (showGroups && o.Group != group)
             {
                 group = o.Group;
                 col.AddChild(UiTheme.Label(group, UiTheme.SmallSize + 1, UiTheme.AccentText));
@@ -61,8 +171,10 @@ public partial class SettingsScreen : Screen
             Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
                 App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
         }
+    }
 
-        col.AddChild(Section("Controller"));
+    private void BuildController(VBoxContainer col, Action<Control> Add)
+    {
         var styles = new (int Style, string Label, string Detail)[]
         {
             (ControllerStyle.ProController, "Pro Controller", "Games see one full controller. Works everywhere; Eden keeps your Console mode setting."),
@@ -91,8 +203,35 @@ public partial class SettingsScreen : Screen
             Host.Eden.SaveInputProfile(styleName);
             App.Success($"Saved profile \"{styleName}\". Pick it on a game's page to use it just for that game.");
         }), "Saves the current mapping and controller style as an Eden input profile you can pick per game."));
+        BuildEdenOptions(col, Add, o => o.Group == "Controls", note: false);
+    }
 
-        col.AddChild(Section("Appearance"));
+    private void BuildLibrary(VBoxContainer col, Action<Control> Add)
+    {
+        foreach (var f in Host.Settings.LibraryFolders)
+        {
+            var folder = f;
+            Add(new ActionButton(folder.Path, () => App.Push(new ChoicePage(folder.Path,
+                ("Keep", () => { }),
+                ("Remove from library", () =>
+                {
+                    Host.SaveSettings(Host.Settings with { LibraryFolders = Host.Settings.LibraryFolders.Where(x => x.Path != folder.Path).ToList() });
+                    Rescan();
+                }))), "Your games are never moved or deleted; removing only stops scanning this folder."));
+        }
+        Add(new ActionButton("Add folder", () => App.Push(new FilePicker("Choose a game folder", pickFolder: true, dir =>
+        {
+            if (Host.Settings.LibraryFolders.All(x => x.Path != dir))
+            {
+                Host.SaveSettings(Host.Settings with { LibraryFolders = [.. Host.Settings.LibraryFolders, new LibraryFolder(dir)] });
+            }
+            Rescan();
+        }))));
+        Add(new ActionButton("Rescan library", Rescan));
+    }
+
+    private void BuildAppearance(VBoxContainer col, Action<Control> Add)
+    {
         var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label)), UiTheme.Name,
             "Changes apply right away, so you can flip through them here.")
         {
@@ -117,15 +256,10 @@ public partial class SettingsScreen : Screen
             Anim.Enabled = on;
         }, "Sliding focus, smooth scrolling and page transitions.", null,
             "Everything changes instantly, nothing slides or fades."));
+    }
 
-        col.AddChild(Section("Eden Deck"));
-        Add(Toggle.Create("Performance overlay layer", !Host.Settings.LayerKillSwitch,
-            on => Host.SaveSettings(Host.Settings with { LayerKillSwitch = !on }),
-            "Eden Deck's Vulkan layer (FPS and frame-time stats).",
-            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Eden Deck.",
-            "No overlay and no stats; games run exactly as in plain Eden."));
-
-        col.AddChild(Section("Updates"));
+    private void BuildUpdates(VBoxContainer col, Action<Control> Add)
+    {
         var updater = Host.Updater;
         col.AddChild(UiTheme.Label($"Eden Deck {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
         Add(new ActionButton("Changelog", App.ShowChangelog, "What changed in each version of Eden Deck."));
@@ -149,11 +283,20 @@ public partial class SettingsScreen : Screen
                 UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
         col.AddChild(UiTheme.Label("Eden Deck never downloads keys, firmware or games. Use your own dumps.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-
-        Focus.Column(items);
-        Anim.Stagger(items, 0.015);
-        _first = items.FirstOrDefault();
     }
+
+    private void BuildAdvanced(VBoxContainer col, Action<Control> Add)
+    {
+        Add(Toggle.Create("Performance overlay layer", !Host.Settings.LayerKillSwitch,
+            on => Host.SaveSettings(Host.Settings with { LayerKillSwitch = !on }),
+            "Eden Deck's Vulkan layer (FPS and frame-time stats).",
+            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Eden Deck.",
+            "No overlay and no stats; games run exactly as in plain Eden."));
+        col.AddChild(Section("Expert Eden options"));
+        BuildEdenOptions(col, Add, o => AdvancedOptions.Contains(o.Id), showGroups: true);
+    }
+
+    public override void FocusDefault() => (_category < _cats.Count ? _cats[_category] : null)?.GrabFocus();
 
     private void Rescan() =>
         App.Busy("Scanning library…", (_, ct) => Task.FromResult(Host.Rescan(ct)), games =>
@@ -168,5 +311,4 @@ public partial class SettingsScreen : Screen
         App.Success(copying > 0 ? $"{count} games ({copying} still copying, rescan when done)" : $"{count} games");
     }
 
-    public override void FocusDefault() => _first?.GrabFocus();
 }

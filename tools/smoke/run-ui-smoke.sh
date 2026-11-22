@@ -24,7 +24,9 @@ done
 head -c 512 /dev/urandom > "$HOME/Games/Switch/Sky Racers [0100000000020800][v131072].nsp"
 # A second copy of a game and a file still being copied must not add tiles.
 cp "$HOME/Games/Switch/Sky Racers [0100000000020000][v0].nsp" "$HOME/Games/Switch/Sky Racers copy [0100000000020000][v0].nsp"
-touch -d '10 minutes ago' "$HOME/Games/Switch/"*.nsp
+# A dump copied without its extension: shown as a "Fix name" row, not a tile.
+{ printf 'PFS0\0\0\0\0\0\0\0\0\0\0\0\0'; head -c 2097152 /dev/zero; } > "$HOME/Games/Switch/Nameless Quest"
+touch -d '10 minutes ago' "$HOME/Games/Switch/"*.nsp "$HOME/Games/Switch/Nameless Quest"
 head -c 512 /dev/urandom > "$HOME/Games/Switch/Copying Now [0100000000090000][v0].nsp"
 
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/edendeck.dll"

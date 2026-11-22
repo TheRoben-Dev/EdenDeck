@@ -65,6 +65,12 @@ public interface ILibraryScanner
 {
     /// <summary>Returns null for files this backend does not handle or cannot read.</summary>
     GameEntry? TryRead(string path);
+
+    /// <summary>
+    /// For a file whose name has no (or the wrong) extension: the extension its contents show it
+    /// should have (e.g. ".xci"), from magic bytes. Null when it isn't this backend's format.
+    /// </summary>
+    string? DetectExtension(string path) => null;
 }
 
 public interface ISettingsProvider

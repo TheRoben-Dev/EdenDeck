@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.3.0
+- Settings are reorganised into two panes, console style: Controller, Graphics, System, Library, Appearance, Updates and Advanced on the left, their options on the right. B goes back to the list.
+- Games copied without a file extension (like "Metroid Dread" instead of "Metroid Dread.nsp") are detected, and the library offers a one-press "Fix name".
+- Dumps that bundle a game with its update or DLC now show up as the game instead of being hidden.
+
 ## 0.2.9
 - Changelogs in the app: the update prompt shows what's new, you see "What's new" once after updating, and every past version is under Settings → Updates → Changelog.
 

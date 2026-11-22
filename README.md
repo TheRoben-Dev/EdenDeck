@@ -175,9 +175,21 @@ Development happens in phases. Each phase lands as a pull request that merges on
 - [ ] **Phase 4 — Mods and cheats**
   Mod and cheat manager, archive installer, conflict detection, version checks, backups, optional GameBanana browser.
 - [ ] **Phase 5 — Upscaling and frame generation**
-  Eden's built-in FSR/SGSR and frame generation (60 FPS cap), Lossless Scaling detection, lsfg-vk for Stable, then the in-game overlay and quick menu.
+  Eden's built-in FSR/SGSR upscaling, Lossless Scaling frame generation through lsfg-vk (Eden's own frame gen is Android-only; 60 FPS cap), lsfg-vk bundled in the app, then the in-game overlay and quick menu.
 - [ ] **Phase 6 — Packaging and updates**
   Flatpak and AppImage, in-app self-updates from GitHub Releases, rollback, user docs.
+
+### Backlog
+
+Planned after the phases above, unless one fits naturally earlier:
+
+- Save management (backups before launch, restore, export)
+- Favorites and collections
+- Per-game performance presets
+- Shader cache tools (size per game, clear and rebuild)
+- Storage view with actions (what uses space, clean up)
+- Haptic and sound feedback in the app
+- Automatic docked/handheld switch when a TV is connected
 
 ### Future backends
 

@@ -56,35 +56,54 @@ public partial class SmokeTest : Node
         Step("returned", () => { }, wait: 3.0, expect: "OK");
         Step("early-exit-ok", () => Press(Pad.Accept), expect: "Castle Defenders");
         Step("eden", () => Press(Pad.TabNext));
-        Step("settings", () => Press(Pad.TabNext));
-        // Finger drag over the list scrolls it and must not press the row it started on.
+        Step("settings", () => Press(Pad.TabNext), expect: "Controller");
+        // Two panes: moving down the categories swaps the right pane in place.
+        Step("settings-library", () =>
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                Press("ui_down");
+            }
+        }, expect: "Library");
+        // Finger drag over the options pane scrolls it and must not press the row it started on.
         Step("touch-drag-scroll", () =>
         {
-            Mouse(new Vector2(640, 600), true);
+            Mouse(new Vector2(800, 600), true);
             for (var y = 580; y >= 260; y -= 40)
             {
-                Input.ParseInputEvent(new InputEventMouseMotion { Position = new Vector2(640, y), GlobalPosition = new Vector2(640, y), ButtonMask = MouseButtonMask.Left, Relative = new Vector2(0, -40) });
+                Input.ParseInputEvent(new InputEventMouseMotion { Position = new Vector2(800, y), GlobalPosition = new Vector2(800, y), ButtonMask = MouseButtonMask.Left, Relative = new Vector2(0, -40) });
             }
-            Mouse(new Vector2(640, 260), false);
-        }, expect: "Games/Switch");
-        Step("settings-scrolled", () =>
+            Mouse(new Vector2(800, 260), false);
+        }, expect: "Library");
+        Step("settings-graphics", () =>
         {
+            FindFocusable(GetTree().Root, "Resolution, upscaling")?.GrabFocus();
+            Press(Pad.Accept);  // into the pane
             for (var i = 0; i < 8; i++)
             {
                 Press("ui_down");
             }
         });
+        Step("settings-back-to-category", () => Press(Pad.Back), expect: "Graphics");
         // Themes switch in place: still on Settings, focus stays on the Theme row.
+        Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         Step("theme-focus", () => FindFocusable(GetTree().Root, "Changes apply right away")?.GrabFocus(), expect: "Changes apply right away");
         for (var i = 1; i <= UiTheme.Themes.Count; i++)
         {
             Step($"theme-{i}", () => Press("ui_right"), wait: 0.8, expect: "Changes apply right away");
         }
+        Step("changelog", () =>
+        {
+            FindFocusable(GetTree().Root, "Version, changelog")?.GrabFocus();
+            Press(Pad.Accept);  // into Updates: first row is Changelog
+            Press(Pad.Accept);
+        });
+        Step("changelog-back", () => Press(Pad.Back), expect: "Changelog");
         Step("choice", () =>
         {
-            Press(Pad.TabNext);  // wraps to Library
-            Press(Pad.TabPrev);  // Settings
-            Press(Pad.Accept);   // first row: library folder -> choice page
+            FindFocusable(GetTree().Root, "Game folders")?.GrabFocus();
+            Press(Pad.Accept);   // into Library: first row is the library folder
+            Press(Pad.Accept);   // -> choice page
         });
         Step("file-picker", () =>
         {

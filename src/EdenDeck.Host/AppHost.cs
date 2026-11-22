@@ -70,6 +70,7 @@ public sealed class AppHost
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
         Library = LoadJson<List<LibraryGame>>(Paths.LibraryCacheFile) ?? [];
+        _misnamed = LoadJson<List<MisnamedFile>>(MisnamedCacheFile) ?? [];
         Updater = new AppUpdater();
     }
 
@@ -86,8 +87,16 @@ public sealed class AppHost
     {
         Library = LibraryService.Scan(Settings.LibraryFolders, ct);
         SaveJson(Paths.LibraryCacheFile, Library);
+        _misnamed = LibraryService.LastMisnamed.ToList();
+        SaveJson(MisnamedCacheFile, _misnamed);
         return Library;
     }
+
+    private List<MisnamedFile> _misnamed;
+    private string MisnamedCacheFile => Path.Combine(Path.GetDirectoryName(Paths.LibraryCacheFile)!, "misnamed.json");
+
+    /// <summary>Game files from the last scan that need a name fix (still there and not yet renamed).</summary>
+    public IReadOnlyList<MisnamedFile> Misnamed => _misnamed.Where(m => File.Exists(m.Path) && !File.Exists(m.SuggestedPath)).ToList();
 
     /// <summary>Finds a game by id ("eden:0100...") or by file path.</summary>
     public LibraryGame? FindGame(string idOrPath)

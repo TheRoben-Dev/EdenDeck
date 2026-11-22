@@ -84,6 +84,37 @@ public sealed partial class EdenLibraryScanner : ILibraryScanner
         };
     }
 
+    /// <summary>NSP/NSZ: "PFS0" at 0. XCI/XCZ: "HEAD" at 0x100. Compressed variants hold .ncz entries.</summary>
+    public string? DetectExtension(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
+        var buf = new byte[0x104];
+        if (fs.ReadAtLeast(buf, buf.Length, throwOnEndOfStream: false) < buf.Length)
+        {
+            return null;
+        }
+        bool Compressed(Func<IReadOnlyList<ContainerEntry>> read)
+        {
+            try
+            {
+                return read().Any(e => e.Name.EndsWith(".ncz", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception e) when (e is InvalidDataException or EndOfStreamException or IOException or ArgumentException)
+            {
+                return false;
+            }
+        }
+        if (buf[0] == 'P' && buf[1] == 'F' && buf[2] == 'S' && buf[3] == '0')
+        {
+            return Compressed(() => SwitchFormats.ReadPfs0(fs, 0)) ? ".nsz" : ".nsp";
+        }
+        if (buf[0x100] == 'H' && buf[0x101] == 'E' && buf[0x102] == 'A' && buf[0x103] == 'D')
+        {
+            return Compressed(() => SwitchFormats.ReadXciSecurePartition(fs)) ? ".xcz" : ".xci";
+        }
+        return null;
+    }
+
     private static string? ReadTitleIdFromHeaders(string path, string ext, byte[] key)
     {
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.RandomAccess);
@@ -94,6 +125,7 @@ public sealed partial class EdenLibraryScanner : ILibraryScanner
                           .OrderByDescending(e => e.Name.Contains(".cnmt.", StringComparison.OrdinalIgnoreCase))
                           .ToList();
         ulong? programFallback = null;
+        var metas = new List<ulong>();
         foreach (var e in ncas)
         {
             if (e.Size < 0xC00)
@@ -103,12 +135,19 @@ public sealed partial class EdenLibraryScanner : ILibraryScanner
             var h = NcaHeaderReader.Read(fs, e.Offset, key);
             if (h.ContentType == NcaContentType.Meta)
             {
-                return KeyFile.FormatTitleId(h.ProgramId);
+                // A dump can bundle the base game with its update/DLC: the base decides the tile.
+                metas.Add(h.ProgramId);
+                continue;
             }
             if (h.ContentType == NcaContentType.Program)
             {
                 programFallback ??= h.ProgramId;
             }
+        }
+        if (metas.Count > 0)
+        {
+            var pick = metas.Where(m => KindFromTitleId(m) == ContentKind.Base).DefaultIfEmpty(metas[0]).First();
+            return KeyFile.FormatTitleId(pick);
         }
         return programFallback is { } p ? KeyFile.FormatTitleId(p) : null;
     }
