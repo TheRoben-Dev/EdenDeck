@@ -202,38 +202,70 @@ public sealed class SteamService
     /// <summary>True inside Steam's Game Mode (gamescope session), where the session restarts Steam on its own.</summary>
     public static bool GameMode =>
         Environment.GetEnvironmentVariable("SteamGamepadUI") == "1" ||
-        string.Equals(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"), "gamescope", StringComparison.OrdinalIgnoreCase);
+        Environment.GetEnvironmentVariable("GAMESCOPE_WAYLAND_DISPLAY") is { Length: > 0 } ||
+        string.Equals(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"), "gamescope", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Environment.GetEnvironmentVariable("XDG_SESSION_DESKTOP"), "gamescope", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Starts a detached helper (<c>scanline steam apply --after-steam-exits</c>) and asks Steam to
-    /// shut down. The helper writes the shortcuts the moment Steam has exited and starts Steam again
-    /// outside Game Mode (in Game Mode the session does that itself). Scanline is closed along with Steam
-    /// when Steam started it.
+    /// Desktop only: starts a detached helper (<c>scanline steam apply --after-steam-exits --restart</c>)
+    /// and asks Steam to shut down. The helper writes the shortcuts the moment Steam has exited and
+    /// starts Steam again. Never used in Game Mode: there Steam is the session itself, and shutting it
+    /// down from a game left the Deck on a dead screen (see <see cref="RebootAndApply"/>).
     /// </summary>
     public void RestartSteamAndApply()
     {
-        var launcher = Launcher ?? throw new InvalidOperationException(Unavailable);
-        var helper = new ProcessStartInfo("setsid")
+        if (GameMode)
         {
-            UseShellExecute = false,
-            RedirectStandardInput = false,
-            ArgumentList = { "-f", launcher, "steam", "apply", "--after-steam-exits", GameMode ? "--no-restart" : "--restart" },
-        };
+            throw new InvalidOperationException("In Game Mode, restart the Deck instead of Steam.");
+        }
+        StartHelper(restart: true);
+        Run("steam", "-shutdown");
+        AppLog.Info("steam: shutting Steam down to add shortcuts");
+    }
+
+    /// <summary>
+    /// Game Mode: starts the detached helper (<c>--no-restart</c>) and restarts the computer. While the
+    /// system shuts down, Steam exits and the helper (which ignores the shutdown signal while it waits)
+    /// writes the shortcuts before it is stopped, so they're there when Steam starts after the reboot.
+    /// </summary>
+    public void RebootAndApply()
+    {
+        StartHelper(restart: false);
+        Thread.Sleep(700);  // let the helper start and take over its signal handling before the shutdown signal arrives
+        AppLog.Info("steam: restarting the computer to add shortcuts");
+        Run("systemctl", "reboot");
+    }
+
+    private void StartHelper(bool restart)
+    {
+        var launcher = Launcher ?? throw new InvalidOperationException(Unavailable);
+        Run("setsid", "-f", launcher, "steam", "apply", "--after-steam-exits", restart ? "--restart" : "--no-restart");
+    }
+
+    private static void Run(string file, params string[] args)
+    {
+        var psi = new ProcessStartInfo(file) { UseShellExecute = false };
+        foreach (var a in args)
+        {
+            psi.ArgumentList.Add(a);
+        }
         try
         {
-            Process.Start(helper)?.Dispose();
-            AppLog.Info("steam: shutting Steam down to add shortcuts");
-            Process.Start(new ProcessStartInfo("steam") { UseShellExecute = false, ArgumentList = { "-shutdown" } })?.Dispose();
+            Process.Start(psi)?.Dispose();
         }
         catch (System.ComponentModel.Win32Exception e)
         {
-            throw new InvalidOperationException($"Couldn't restart Steam ({e.Message}). Close Steam yourself; Scanline adds the shortcuts the next time it starts with Steam closed.", e);
+            throw new InvalidOperationException($"Couldn't run {file} ({e.Message}). Close Steam yourself; Scanline adds the shortcuts the next time it starts with Steam closed.", e);
         }
     }
 
     /// <summary>The helper's side: waits (up to two minutes) for Steam to exit, applies, optionally restarts Steam.</summary>
     public int ApplyAfterSteamExits(bool restart)
     {
+        // A reboot or logout sends everyone SIGTERM at once; keep going until Steam is gone and the
+        // file is written (the two-minute limit below still applies).
+        using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, c => c.Cancel = true);
+        using var hup = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGHUP, c => c.Cancel = true);
         var until = DateTime.UtcNow.AddMinutes(2);
         while (SteamRunning)
         {

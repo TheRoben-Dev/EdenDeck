@@ -375,8 +375,10 @@ public partial class SettingsScreen : TwoPaneScreen
         }, "One Steam shortcut per game in your library. Games already added are updated, not duplicated."));
         if (pending.Count > 0)
         {
-            Add(new ActionButton($"Restart Steam to add {pending.Count}", () => App.OfferSteamRestart("Steam picks up new shortcuts when it restarts."),
-                "Closes Steam, writes the shortcuts and lets Steam start again."));
+            var gameMode = EdenDeck.Host.SteamService.GameMode;
+            Add(new ActionButton(gameMode ? $"Restart the Deck to add {pending.Count}" : $"Restart Steam to add {pending.Count}",
+                () => App.OfferSteamRestart("Steam picks up new shortcuts when it restarts."),
+                gameMode ? "Restarts the Deck and writes the shortcuts while it shuts down." : "Closes Steam, writes the shortcuts and lets Steam start again."));
         }
     }
 

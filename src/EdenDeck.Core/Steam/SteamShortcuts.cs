@@ -221,7 +221,11 @@ public sealed class SteamShortcuts
             File.Copy(_file, _file + ".scanline-bak", overwrite: true);
         }
         var tmp = _file + ".scanline.tmp";
-        File.WriteAllBytes(tmp, ToBytes());
+        using (var f = new FileStream(tmp, FileMode.Create, FileAccess.Write))
+        {
+            f.Write(ToBytes());
+            f.Flush(flushToDisk: true);  // may be written moments before a reboot
+        }
         File.Move(tmp, _file, overwrite: true);
     }
 
