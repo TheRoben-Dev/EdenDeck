@@ -102,16 +102,48 @@ public class UpdaterTests : IDisposable
         Assert.Empty(Directory.EnumerateDirectories(Path.GetDirectoryName(install)!, ".edendeck-update-*"));
     }
 
-    private static byte[] MakeTarball(string content)
+    [Fact]
+    public async Task UpdatesAcrossTheScanlineRename()
+    {
+        // A 0.3.x install (EdenDeck folder and binary) updating to a release from the renamed repo.
+        var install = Path.Combine(_root, "Applications", "EdenDeck");
+        Directory.CreateDirectory(install);
+        File.WriteAllText(Path.Combine(install, "EdenDeck.x86_64"), "old");
+        File.WriteAllText(Path.Combine(install, "edendeck"), "old");
+        const string b = "https://github.com/TheRoben-Dev/Scanline/releases/download/v0.4.0/";
+        var tarball = MakeTarball("new", "Scanline", "Scanline.x86_64", "scanline");
+        var sums = $"{Convert.ToHexString(SHA256.HashData(tarball)).ToLowerInvariant()}  Scanline-linux-x86_64.tar.gz\n";
+        var json = $$"""
+            {"tag_name":"v0.4.0","draft":false,"prerelease":false,"body":"",
+             "assets":[{"name":"EdenDeck-linux-x86_64.tar.gz","size":10,"browser_download_url":"{{b}}EdenDeck-linux-x86_64.tar.gz"},
+                       {"name":"Scanline-linux-x86_64.tar.gz","size":10,"browser_download_url":"{{b}}Scanline-linux-x86_64.tar.gz"},
+                       {"name":"SHA256SUMS","browser_download_url":"{{b}}SHA256SUMS"}]}
+            """;
+        var http = new HttpClient(new Fake(new()
+        {
+            [b + "Scanline-linux-x86_64.tar.gz"] = tarball,
+            [b + "SHA256SUMS"] = System.Text.Encoding.UTF8.GetBytes(sums),
+        }));
+        var release = AppUpdater.ParseRelease(json)!;
+        Assert.EndsWith("Scanline-linux-x86_64.tar.gz", release.TarballUrl);
+        var u = new AppUpdater(http, install, new Version(0, 3, 5));
+        var exe = await u.InstallAsync(release);
+        Assert.Equal(Path.Combine(install, "Scanline.x86_64"), exe);
+        Assert.Equal("new", File.ReadAllText(exe));
+        Assert.True(u.CanRollback);
+        Assert.Equal(Path.Combine(install, "EdenDeck.x86_64"), u.Rollback());
+    }
+
+    private static byte[] MakeTarball(string content, string folder = "EdenDeck", string binary = "EdenDeck.x86_64", string launcher = "edendeck")
     {
         using var ms = new MemoryStream();
         using (var gz = new GZipStream(ms, CompressionLevel.Fastest, leaveOpen: true))
         using (var tar = new TarWriter(gz))
         {
-            tar.WriteEntry(new PaxTarEntry(TarEntryType.Directory, "EdenDeck/") { Mode = (UnixFileMode)0b111_101_101 });
-            foreach (var name in new[] { "EdenDeck.x86_64", "edendeck" })
+            tar.WriteEntry(new PaxTarEntry(TarEntryType.Directory, folder + "/") { Mode = (UnixFileMode)0b111_101_101 });
+            foreach (var name in new[] { binary, launcher })
             {
-                tar.WriteEntry(new PaxTarEntry(TarEntryType.RegularFile, "EdenDeck/" + name)
+                tar.WriteEntry(new PaxTarEntry(TarEntryType.RegularFile, folder + "/" + name)
                 {
                     Mode = (UnixFileMode)0b111_101_101,
                     DataStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)),
