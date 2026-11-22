@@ -148,7 +148,7 @@ public partial class Main : Control
         }
         else
         {
-            if (Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
+            if (!ShowWhatsNew() && Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
             {
                 CheckForAppUpdate(silent: true);
             }
@@ -333,6 +333,39 @@ public partial class Main : Control
         }
     }
 
+    /// <summary>
+    /// After an update, shows the changes since the last version the user saw, once. A fresh install
+    /// just records the version. Returns true if the page was shown.
+    /// </summary>
+    private bool ShowWhatsNew()
+    {
+        if (Host == null)
+        {
+            return false;
+        }
+        var current = Host.Updater.CurrentVersion;
+        var display = AppUpdater.DisplayVersion(current);
+        var seen = AppUpdater.ParseVersion(Host.Settings.LastSeenVersion);
+        if (Host.Settings.LastSeenVersion != display)
+        {
+            Host.SaveSettings(Host.Settings with { LastSeenVersion = display });
+        }
+        if (seen == null)
+        {
+            return false;
+        }
+        var news = Changelog.Between(Changelog.Bundled, seen, current);
+        if (news.Count == 0)
+        {
+            return false;
+        }
+        Push(new ChangelogPage($"What's new in Eden Deck {display}", news, whatsNew: true));
+        return true;
+    }
+
+    /// <summary>Full release history (Settings → Updates).</summary>
+    public void ShowChangelog() => Push(new ChangelogPage("Changelog", Changelog.Bundled));
+
     /// <summary>Asks GitHub for a newer Eden Deck. Silent: no message when up to date or offline.</summary>
     public async void CheckForAppUpdate(bool silent)
     {
@@ -374,7 +407,9 @@ public partial class Main : Control
             Toast($"Eden Deck {next} is available. Re-run the installer to update this copy.");
             return;
         }
-        Push(new ChoicePage($"Eden Deck {next} is available (you have {current}).\n\nThe update takes a few seconds. Your games, keys and settings are not touched, and the current version is kept so you can roll back in Settings.",
+        var whatsNew = Changelog.ItemsFromReleaseNotes(release.Notes);
+        var notes = whatsNew.Count > 0 ? "\n\nWhat's new:\n" + string.Join("\n", whatsNew.Take(8).Select(i => "• " + i)) : "";
+        Push(new ChoicePage($"Eden Deck {next} is available (you have {current}).{notes}\n\nThe update takes a few seconds. Your games, keys and settings are not touched, and the current version is kept so you can roll back in Settings.",
             ("Update and restart", () => InstallAppUpdate(release)),
             ("Later", () => { })));
     }

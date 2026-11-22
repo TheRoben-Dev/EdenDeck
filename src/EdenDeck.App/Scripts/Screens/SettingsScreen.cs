@@ -128,6 +128,7 @@ public partial class SettingsScreen : Screen
         col.AddChild(Section("Updates"));
         var updater = Host.Updater;
         col.AddChild(UiTheme.Label($"Eden Deck {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
+        Add(new ActionButton("Changelog", App.ShowChangelog, "What changed in each version of Eden Deck."));
         if (updater.CanSelfUpdate)
         {
             Add(new ActionButton("Check for updates", () => App.CheckForAppUpdate(silent: false),

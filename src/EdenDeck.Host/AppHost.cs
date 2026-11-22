@@ -32,6 +32,9 @@ public sealed record AppSettings
 
     /// <summary>Check GitHub Releases for a new Eden Deck version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
+
+    /// <summary>Last app version whose "What's new" was shown; null on a fresh install.</summary>
+    public string? LastSeenVersion { get; init; }
 }
 
 /// <summary>
