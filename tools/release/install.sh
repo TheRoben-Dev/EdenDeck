@@ -63,4 +63,7 @@ command -v update-desktop-database >/dev/null && update-desktop-database "$APPS"
 echo
 echo "Installed Eden Deck $(sed -n 's/^Eden Deck \([^ ]*\).*/\1/p' "$DEST/README.txt" | head -1) to $DEST"
 echo "Start it from your app menu, or run: $DEST/EdenDeck.x86_64"
-echo "For Game Mode: in Steam (Desktop Mode) use Add a Non-Steam Game and pick Eden Deck."
+echo
+echo "Controller: start Eden Deck from Steam. In Steam: Games > Add a Non-Steam Game to My Library >"
+echo "tick Eden Deck > Add Selected Programs. Launched outside Steam, Steam's desktop layout turns your"
+echo "controller into keyboard/mouse (arrows, Enter, Esc and Tab still work)."

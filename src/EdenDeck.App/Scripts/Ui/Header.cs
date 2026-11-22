@@ -11,6 +11,9 @@ public partial class Header : HBoxContainer
     private readonly Label _next = UiTheme.Label("", UiTheme.SmallSize, UiTheme.Dim);
     private readonly HBoxContainer _tabRow = new();
 
+    /// <summary>Mouse/trackpad click on a tab (desktop use).</summary>
+    public event Action<int>? TabClicked;
+
     public Header(IEnumerable<string> tabs)
     {
         AddThemeConstantOverride("separation", 22);
@@ -23,6 +26,16 @@ public partial class Header : HBoxContainer
         foreach (var t in tabs)
         {
             var l = UiTheme.Label(t, 22);
+            var index = _tabs.Count;
+            l.MouseFilter = MouseFilterEnum.Stop;
+            l.MouseDefaultCursorShape = CursorShape.PointingHand;
+            l.GuiInput += e =>
+            {
+                if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+                {
+                    TabClicked?.Invoke(index);
+                }
+            };
             _tabs.Add(l);
             _names.Add(t);
             _tabRow.AddChild(l);

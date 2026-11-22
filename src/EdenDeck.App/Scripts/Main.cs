@@ -64,6 +64,13 @@ public partial class Main : Control
         root.AddThemeConstantOverride("separation", 16);
         margin.AddChild(root);
         _header = new Header(TabNames);
+        _header.TabClicked += i =>
+        {
+            if (_stack.Count == 1 && !GameRunning)
+            {
+                SwitchTab(i);
+            }
+        };
         root.AddChild(_header);
         _content = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
         root.AddChild(_content);
@@ -101,6 +108,7 @@ public partial class Main : Control
         if (what == NotificationApplicationFocusOut)
         {
             _appFocused = false;
+            Pad.ReleaseAll();
         }
         else if (what == NotificationApplicationFocusIn)
         {
@@ -312,6 +320,7 @@ public partial class Main : Control
         var page = new RunningPage(game.Base.Title, plan.Notes);
         Push(page);
         GameRunning = true;
+        Pad.ReleaseAll();
         var log = new List<string>();
         int code;
         try

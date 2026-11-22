@@ -136,7 +136,9 @@ jobs:
           curl -fsSL https://github.com/TheRoben-Dev/EdenDeck/releases/latest/download/install.sh | bash
           \`\`\`
 
-          This installs to \`~/Applications/EdenDeck\`, adds Eden Deck to your app menu and puts \`edendeck\` on your PATH. For Game Mode, add Eden Deck to Steam with *Add a Non-Steam Game*.
+          This installs to \`~/Applications/EdenDeck\`, adds Eden Deck to your app menu and puts \`edendeck\` on your PATH.
+
+**Start it from Steam for controller support:** *Games → Add a Non-Steam Game to My Library →* tick Eden Deck. Started outside Steam, Steam's desktop layout turns the controller into keyboard and mouse input (arrows, Enter, Esc and Tab still work).
 
           **Manual install:** download \`EdenDeck-linux-x86_64.tar.gz\`, extract it anywhere and run \`EdenDeck/EdenDeck.x86_64\`.
 
