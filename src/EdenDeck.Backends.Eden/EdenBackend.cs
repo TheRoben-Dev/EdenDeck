@@ -141,7 +141,7 @@ public sealed class EdenBackend : IEmulatorBackend
     /// <summary>True while player 1 is still on Eden's keyboard defaults.</summary>
     public bool ControllerNeedsMapping() => EdenControllerDefaults.NeedsMapping(QtIni.Load(Paths.GlobalConfigFile));
 
-    /// <summary>Plan to open Eden's own window (no game), for settings Eden Deck doesn't cover.</summary>
+    /// <summary>Plan to open Eden's own window (no game), for settings Scanline doesn't cover.</summary>
     public Core.Launch.LaunchPlan PlanEdenUi()
     {
         var eden = Install.Current ?? throw new InvalidOperationException("No Eden install found. Install one in the Eden manager.");

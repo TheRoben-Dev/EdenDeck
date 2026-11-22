@@ -1,6 +1,6 @@
-# VK_LAYER_EDENDECK_fsr
+# VK_LAYER_SCANLINE_overlay
 
-Phase 1 prototype of the EdenDeck Vulkan layer. It's injected only into the Eden process
+Phase 1 prototype of the Scanline Vulkan layer. It's injected only into the Eden process
 through environment variables. Eden is not modified.
 
 **Current scope:** loader chaining, swapchain tracking, a `vkQueuePresentKHR` hook with
@@ -15,13 +15,13 @@ cmake --build layer/build
 ctest --test-dir layer/build --output-on-failure
 ```
 
-Produces `layer/build/libVkLayer_EDENDECK_fsr.so` and two manifests:
+Produces `layer/build/libVkLayer_SCANLINE_overlay.so` and two manifests:
 
-* `layer/build/VkLayer_EDENDECK_fsr.json` is **explicit**. Use it with `VK_ADD_LAYER_PATH` +
-  `VK_INSTANCE_LAYERS`. This is what EdenDeck uses.
-* `layer/build/implicit/VkLayer_EDENDECK_fsr.json` is **implicit**. When installed into
-  `~/.local/share/vulkan/implicit_layer.d/` it only activates with `ENABLE_EDENDECK_LAYER=1`
-  and never with `DISABLE_EDENDECK_LAYER=1`. This is the fallback if a loader ignores
+* `layer/build/VkLayer_SCANLINE_overlay.json` is **explicit**. Use it with `VK_ADD_LAYER_PATH` +
+  `VK_INSTANCE_LAYERS`. This is what Scanline uses.
+* `layer/build/implicit/VkLayer_SCANLINE_overlay.json` is **implicit**. When installed into
+  `~/.local/share/vulkan/implicit_layer.d/` it only activates with `ENABLE_SCANLINE_LAYER=1`
+  and never with `DISABLE_SCANLINE_LAYER=1`. This is the fallback if a loader ignores
   `VK_ADD_LAYER_PATH`. Edit `library_path` to an absolute path when installing.
 
 ## Environment variables
@@ -29,12 +29,12 @@ Produces `layer/build/libVkLayer_EDENDECK_fsr.so` and two manifests:
 | Var | Effect |
 |---|---|
 | `VK_ADD_LAYER_PATH=<dir>` | where the loader finds the explicit manifest (loader 1.3.234+) |
-| `VK_INSTANCE_LAYERS=VK_LAYER_EDENDECK_fsr` | enable the explicit layer |
-| `EDENDECK_LAYER_LOG=<path>` | log file (default stderr) |
-| `EDENDECK_LAYER_STATS=<path>` | JSON stats, rewritten atomically every report interval |
-| `EDENDECK_LAYER_REPORT_MS=<ms>` | report interval, default 2000 |
-| `EDENDECK_LAYER_NO_USAGE_PATCH=1` | don't add TRANSFER_SRC/DST to swapchain image usage |
-| `DISABLE_EDENDECK_LAYER=1` | kill switch: pure pass-through (explicit) / not loaded (implicit) |
+| `VK_INSTANCE_LAYERS=VK_LAYER_SCANLINE_overlay` | enable the explicit layer |
+| `SCANLINE_LAYER_LOG=<path>` | log file (default stderr) |
+| `SCANLINE_LAYER_STATS=<path>` | JSON stats, rewritten atomically every report interval |
+| `SCANLINE_LAYER_REPORT_MS=<ms>` | report interval, default 2000 |
+| `SCANLINE_LAYER_NO_USAGE_PATCH=1` | don't add TRANSFER_SRC/DST to swapchain image usage |
+| `DISABLE_SCANLINE_LAYER=1` | kill switch: pure pass-through (explicit) / not loaded (implicit) |
 
 ## What has been verified, and where
 
@@ -46,7 +46,7 @@ Xvfb, i.e. **X11 only, software rendering**) with `vkcube`:
 | Explicit layer via `VK_ADD_LAYER_PATH` + `VK_INSTANCE_LAYERS` | loads, instance + device hooked |
 | `vkCreateSwapchainKHR` hook, usage patch | 500×500 FIFO, usage 0x10 → 0x13, creation succeeds |
 | `vkQueuePresentKHR` hook | all 300/300 presents counted, stats JSON written |
-| `DISABLE_EDENDECK_LAYER=1` with explicit manifest | loads, no swapchain/present hooks |
+| `DISABLE_SCANLINE_LAYER=1` with explicit manifest | loads, no swapchain/present hooks |
 | Implicit manifest: enable env / no env / enable+disable | active / inactive / inactive |
 | Khronos validation layer above and below ours | no validation errors |
 | Unit tests (`frame_stats_test`) | pass |
@@ -76,14 +76,14 @@ Pass criteria, from the log path the script prints:
 * `present:` lines every 2 s with fps close to the game's real frame rate (30 or 60),
   and `cat $XDG_RUNTIME_DIR/edendeck/stats.json` updating
 * The game renders normally, with no new crashes or flicker. Compare with a run where
-  `DISABLE_EDENDECK_LAYER=1` is set.
+  `DISABLE_SCANLINE_LAYER=1` is set.
 
 If no `[edendeck-layer]` lines appear at all:
 
 1. `VK_LOADER_DEBUG=layer` to see whether the loader found the manifest.
 2. The AppImage may bundle an old `libvulkan.so.1` that ignores `VK_ADD_LAYER_PATH`. Check with
    `./Eden.AppImage --appimage-extract` then `find squashfs-root -name 'libvulkan*'`. If so,
-   install the implicit manifest (above) and use `ENABLE_EDENDECK_LAYER=1`.
+   install the implicit manifest (above) and use `ENABLE_SCANLINE_LAYER=1`.
 3. If Eden runs on OpenGL, the layer isn't involved. Set the renderer to Vulkan.
 
 ### 2. Desktop Wayland session (KDE Plasma / GNOME)

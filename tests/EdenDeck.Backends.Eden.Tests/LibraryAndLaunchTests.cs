@@ -542,10 +542,10 @@ public class LaunchTests : IDisposable
         var b = Backend("nightly");
         var none = b.Launch.Plan(Game(), new GameProfile(), new LaunchOptions { LayerDirectory = layerDir });
         Assert.False(none.Environment.ContainsKey("VK_INSTANCE_LAYERS"));
-        File.WriteAllText(Path.Combine(layerDir, "VkLayer_EDENDECK_fsr.json"), "{}");
+        File.WriteAllText(Path.Combine(layerDir, "VkLayer_SCANLINE_overlay.json"), "{}");
         var plan = b.Launch.Plan(Game(), new GameProfile(), new LaunchOptions { LayerDirectory = layerDir, LayerKillSwitch = true });
         Assert.StartsWith(layerDir, plan.Environment["VK_ADD_LAYER_PATH"]);
-        Assert.StartsWith("VK_LAYER_EDENDECK_fsr", plan.Environment["VK_INSTANCE_LAYERS"]);
-        Assert.Equal("1", plan.Environment["DISABLE_EDENDECK_LAYER"]);
+        Assert.StartsWith("VK_LAYER_SCANLINE_overlay", plan.Environment["VK_INSTANCE_LAYERS"]);
+        Assert.Equal("1", plan.Environment["DISABLE_SCANLINE_LAYER"]);
     }
 }

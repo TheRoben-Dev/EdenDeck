@@ -76,7 +76,7 @@ public class UpdaterTests : IDisposable
         Assert.Equal("new", File.ReadAllText(exe));
         Assert.True((File.GetUnixFileMode(exe) & UnixFileMode.UserExecute) != 0);
         Assert.Equal("old", File.ReadAllText(Path.Combine(u.PreviousDir, "EdenDeck.x86_64")));
-        Assert.Empty(Directory.EnumerateDirectories(Path.GetDirectoryName(install)!, ".edendeck-update-*"));
+        Assert.Empty(Directory.EnumerateDirectories(Path.GetDirectoryName(install)!, ".scanline-update-*"));
 
         u.Rollback();
         Assert.Equal("old", File.ReadAllText(Path.Combine(install, "EdenDeck.x86_64")));
@@ -99,7 +99,7 @@ public class UpdaterTests : IDisposable
         await Assert.ThrowsAsync<InvalidDataException>(() => u.InstallAsync(AppUpdater.ParseRelease(ReleaseJson())!));
         Assert.Equal("old", File.ReadAllText(Path.Combine(install, "EdenDeck.x86_64")));
         Assert.False(u.CanRollback);
-        Assert.Empty(Directory.EnumerateDirectories(Path.GetDirectoryName(install)!, ".edendeck-update-*"));
+        Assert.Empty(Directory.EnumerateDirectories(Path.GetDirectoryName(install)!, ".scanline-update-*"));
     }
 
     [Fact]

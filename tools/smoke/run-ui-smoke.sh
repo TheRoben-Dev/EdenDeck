@@ -2,7 +2,7 @@
 # UI smoke test: fake $HOME with a small fake library, then drives the Godot app with scripted
 # controller input (--smoke) under Xvfb and saves a screenshot per step.
 #
-#   tools/smoke/run-ui-smoke.sh <godot-mono-editor | exported EdenDeck.x86_64> <out-dir>
+#   tools/smoke/run-ui-smoke.sh <godot-mono-editor | exported Scanline.x86_64> <out-dir>
 #
 # The "games" are random bytes named like real dumps ("Title [TITLEID][v0].nsp"); the scanner
 # falls back to the title id in the file name. No real game, key or firmware files are used.
@@ -32,12 +32,12 @@ cp "$HOME/Games/Switch/Sky Racers [0100000000020000][v0].nsp" "$HOME/Games/Switc
 touch -d '10 minutes ago' "$HOME/Games/Switch/"*.nsp "$HOME/Games/Switch/Nameless Quest"
 head -c 512 /dev/urandom > "$HOME/Games/Switch/Copying Now [0100000000090000][v0].nsp"
 
-CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/edendeck.dll"
-[ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/edendeck.dll"
+CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
+[ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
 dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
 dotnet "$CLI" scan
 if [ -n "${SMOKE_THEME:-}" ]; then  # e.g. SMOKE_THEME=nightgrid for theme screenshots
-  python3 - "$HOME/.config/edendeck/settings.json" "$SMOKE_THEME" <<'PY'
+  python3 - "$HOME/.config/scanline/settings.json" "$SMOKE_THEME" <<'PY'
 import json, sys
 p, theme = sys.argv[1], sys.argv[2]
 s = json.load(open(p))
@@ -54,7 +54,7 @@ dotnet "$CLI" eden use "$FAKE"
 
 cd "$ROOT/src/EdenDeck.App"
 PROJECT=(--path .)
-[ "$(basename "$GODOT")" = "EdenDeck.x86_64" ] && PROJECT=()  # exported build: project is embedded
+[ "$(basename "$GODOT")" = "Scanline.x86_64" ] && PROJECT=()  # exported build: project is embedded
 set +e
 timeout 300 xvfb-run -a -s "-screen 0 1280x800x24" "$GODOT" "${PROJECT[@]}" --rendering-driver opengl3 \
   -- --windowed --smoke "$OUT" 2>&1 | tee "$OUT/godot.log"

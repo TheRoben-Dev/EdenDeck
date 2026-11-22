@@ -19,14 +19,15 @@ public sealed record AppRelease(Version Version, string Tag, string TarballUrl, 
 /// </summary>
 public sealed class AppUpdater
 {
-    public const string Repo = "TheRoben-Dev/EdenDeck";
-    public const string Asset = "EdenDeck-linux-x86_64.tar.gz";
+    public const string Repo = "TheRoben-Dev/Scanline";
+    public const string Asset = "Scanline-linux-x86_64.tar.gz";
     public const string LatestApi = $"https://api.github.com/repos/{Repo}/releases/latest";
 
-    // The app is being renamed to Scanline (repository, package and binary). This version already
-    // accepts both names so it can update across the rename; GitHub redirects the old repo URL.
-    private static readonly string[] Repos = ["TheRoben-Dev/EdenDeck", "TheRoben-Dev/Scanline"];
-    private static readonly string[] Assets = [Asset, "Scanline-linux-x86_64.tar.gz"];
+    // The app used to be called Eden Deck (repository, package and binary); both names are accepted.
+    // Releases also carry EdenDeck-linux-x86_64.tar.gz for updaters older than 0.3.5. Listed in
+    // ascending preference.
+    private static readonly string[] Repos = ["TheRoben-Dev/EdenDeck", Repo];
+    private static readonly string[] Assets = ["EdenDeck-linux-x86_64.tar.gz", Asset];
     private static readonly (string Folder, string Binary, string Launcher)[] Layouts =
         [("Scanline", "Scanline.x86_64", "scanline"), ("EdenDeck", "EdenDeck.x86_64", "edendeck")];
 
@@ -36,7 +37,7 @@ public sealed class AppUpdater
 
     private readonly HttpClient _http;
 
-    /// <param name="installDir">Folder holding EdenDeck.x86_64; null = the running app's folder.</param>
+    /// <param name="installDir">Folder holding Scanline.x86_64 (EdenDeck.x86_64 before the rename); null = the running app's folder.</param>
     public AppUpdater(HttpClient? http = null, string? installDir = null, Version? current = null)
     {
         _http = http ?? DefaultClient();
@@ -58,7 +59,7 @@ public sealed class AppUpdater
 
     public bool CanRollback => Directory.Exists(PreviousDir) && AppBinary(PreviousDir) != null;
 
-    /// <summary>Version of the copy kept for rollback, from its README.txt ("Eden Deck 0.1.1 (Linux x86_64)").</summary>
+    /// <summary>Version of the copy kept for rollback, from its README.txt ("Scanline 0.4.0 (Linux x86_64)"; "Eden Deck …" before the rename).</summary>
     public string? PreviousVersion
     {
         get
@@ -169,10 +170,10 @@ public sealed class AppUpdater
     {
         if (!CanSelfUpdate)
         {
-            throw new InvalidOperationException("This copy of Eden Deck can't update itself. Re-run the installer instead.");
+            throw new InvalidOperationException("This copy of Scanline can't update itself. Re-run the installer instead.");
         }
         var parent = Directory.GetParent(InstallDir.TrimEnd('/'))!.FullName;
-        var stage = Path.Combine(parent, ".edendeck-update-" + Guid.NewGuid().ToString("N")[..8]);
+        var stage = Path.Combine(parent, ".scanline-update-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(stage);
         try
         {
@@ -291,7 +292,7 @@ public sealed class AppUpdater
     {
         try
         {
-            var probe = Path.Combine(dir, ".edendeck-write-" + Guid.NewGuid().ToString("N")[..6]);
+            var probe = Path.Combine(dir, ".scanline-write-" + Guid.NewGuid().ToString("N")[..6]);
             File.WriteAllText(probe, "");
             File.Delete(probe);
             return true;
@@ -305,7 +306,7 @@ public sealed class AppUpdater
     private static HttpClient DefaultClient()
     {
         var h = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        h.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("EdenDeck", DisplayVersion(CurrentAppVersion())));
+        h.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Scanline", DisplayVersion(CurrentAppVersion())));
         h.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         return h;
     }

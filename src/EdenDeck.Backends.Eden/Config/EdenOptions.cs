@@ -52,7 +52,7 @@ public static class EdenOptions
         new()
         {
             Id = "backend", Group = "Graphics", Label = "Renderer", Type = OptionType.Choice,
-            Help = "Vulkan is fastest and required for the EdenDeck overlay. OpenGL is a fallback.",
+            Help = "Vulkan is fastest and required for the Scanline overlay. OpenGL is a fallback.",
             DefaultValue = "Vulkan", Choices = [C("Vulkan", "Vulkan", "Fastest on Linux and needed for the overlay and frame generation."), C("OpenGL_GLSL", "OpenGL", "Only if a game breaks on Vulkan. Slower, and no overlay.")],
         },
         new()

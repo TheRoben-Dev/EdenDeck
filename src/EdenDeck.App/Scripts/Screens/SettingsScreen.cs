@@ -137,25 +137,40 @@ public partial class SettingsScreen : TwoPaneScreen
         Add(new ActionButton("Rescan library", Rescan));
     }
 
+    private string? _pendingTheme;
+    private string? _pendingBase;
+    private Dictionary<string, string>? _pendingAccents;
+
     private void BuildAppearance(VBoxContainer col, Action<Control> Add)
     {
-        var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label)), UiTheme.Name,
-            "Changes apply right away, so you can flip through them here.")
+        // Theme and accent are picked here and applied by restarting the app: switching them live
+        // left the library unable to open games until the next start.
+        var active = UiTheme.Name;
+        if (_pendingBase != active)
+        {
+            _pendingBase = active;
+            _pendingTheme = null;
+            _pendingAccents = null;
+        }
+        _pendingTheme ??= active;
+        _pendingAccents ??= new Dictionary<string, string>(Host.Settings.Accents);
+        var themeId = _pendingTheme;
+        var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label + (t.Id == active ? "  (current)" : ""))), themeId,
+            "Pick a theme, then choose Restart to apply. The app restarts and comes back here.")
         {
             Expands = true,
             DetailFor = v => UiTheme.Themes.FirstOrDefault(t => t.Id == v)?.Blurb,
         };
         theme.Changed += v =>
         {
-            Host.SaveSettings(Host.Settings with { Theme = v });
-            App.ApplyTheme(v);
+            _pendingTheme = v;
+            RefreshPane();  // the accent row's choices depend on the theme
         };
         Add(theme);
-        var themeId = UiTheme.Name;
         var pocket = themeId == "pocket";
         var accent = new Stepper(pocket ? "Screen colour" : "Accent colour",
             [("", pocket ? "Classic green" : "Theme's own"), .. UiTheme.SwatchesFor(UiTheme.Themes.First(t => t.Id == themeId))],
-            Host.Settings.Accents.GetValueOrDefault(themeId) ?? "",
+            _pendingAccents.GetValueOrDefault(themeId) ?? "",
             pocket ? "Pocket LCD's four shades, in another screen colour. Saved for this theme." : "The highlight colour for this theme. Each theme remembers its own.")
         {
             Expands = true,
@@ -165,19 +180,28 @@ public partial class SettingsScreen : TwoPaneScreen
         };
         accent.Changed += v =>
         {
-            var accents = new Dictionary<string, string>(Host.Settings.Accents);
             if (v == "")
             {
-                accents.Remove(themeId);
+                _pendingAccents.Remove(themeId);
             }
             else
             {
-                accents[themeId] = v;
+                _pendingAccents[themeId] = v;
             }
-            Host.SaveSettings(Host.Settings with { Accents = accents });
-            App.ApplyTheme(themeId);
+            RefreshPane();
         };
         Add(accent);
+        var changed = themeId != active ||
+                      (_pendingAccents.GetValueOrDefault(themeId) ?? "") != (Host.Settings.Accents.GetValueOrDefault(themeId) ?? "");
+        if (changed)
+        {
+            var label = UiTheme.Themes.First(t => t.Id == themeId).Label;
+            Add(new ActionButton($"↻  Restart to apply {label}", () =>
+            {
+                Host.SaveSettings(Host.Settings with { Theme = themeId, Accents = new Dictionary<string, string>(_pendingAccents) });
+                App.RestartApp("--open=appearance");
+            }, "Saves the theme and restarts the app. You come back to this page."));
+        }
         Add(Toggle.Create("Animated background", Host.Settings.AnimatedBackground, on =>
         {
             Host.SaveSettings(Host.Settings with { AnimatedBackground = on });
@@ -215,12 +239,12 @@ public partial class SettingsScreen : TwoPaneScreen
     private void BuildUpdates(VBoxContainer col, Action<Control> Add)
     {
         var updater = Host.Updater;
-        col.AddChild(UiTheme.Label($"Eden Deck {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
-        Add(new ActionButton("Changelog", App.ShowChangelog, "What changed in each version of Eden Deck."));
+        col.AddChild(UiTheme.Label($"Scanline {AppUpdater.DisplayVersion(updater.CurrentVersion)}", UiTheme.FontSize + 6, UiTheme.Text));
+        Add(new ActionButton("Changelog", App.ShowChangelog, "What changed in each version of Scanline."));
         if (updater.CanSelfUpdate)
         {
             Add(new ActionButton("Check for updates", () => App.CheckForAppUpdate(silent: false),
-                "Looks for a newer Eden Deck on GitHub. Updates install in place and keep your games, keys and settings."));
+                "Looks for a newer Scanline on GitHub. Updates install in place and keep your games, keys and settings."));
             Add(Toggle.Create("Check at startup", Host.Settings.CheckForUpdates,
                 on => Host.SaveSettings(Host.Settings with { CheckForUpdates = on }),
                 "Asks when a new version is out. Never interrupts a game."));
@@ -228,7 +252,7 @@ public partial class SettingsScreen : TwoPaneScreen
             {
                 var prev = updater.PreviousVersion is { } pv ? $" ({pv})" : "";
                 Add(new ActionButton($"Roll back to previous version{prev}", () => App.Confirm(
-                    $"Go back to the previous Eden Deck{prev}? The app restarts.", "Roll back", App.RollbackApp)));
+                    $"Go back to the previous Scanline{prev}? The app restarts.", "Roll back", App.RollbackApp)));
             }
         }
         else
@@ -236,15 +260,15 @@ public partial class SettingsScreen : TwoPaneScreen
             col.AddChild(UiTheme.Label("This copy can't update itself (development build or package). Use the installer to update.",
                 UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
-        col.AddChild(UiTheme.Label("Eden Deck never downloads keys, firmware or games. Use your own dumps.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Scanline never downloads keys, firmware or games. Use your own dumps.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
     private void BuildAdvanced(VBoxContainer col, Action<Control> Add)
     {
         Add(Toggle.Create("Performance overlay layer", !Host.Settings.LayerKillSwitch,
             on => Host.SaveSettings(Host.Settings with { LayerKillSwitch = !on }),
-            "Eden Deck's Vulkan layer (FPS and frame-time stats).",
-            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Eden Deck.",
+            "Scanline's Vulkan layer (FPS and frame-time stats).",
+            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Scanline.",
             "No overlay and no stats; games run exactly as in plain Eden."));
         col.AddChild(Section("Expert Eden options"));
         BuildEdenOptions(col, Add, o => AdvancedOptions.Contains(o.Id), showGroups: true);

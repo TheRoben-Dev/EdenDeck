@@ -98,8 +98,8 @@ jobs:
         run: |
           timeout 300 "$GODOT" --headless --import
           mkdir -p ../../build/godot
-          timeout 600 "$GODOT" --headless --export-release Linux ../../build/godot/EdenDeck.x86_64 2>&1 | tee export.log
-          test -x ../../build/godot/EdenDeck.x86_64
+          timeout 600 "$GODOT" --headless --export-release Linux ../../build/godot/Scanline.x86_64 2>&1 | tee export.log
+          test -x ../../build/godot/Scanline.x86_64
           ! grep -E "^ERROR" export.log
 
       - name: Headless launcher
@@ -110,17 +110,25 @@ jobs:
 
       - name: Package
         if: steps.version.outputs.skip != 'true'
-        run: tools/release/package-linux.sh "$VERSION" build/godot build/cli/edendeck layer/build dist
+        run: tools/release/package-linux.sh "$VERSION" build/godot build/cli/scanline layer/build dist
 
       - name: Smoke test the packaged build
         if: steps.version.outputs.skip != 'true'
         run: |
           mkdir -p "$RUNNER_TEMP/pkg"
-          tar xzf dist/EdenDeck-$VERSION-linux-x86_64.tar.gz -C "$RUNNER_TEMP/pkg"
-          HOME="$RUNNER_TEMP/insthome" EDENDECK_RELEASE_URL="file://$PWD/dist" bash dist/install.sh
+          tar xzf dist/Scanline-$VERSION-linux-x86_64.tar.gz -C "$RUNNER_TEMP/pkg"
+          # Install over an old Eden Deck install: it moves to ~/Applications/Scanline and the old
+          # path stays as a link, so Steam shortcuts that point at it keep working.
+          mkdir -p "$RUNNER_TEMP/insthome/Applications/EdenDeck"
+          touch "$RUNNER_TEMP/insthome/Applications/EdenDeck/EdenDeck.x86_64"
+          HOME="$RUNNER_TEMP/insthome" SCANLINE_RELEASE_URL="file://$PWD/dist" bash dist/install.sh
+          test -x "$RUNNER_TEMP/insthome/Applications/Scanline/Scanline.x86_64"
+          test -L "$RUNNER_TEMP/insthome/Applications/EdenDeck"
           test -x "$RUNNER_TEMP/insthome/Applications/EdenDeck/EdenDeck.x86_64"
-          tools/smoke/run-ui-smoke.sh "$RUNNER_TEMP/pkg/EdenDeck/EdenDeck.x86_64" "$RUNNER_TEMP/shots"
-          "$RUNNER_TEMP/pkg/EdenDeck/edendeck" help
+          "$RUNNER_TEMP/insthome/Applications/EdenDeck/edendeck" help >/dev/null
+          tar tzf dist/EdenDeck-linux-x86_64.tar.gz | grep -qx 'EdenDeck/EdenDeck.x86_64'
+          tools/smoke/run-ui-smoke.sh "$RUNNER_TEMP/pkg/Scanline/Scanline.x86_64" "$RUNNER_TEMP/shots"
+          "$RUNNER_TEMP/pkg/Scanline/scanline" help
 
       - name: Publish release
         if: steps.version.outputs.skip != 'true'
@@ -137,21 +145,21 @@ jobs:
           **Install or update** (Desktop Mode, in a terminal, no root needed):
 
           \`\`\`sh
-          curl -fsSL https://github.com/TheRoben-Dev/EdenDeck/releases/latest/download/install.sh | bash
+          curl -fsSL https://github.com/TheRoben-Dev/Scanline/releases/latest/download/install.sh | bash
           \`\`\`
 
-          This installs to \`~/Applications/EdenDeck\`, adds Eden Deck to your app menu and puts \`edendeck\` on your PATH.
+          This installs to \`~/Applications/Scanline\`, adds Scanline to your app menu and puts \`scanline\` on your PATH. Coming from Eden Deck? Your settings, key sets, installed Eden and Steam shortcuts carry over.
 
-          **Start it from Steam for controller support:** *Games → Add a Non-Steam Game to My Library →* tick Eden Deck. Started outside Steam, Steam's desktop layout turns the controller into keyboard and mouse input (arrows, Enter, Esc and Tab still work).
+          **Start it from Steam for controller support:** *Games → Add a Non-Steam Game to My Library →* tick Scanline. Started outside Steam, Steam's desktop layout turns the controller into keyboard and mouse input (arrows, Enter, Esc and Tab still work).
 
-          **Manual install:** download \`EdenDeck-linux-x86_64.tar.gz\`, extract it anywhere and run \`EdenDeck/EdenDeck.x86_64\`.
+          **Manual install:** download \`Scanline-linux-x86_64.tar.gz\`, extract it anywhere and run \`Scanline/Scanline.x86_64\`.
 
           **First run:** on the Eden tab, install Eden (Stable is recommended), then import your own \`prod.keys\` and firmware. Add your game folder on the Library tab.
 
-          Eden Deck never downloads keys, firmware or games. Downloads are listed in \`SHA256SUMS\`, and the installer checks them.
+          Scanline never downloads keys, firmware or games. Downloads are listed in \`SHA256SUMS\`, and the installer checks them.
           NOTES
           cat head.md notes.md > release-notes.md
-          gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Eden Deck $VERSION" --notes-file release-notes.md
+          gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Scanline $VERSION" --notes-file release-notes.md
 
       - name: Upload screenshots
         if: always() && steps.version.outputs.skip != 'true'

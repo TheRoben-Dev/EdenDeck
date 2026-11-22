@@ -12,6 +12,11 @@ namespace EdenDeck.App.Screens;
 public abstract partial class TwoPaneScreen : Screen
 {
     private int _category;
+    private bool _enterOnFocus;
+    private bool _startApplied;
+
+    /// <summary>Category to open with (and step into) when the screen first appears, e.g. after a restart.</summary>
+    public string? StartIn { get; init; }
     private readonly List<Button> _cats = new();
     private VBoxContainer? _pane;
     private ScrollContainer? _paneScroll;
@@ -41,6 +46,16 @@ public abstract partial class TwoPaneScreen : Screen
     {
         _cats.Clear();
         _list = Categories;
+        if (StartIn != null && !_startApplied)
+        {
+            _startApplied = true;
+            var start = _list.ToList().FindIndex(c => c.Name == StartIn);
+            if (start >= 0)
+            {
+                _category = start;
+                _enterOnFocus = true;
+            }
+        }
         _category = Math.Clamp(_category, 0, Math.Max(0, _list.Count - 1));
         var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
         row.AddThemeConstantOverride("separation", 28);
@@ -194,5 +209,26 @@ public abstract partial class TwoPaneScreen : Screen
         Anim.Stagger(items, 0.015);
     }
 
-    public override void FocusDefault() => (_category < _cats.Count ? _cats[_category] : null)?.GrabFocus();
+    public override void FocusDefault()
+    {
+        if (_enterOnFocus && _paneItems.Count > 0)
+        {
+            _enterOnFocus = false;
+            _paneItems[0].GrabFocus();
+            return;
+        }
+        (_category < _cats.Count ? _cats[_category] : null)?.GrabFocus();
+    }
+
+    /// <summary>Rebuilds the open category's pane in place and puts focus back on the same row.</summary>
+    protected void RefreshPane()
+    {
+        var f = GetViewport()?.GuiGetFocusOwner();
+        var index = f != null ? _paneItems.IndexOf(f) : -1;
+        BuildPane();
+        if (index >= 0 && _paneItems.Count > 0)
+        {
+            _paneItems[Math.Min(index, _paneItems.Count - 1)].GrabFocus();
+        }
+    }
 }

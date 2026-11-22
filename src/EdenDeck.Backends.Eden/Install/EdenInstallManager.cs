@@ -10,7 +10,7 @@ namespace EdenDeck.Backends.Eden.Install;
 /// <summary>
 /// Installs Eden AppImages from Eden's official feeds only, keeps the previous version for
 /// one-click rollback, or uses an Eden the user already has.
-/// Layout: &lt;edendeck data&gt;/emulators/eden/&lt;channel&gt;/&lt;tag&gt;/Eden.AppImage + state.json
+/// Layout: &lt;scanline data&gt;/emulators/eden/&lt;channel&gt;/&lt;tag&gt;/Eden.AppImage + state.json
 /// </summary>
 public sealed partial class EdenInstallManager : IInstallManager
 {
@@ -219,7 +219,7 @@ public sealed partial class EdenInstallManager : IInstallManager
     private static HttpClient CreateHttp()
     {
         var h = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        h.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("EdenDeck", "0.1"));
+        h.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Scanline", "0.4"));
         return h;
     }
 

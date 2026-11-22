@@ -10,7 +10,7 @@ public sealed class KeyImportException(string message) : Exception(message);
 /// <summary>
 /// The user's own key sets (prod.keys/title.keys, optional firmware). EdenDeck never downloads,
 /// bundles or links to keys or firmware; it only copies files the user points it at.
-/// Layout: &lt;edendeck data&gt;/keysets/&lt;id&gt;/{prod.keys,title.keys,firmware/*.nca,keyset.json}
+/// Layout: &lt;scanline data&gt;/keysets/&lt;id&gt;/{prod.keys,title.keys,firmware/*.nca,keyset.json}
 /// </summary>
 public sealed class KeySetStore
 {

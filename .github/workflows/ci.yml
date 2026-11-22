@@ -87,18 +87,18 @@ jobs:
         working-directory: src/EdenDeck.App
         run: |
           mkdir -p ../../build/godot
-          timeout 600 "$GODOT" --headless --export-release Linux ../../build/godot/EdenDeck.x86_64 2>&1 | tee export.log
-          test -x ../../build/godot/EdenDeck.x86_64
+          timeout 600 "$GODOT" --headless --export-release Linux ../../build/godot/Scanline.x86_64 2>&1 | tee export.log
+          test -x ../../build/godot/Scanline.x86_64
           ! grep -E "^ERROR" export.log
 
-      - name: Headless launcher (edendeck) for Steam shortcuts
+      - name: Headless launcher (scanline) for Steam shortcuts
         run: |
           dotnet publish src/EdenDeck.Cli -c Release -r linux-x64 --self-contained \
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o build/godot
-          build/godot/edendeck --help
+          build/godot/scanline --help
 
       - name: UI smoke test (exported build)
-        run: tools/smoke/run-ui-smoke.sh build/godot/EdenDeck.x86_64 "${{ runner.temp }}/shots"
+        run: tools/smoke/run-ui-smoke.sh build/godot/Scanline.x86_64 "${{ runner.temp }}/shots"
 
       - name: Upload screenshots
         if: always()
@@ -111,7 +111,7 @@ jobs:
       - name: Upload Linux build
         uses: actions/upload-artifact@v4
         with:
-          name: EdenDeck-linux-x86_64
+          name: Scanline-linux-x86_64
           path: build/godot
   layer:
     name: Vulkan layer (build, unit tests, lavapipe smoke test)
@@ -136,29 +136,29 @@ jobs:
 
       - name: Exported symbols
         run: |
-          nm -D --defined-only layer/build/libVkLayer_EDENDECK_fsr.so | awk '{print $3}' | grep -v '^_' | sort > syms.txt
+          nm -D --defined-only layer/build/libVkLayer_SCANLINE_overlay.so | awk '{print $3}' | grep -v '^_' | sort > syms.txt
           cat syms.txt
-          diff <(printf '%s\n' edendeck_GetDeviceProcAddr edendeck_GetInstanceProcAddr vkNegotiateLoaderLayerInterfaceVersion) syms.txt
+          diff <(printf '%s\n' scanline_GetDeviceProcAddr scanline_GetInstanceProcAddr vkNegotiateLoaderLayerInterfaceVersion) syms.txt
 
       - name: Smoke test with vkcube on lavapipe (explicit layer + validation)
         env:
           VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
           VK_ADD_LAYER_PATH: ${{ github.workspace }}/layer/build
-          VK_INSTANCE_LAYERS: VK_LAYER_EDENDECK_fsr:VK_LAYER_KHRONOS_validation
-          EDENDECK_LAYER_STATS: ${{ runner.temp }}/stats.json
+          VK_INSTANCE_LAYERS: VK_LAYER_SCANLINE_overlay:VK_LAYER_KHRONOS_validation
+          SCANLINE_LAYER_STATS: ${{ runner.temp }}/stats.json
         run: |
           timeout 120 xvfb-run -a vkcube --c 120 2>&1 | tee vkcube.log
           grep -q 'vkCreateSwapchainKHR ok' vkcube.log
           grep -q 'present: .*total=120' vkcube.log
           if grep -E 'VUID|Validation Error' vkcube.log; then echo "validation errors"; exit 1; fi
-          python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['total_presents']==120, d" "$EDENDECK_LAYER_STATS"
+          python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['total_presents']==120, d" "$SCANLINE_LAYER_STATS"
 
       - name: Kill switch keeps the layer passive
         env:
           VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
           VK_ADD_LAYER_PATH: ${{ github.workspace }}/layer/build
-          VK_INSTANCE_LAYERS: VK_LAYER_EDENDECK_fsr
-          DISABLE_EDENDECK_LAYER: "1"
+          VK_INSTANCE_LAYERS: VK_LAYER_SCANLINE_overlay
+          DISABLE_SCANLINE_LAYER: "1"
         run: |
           timeout 60 xvfb-run -a vkcube --c 30 2>&1 | tee off.log
           ! grep -q 'vkCreateSwapchainKHR ok' off.log

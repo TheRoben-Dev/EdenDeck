@@ -1,10 +1,10 @@
 <div align="center">
 
-# EdenDeck
+# Scanline
 
 **A controller-first frontend for the [Eden](https://eden-emu.dev) Nintendo Switch emulator on Linux.**
 
-Built for SteamOS, Bazzite and other gaming distros. Made for handhelds like the Steam Deck and ROG Ally, and just as at home on a desktop or TV.
+Formerly called Eden Deck. Built for SteamOS, Bazzite and other gaming distros. Made for handhelds like the Steam Deck and ROG Ally, and just as at home on a desktop or TV.
 
 ![Status](https://img.shields.io/badge/status-pre--alpha-orange)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20SteamOS-1793d1)
@@ -13,15 +13,15 @@ Built for SteamOS, Bazzite and other gaming distros. Made for handhelds like the
 </div>
 
 > [!WARNING]
-> **EdenDeck is in early development (pre-alpha).** Nothing here is usable yet. This README describes what is *planned*, and details may change as the work goes on. Watch the repo or check [Releases](https://github.com/TheRoben-Dev/EdenDeck/releases) for the first build.
+> **Scanline is in early development (pre-alpha).** Nothing here is usable yet. This README describes what is *planned*, and details may change as the work goes on. Watch the repo or check [Releases](https://github.com/TheRoben-Dev/Scanline/releases) for the first build.
 
 ---
 
-## What is EdenDeck?
+## What is Scanline?
 
-EdenDeck wraps the **unmodified upstream Eden emulator** in a fullscreen, gamepad-driven interface. You browse your library, tweak settings, manage mods, set up controllers and launch games without ever touching Eden's desktop Qt UI.
+Scanline wraps the **unmodified upstream Eden emulator** in a fullscreen, gamepad-driven interface. You browse your library, tweak settings, manage mods, set up controllers and launch games without ever touching Eden's desktop Qt UI.
 
-Eden stays a separate program. You can update it (Stable or Nightly) on its own schedule, and EdenDeck keeps working.
+Eden stays a separate program. You can update it (Stable or Nightly) on its own schedule, and Scanline keeps working.
 
 ## Highlights (planned)
 
@@ -33,7 +33,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - 🚂 **Per-game "Add to Steam"** so each game launches from Game Mode with its own settings applied
 - 🧩 **Mod and cheat manager** with conflict warnings and one-tap enable/disable
 - ✨ **Upscaling and frame generation** using Eden's built-in FSR/SGSR and Lossless Scaling frame gen (your own copy), plus lsfg-vk for Eden Stable
-- 📊 **In-game overlay and quick menu** through EdenDeck's own Vulkan layer
+- 📊 **In-game overlay and quick menu** through Scanline's own Vulkan layer
 - 🎯 **Frame generation capped at 60 FPS**, because the goal is smooth 60 FPS Switch games and nothing more
 - 🔄 **In-app self-updates** from this repo's GitHub Releases
 
@@ -46,15 +46,15 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - Finds an existing Eden install, or installs one for you from **Eden's official sources only**.
 - **Stable / Nightly** channel picker, update checks, and the previous version kept around for **one-click rollback**.
 - Checksums or signatures verified wherever Eden publishes them.
-- **Guided import of your own** `prod.keys`, `title.keys` and firmware into the right Eden folders, with validation and clear error messages. EdenDeck never downloads or bundles keys, firmware or games.
-- **Per-game key sets.** Import several sets of your own keys (and matching firmware), label them, and assign a specific set to any game. Handy when one set won't boot a newer or older title. EdenDeck puts the assigned set in place right before launch and restores your default afterwards, so Eden itself needs no changes.
+- **Guided import of your own** `prod.keys`, `title.keys` and firmware into the right Eden folders, with validation and clear error messages. Scanline never downloads or bundles keys, firmware or games.
+- **Per-game key sets.** Import several sets of your own keys (and matching firmware), label them, and assign a specific set to any game. Handy when one set won't boot a newer or older title. Scanline puts the assigned set in place right before launch and restores your default afterwards, so Eden itself needs no changes.
 
 ### 2. Controller-first UI
 
 - Fullscreen interface that works with **a gamepad alone**. Mouse, touch and keyboard work too, but they're secondary.
 - SDL3 gamepad input with **predictable D-pad/stick focus** (no diagonal jumps), **shoulder buttons to switch tabs**, and an **on-screen keyboard** for every text field.
 - **Button glyphs that match your controller**: Xbox, PlayStation, Nintendo or Steam Deck.
-- **Fixed UI controls:** A confirms and B goes back in EdenDeck's menus, always (shown with your controller's glyphs). Button remaps you set up for games never change how the app itself is navigated.
+- **Fixed UI controls:** A confirms and B goes back in Scanline's menus, always (shown with your controller's glyphs). Button remaps you set up for games never change how the app itself is navigated.
 - Controller-navigable file and folder pickers. No native GTK/Qt dialogs.
 - Screens:
   - **Library grid:** scans your game folders and shows title, icon, title ID, version, update and DLC status.
@@ -67,14 +67,14 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 
 - **Mapping screen** that writes Eden input profiles for players 1–8, including motion/gyro and rumble.
 - **Per-game profiles** and separate **handheld vs. docked** profiles.
-- **Remaps apply to games only.** For example, you can swap ABXY so they match the Switch layout in-game while the EdenDeck menus keep A = confirm, B = back.
+- **Remaps apply to games only.** For example, you can swap ABXY so they match the Switch layout in-game while the Scanline menus keep A = confirm, B = back.
 - **Steam Input aware:** detects Game Mode / Big Picture and maps against Steam's virtual gamepads instead of the physical controller, keeping player order stable across sleep and resume.
 - **Gyro** on Steam Deck and ROG Ally through SDL / Steam Input, mapped to Eden motion.
 - **Add to Steam:**
-  - Add EdenDeck itself as a non-Steam shortcut, with artwork.
+  - Add Scanline itself as a non-Steam shortcut, with artwork.
   - **Every game page has its own "Add to Steam" button.** It creates a per-game shortcut that launches that game straight from **SteamOS Game Mode** with all of its settings applied: frame generation, upscaling, controller profile and Eden overrides. No trip through the menus required.
   - Steam's `shortcuts.vdf` is only written while Steam is closed, or after a clear warning.
-- A **recommended Steam Input template** for EdenDeck: menu navigation plus the quick-menu hotkey chord.
+- A **recommended Steam Input template** for Scanline: menu navigation plus the quick-menu hotkey chord.
 - **In-game quick menu:** hold a chord (for example View + Menu) to open an overlay where you can exit the game, save/load state where Eden supports it, toggle FSR or frame gen, change resolution scale and adjust the FPS limit. All of it works without modifying Eden.
 
 ### 4. Mod and cheat manager
@@ -93,7 +93,7 @@ Phase 1 found that Eden already has the important pieces built in, and they work
 than a layer that only sees the finished frame: spatial **FSR 1** (both channels), **SGSR**
 (Nightly), and **frame generation using Lossless Scaling's engine** (Nightly). These run
 inside Eden's renderer, so they know the game's real resolution and can tell real frames from
-repeats. EdenDeck drives them through Eden's own per-game settings.
+repeats. Scanline drives them through Eden's own per-game settings.
 
 **Upscaling.** You choose between:
 
@@ -105,9 +105,9 @@ repeats. EdenDeck drives them through Eden's own per-game settings.
 
 **Frame generation.** One engine per game:
 
-- **Eden's built-in frame gen** (Nightly). This needs your own copy of [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam. EdenDeck finds its `Lossless.dll` and puts it where Eden expects it, and never ships or downloads Lossless Scaling files.
+- **Eden's built-in frame gen** (Nightly). This needs your own copy of [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam. Scanline finds its `Lossless.dll` and puts it where Eden expects it, and never ships or downloads Lossless Scaling files.
 - **lsfg-vk** for Eden Stable, with the same Lossless Scaling requirement.
-- **FSR 3.1 frame generation** in EdenDeck's own layer, as an experimental option for players without Lossless Scaling.
+- **FSR 3.1 frame generation** in Scanline's own layer, as an experimental option for players without Lossless Scaling.
 
 **The 60 FPS rule.** Frame generation exists here to get Switch games to a smooth 60 FPS, and **output is hard-capped at 60 FPS**:
 
@@ -115,7 +115,7 @@ repeats. EdenDeck drives them through Eden's own per-game settings.
 - Games that already run at 60 get **no frame generation**.
 - No 3x/4x modes and no targets above 60.
 
-**EdenDeck's Vulkan layer** (`VK_LAYER_EDENDECK_fsr`) is injected **only into Eden, only at launch**, through environment variables. Eden is never patched. Its main jobs:
+**Scanline's Vulkan layer** (`VK_LAYER_SCANLINE_overlay`) is injected **only into Eden, only at launch**, through environment variables. Eden is never patched. Its main jobs:
 
 - An optional **performance overlay**: real vs. generated FPS, frame-time graph, active upscale mode.
 - The **in-game quick menu**.
@@ -125,7 +125,7 @@ repeats. EdenDeck drives them through Eden's own per-game settings.
 
 ### 6. Updates and releases
 
-- **In-app self-updates:** EdenDeck checks this repository's [GitHub Releases](https://github.com/TheRoben-Dev/EdenDeck/releases) and updates itself, with rollback if something goes wrong. Download it once, and future versions arrive inside the app.
+- **In-app self-updates:** Scanline checks this repository's [GitHub Releases](https://github.com/TheRoben-Dev/Scanline/releases) and updates itself, with rollback if something goes wrong. Download it once, and future versions arrive inside the app.
 - **Fully automated pipeline:** builds, tests, pull requests and releases all run through GitHub Actions.
 - Packaged as **Flatpak** (primary, for SteamOS and Bazzite) and **AppImage**, with sandbox permissions set up for the Eden binary, your game folders and Steam's `shortcuts.vdf`.
 
@@ -135,18 +135,18 @@ repeats. EdenDeck drives them through Eden's own per-game settings.
 
 ```
 ┌──────────────────────────┐      launch args, config files,      ┌─────────────────────┐
-│        EdenDeck          │      mod/data folders, env vars      │   Eden (upstream,   │
+│        Scanline          │      mod/data folders, env vars      │   Eden (upstream,   │
 │  controller-first UI     │ ───────────────────────────────────▶ │   unmodified)       │
 │                          │                                      │   AppImage / pkg    │
 │   └─ Eden backend        │                                      └──────────┬──────────┘
 │      (all Eden-specific  │                                                 │ Vulkan
 │       knowledge lives    │                                      ┌──────────▼──────────┐
-│       here, versioned)   │                                      │ VK_LAYER_EDENDECK_  │
-└──────────────────────────┘                                      │ fsr (overlay)       │
+│       here, versioned)   │                                      │ VK_LAYER_SCANLINE_  │
+└──────────────────────────┘                                      │ overlay             │
                                                                   └─────────────────────┘
 ```
 
-**The core rule: EdenDeck does not fork Eden.** It talks to Eden only through command-line arguments, Eden's config files, its mod and data folders, environment variables and a Vulkan layer.
+**The core rule: Scanline does not fork Eden.** It talks to Eden only through command-line arguments, Eden's config files, its mod and data folders, environment variables and a Vulkan layer.
 
 Everything Eden-specific (config keys, paths, CLI flags) lives in a single versioned module, the Eden backend (`EdenDeck.Backends.Eden`, with version snapshots in `eden_adapter/schema/`). It detects the installed Eden version and tolerates config keys it doesn't know. When Eden changes, that one module is the only thing that needs updating, and it's covered by tests against sample configs from several Eden versions. Every path, key and flag is verified against the current Eden source and documented in [`docs/eden-integration.md`](docs/eden-integration.md).
 
@@ -193,7 +193,7 @@ Planned after the phases above, unless one fits naturally earlier:
 
 ### Future backends
 
-EdenDeck's core uses a generic emulator-backend interface ([`docs/backends.md`](docs/backends.md)), and Eden is the first implementation. More are planned later, each as its own module: **PS3** (RPCS3), **PS2** (PCSX2), **PS1** (DuckStation), **Xbox** (xemu), **NDS** (melonDS) and **GBA** (mGBA). The same rules apply: upstream emulators stay unmodified, and you use only your own BIOS and firmware.
+Scanline's core uses a generic emulator-backend interface ([`docs/backends.md`](docs/backends.md)), and Eden is the first implementation. More are planned later, each as its own module: **PS3** (RPCS3), **PS2** (PCSX2), **PS1** (DuckStation), **Xbox** (xemu), **NDS** (melonDS) and **GBA** (mGBA). The same rules apply: upstream emulators stay unmodified, and you use only your own BIOS and firmware.
 
 ## Repository layout
 
@@ -209,25 +209,25 @@ EdenDeck's core uses a generic emulator-backend interface ([`docs/backends.md`](
 | `src/EdenDeck.Core/` | Backend interface, library grouping, launch plans, per-game profiles, frame gen policy |
 | `src/EdenDeck.Backends.Eden/` | Everything Eden-specific |
 | `src/EdenDeck.Host/` | Composition root shared by the app and the CLI |
-| `src/EdenDeck.Cli/` | `edendeck`, the headless launcher used by Steam shortcuts |
+| `src/EdenDeck.Cli/` | `scanline`, the headless launcher used by Steam shortcuts |
 | `src/EdenDeck.App/` | Godot 4 .NET app (UI built in code) |
 | `tests/` | xUnit tests with sample Eden configs |
 | `tools/smoke/` | Scripted UI smoke test with screenshots |
-| `layer/` | `VK_LAYER_EDENDECK_fsr` Vulkan layer and its hardware test procedure |
+| `layer/` | `VK_LAYER_SCANLINE_overlay` Vulkan layer and its hardware test procedure |
 
 ## Install
 
 On SteamOS, Bazzite or any x86_64 Linux, open a terminal in Desktop Mode and run:
 
 ```sh
-curl -fsSL https://github.com/TheRoben-Dev/EdenDeck/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/TheRoben-Dev/Scanline/releases/latest/download/install.sh | bash
 ```
 
-This installs to `~/Applications/EdenDeck` (no root), adds a menu entry, and puts the `edendeck` launcher on your PATH.
+This installs to `~/Applications/Scanline` (no root), adds a menu entry, and puts the `scanline` launcher on your PATH.
 
-**Updates (0.2.0 and later) install from inside the app.** Eden Deck checks GitHub Releases at startup and offers *Update and restart*; you can also check from *Settings → Updates*. The download is checksum-verified, your games, keys and settings are never touched, and the previous version is kept so you can roll back from the same screen. The version you're running shows in the top-right corner. Re-running the install command also works.
+**Updates (0.2.0 and later) install from inside the app.** Scanline checks GitHub Releases at startup and offers *Update and restart*; you can also check from *Settings → Updates*. The download is checksum-verified, your games, keys and settings are never touched, and the previous version is kept so you can roll back from the same screen. The version you're running shows in the top-right corner. Re-running the install command also works.
 
-**Use a controller by starting Eden Deck from Steam**, in both Desktop and Game Mode: in Steam, choose *Games → Add a Non-Steam Game to My Library*, then tick Eden Deck. If you start it outside Steam while Steam is running, Steam's desktop controller layout turns your pad into keyboard and mouse input. Eden Deck still understands the arrow keys, Enter, Esc, and Tab/Shift+Tab for switching tabs, but gamepad buttons won't work.
+**Use a controller by starting Scanline from Steam**, in both Desktop and Game Mode: in Steam, choose *Games → Add a Non-Steam Game to My Library*, then tick Scanline. If you start it outside Steam while Steam is running, Steam's desktop controller layout turns your pad into keyboard and mouse input. Scanline still understands the arrow keys, Enter, Esc, and Tab/Shift+Tab for switching tabs, but gamepad buttons won't work.
 
 ## Building
 
@@ -239,16 +239,16 @@ dotnet run --project src/EdenDeck.Cli -- help # headless launcher
 cd src/EdenDeck.App && godot --path . -- --windowed   # run the app from source
 ```
 
-CI builds the Linux export on every pull request and uploads it as the `EdenDeck-linux-x86_64` artifact, together with screenshots from the UI smoke test.
+CI builds the Linux export on every pull request and uploads it as the `Scanline-linux-x86_64` artifact, together with screenshots from the UI smoke test.
 
 ---
 
 ## Legal and project stance
 
-- **No piracy features.** EdenDeck does not download, bundle or link to keys, firmware or games. You must dump these from hardware you own.
+- **No piracy features.** Scanline does not download, bundle or link to keys, firmware or games. You must dump these from hardware you own.
 - **Eden is not modified.** If an upstream change is ever genuinely needed, it will be proposed to the Eden project as a pull request, not forked.
-- **Third-party software stays yours.** Lossless Scaling is a paid Steam product you buy and install yourself. EdenDeck only detects it.
-- EdenDeck is an independent project. It is not affiliated with or endorsed by the Eden team, Nintendo, Valve, AMD or Lossless Scaling's developer. "Nintendo Switch" is a trademark of Nintendo.
+- **Third-party software stays yours.** Lossless Scaling is a paid Steam product you buy and install yourself. Scanline only detects it.
+- Scanline is an independent project. It is not affiliated with or endorsed by the Eden team, Nintendo, Valve, AMD or Lossless Scaling's developer. "Nintendo Switch" is a trademark of Nintendo.
 
 ## License
 

@@ -134,7 +134,7 @@ public sealed class QtIni
     public void Save(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var tmp = path + ".edendeck.tmp";
+        var tmp = path + ".scanline.tmp";
         File.WriteAllText(tmp, ToString(), new UTF8Encoding(false));
         File.Move(tmp, path, overwrite: true);
     }

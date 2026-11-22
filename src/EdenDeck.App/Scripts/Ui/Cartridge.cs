@@ -3,7 +3,7 @@ using Godot;
 namespace EdenDeck.App.Ui;
 
 /// <summary>
-/// A game drawn as a small cartridge (Eden Deck's own design): a portrait shell with a cut
+/// A game drawn as a small cartridge (Scanline's own design): a portrait shell with a cut
 /// top-left corner and a recessed slot along the top edge, a label window for the art (cover art
 /// later; a monogram until then) and the title on the shell below it. Drawn in code so it stays
 /// crisp at any scale and follows the theme.

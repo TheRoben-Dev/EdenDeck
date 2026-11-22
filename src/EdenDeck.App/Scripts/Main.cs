@@ -82,6 +82,22 @@ public partial class Main : Control
         Instance = this;
         Pad.Setup();
         Pad.FamilyChanged += UpdateChrome;
+        // First start after the rename: ~/Applications/EdenDeck moves to ~/Applications/Scanline
+        // (the old path stays as a link), then the app restarts from the new folder.
+        if (!OS.GetCmdlineUserArgs().Contains("--smoke") && System.Environment.ProcessPath is { } exe &&
+            InstallMigration.Run(Path.GetDirectoryName(exe)!) is { } moved)
+        {
+            try
+            {
+                AppUpdater.Relaunch(moved, OS.GetCmdlineUserArgs());
+                GetTree().Quit();
+                return;
+            }
+            catch (Exception re) when (re is System.ComponentModel.Win32Exception or IOException)
+            {
+                GD.PushWarning($"Restart after moving the install failed: {re.Message}");
+            }
+        }
         AppHost? host = null;
         Exception? startupError = null;
         try
@@ -162,12 +178,24 @@ public partial class Main : Control
         if (startupError is { } e)
         {
             GD.PushError(e.ToString());
-            var msg = UiTheme.Label($"Eden Deck could not start:\n\n{e.Message}", wrap: true);
+            var msg = UiTheme.Label($"Scanline could not start:\n\n{e.Message}", wrap: true);
             msg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             _content.AddChild(msg);
             return;
         }
-        SwitchTab(0);
+        if (OS.GetCmdlineUserArgs().Contains("--open=appearance"))
+        {
+            // Back from a restart that applied a theme: Settings → Appearance, on the theme row.
+            _tab = 2;
+            var settings = new SettingsScreen { StartIn = "Appearance" };
+            _stack.Add(settings);
+            _content.AddChild(settings);
+            UpdateChrome();
+        }
+        else
+        {
+            SwitchTab(0);
+        }
 
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
@@ -259,6 +287,8 @@ public partial class Main : Control
     }
 
     /// <summary>
+    /// Used by the UI smoke test only: players change theme through Settings, which restarts the
+    /// app (switching live left the library unable to open games on the Deck).
     /// Switches theme in place: same tab, same page stack, same focus and scroll position. The old
     /// frame is kept as a picture on top and faded out, so the change is a quick crossfade.
     /// </summary>
@@ -329,7 +359,7 @@ public partial class Main : Control
 
     /// <summary>
     /// Quietly asks Eden's official feed whether the installed channel has a newer build (only for
-    /// copies Eden Deck installed; a user's own AppImage has no comparable version). Shows a badge
+    /// copies Scanline installed; a user's own AppImage has no comparable version). Shows a badge
     /// on the Eden tab and a banner on the Eden page. Throttled to once every 15 minutes.
     /// </summary>
     public async void CheckForEdenUpdate(bool force = false)
@@ -399,14 +429,14 @@ public partial class Main : Control
         {
             return false;
         }
-        Push(new ChangelogPage($"What's new in Eden Deck {display}", news, whatsNew: true));
+        Push(new ChangelogPage($"What's new in Scanline {display}", news, whatsNew: true));
         return true;
     }
 
     /// <summary>Full release history (Settings → Updates).</summary>
     public void ShowChangelog() => Push(new ChangelogPage("Changelog", Changelog.Bundled));
 
-    /// <summary>Asks GitHub for a newer Eden Deck. Silent: no message when up to date or offline.</summary>
+    /// <summary>Asks GitHub for a newer Scanline. Silent: no message when up to date or offline.</summary>
     public async void CheckForAppUpdate(bool silent)
     {
         if (Host == null)
@@ -432,7 +462,7 @@ public partial class Main : Control
         {
             if (!silent)
             {
-                Success($"Eden Deck {current} is the latest version");
+                Success($"Scanline {current} is the latest version");
             }
             return;
         }
@@ -444,12 +474,12 @@ public partial class Main : Control
         var next = AppUpdater.DisplayVersion(release.Version);
         if (!updater.CanSelfUpdate)
         {
-            Toast($"Eden Deck {next} is available. Re-run the installer to update this copy.");
+            Toast($"Scanline {next} is available. Re-run the installer to update this copy.");
             return;
         }
         var whatsNew = Changelog.ItemsFromReleaseNotes(release.Notes);
         var notes = whatsNew.Count > 0 ? "\n\nWhat's new:\n" + string.Join("\n", whatsNew.Take(8).Select(i => "• " + i)) : "";
-        Push(new ChoicePage($"Eden Deck {next} is available (you have {current}).{notes}\n\nThe update takes a few seconds. Your games, keys and settings are not touched, and the current version is kept so you can roll back in Settings.",
+        Push(new ChoicePage($"Scanline {next} is available (you have {current}).{notes}\n\nThe update takes a few seconds. Your games, keys and settings are not touched, and the current version is kept so you can roll back in Settings.",
             ("Update and restart", () => InstallAppUpdate(release)),
             ("Later", () => { })));
     }
@@ -474,6 +504,24 @@ public partial class Main : Control
     }
 
     /// <summary>Starts the given app binary with the same arguments and quits this one.</summary>
+    /// <summary>
+    /// Restarts the app with the same arguments (plus <paramref name="extra"/>), e.g. to apply a
+    /// theme. Godot starts the new instance as this one exits, so it works from source and exported.
+    /// </summary>
+    public void RestartApp(params string[] extra)
+    {
+        AppLog.Info($"restart ({string.Join(' ', extra)})");
+        var user = OS.GetCmdlineUserArgs().Where(a => !a.StartsWith("--open=", StringComparison.Ordinal)).Concat(extra).ToList();
+        var args = OS.GetCmdlineArgs().ToList();
+        if (user.Count > 0)
+        {
+            args.Add("--");
+            args.AddRange(user);
+        }
+        OS.SetRestartOnExit(true, args.ToArray());
+        GetTree().Quit();
+    }
+
     private void Restart(string exe)
     {
         try
@@ -482,7 +530,7 @@ public partial class Main : Control
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or IOException)
         {
-            Error("Updated. Please start Eden Deck again to finish.");
+            Error("Updated. Please start Scanline again to finish.");
             return;
         }
         GetTree().Quit();
@@ -498,6 +546,11 @@ public partial class Main : Control
         EdenDeck.App.Ui.Poly.Ps1.ReleaseShared();
         EdenDeck.App.Ui.Poly.CartStage.ReleaseShared();
         UiTheme.ReleaseFonts();
+        // Wrappers of finished tweens, timers, input events and images still waiting for the GC
+        // would otherwise be released by the engine after .NET is gone.
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
     }
 
     public override void _Notification(int what)
@@ -863,7 +916,7 @@ public partial class Main : Control
         RunEden(game.Base.Title, plan, notes, null, game);
     }
 
-    /// <summary>Opens Eden's own window for anything Eden Deck doesn't cover; re-reads Eden's config after.</summary>
+    /// <summary>Opens Eden's own window for anything Scanline doesn't cover; re-reads Eden's config after.</summary>
     public void OpenEden()
     {
         if (Host == null || GameRunning)
@@ -880,7 +933,7 @@ public partial class Main : Control
             Error(e.Message);
             return;
         }
-        RunEden("Eden settings", plan, ["Change anything in Eden's window, then close it to come back. Eden Deck reads Eden's settings again afterwards."],
+        RunEden("Eden settings", plan, ["Change anything in Eden's window, then close it to come back. Scanline reads Eden's settings again afterwards."],
             () =>
             {
                 Host.Eden.ReloadPaths();
@@ -907,7 +960,7 @@ public partial class Main : Control
             }
             // Still on the keyboard and nothing we can map: say what we see, so it can be mapped in Eden.
             return Host.Eden.ControllerNeedsMapping()
-                ? $"controller: Eden still uses the keyboard for player 1. Eden Deck sees: {Pad.DescribePads()}. Map it once with Open Eden → Controls."
+                ? $"controller: Eden still uses the keyboard for player 1. Scanline sees: {Pad.DescribePads()}. Map it once with Open Eden → Controls."
                 : null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
@@ -934,7 +987,7 @@ public partial class Main : Control
         }
         catch (OperationCanceledException)
         {
-            // Closed from Eden Deck (button chord or the Close game button): not a failure.
+            // Closed from Scanline (button chord or the Close game button): not a failure.
             _gameCts = null;
             GameRunning = false;
             PopTo(page);
