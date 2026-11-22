@@ -72,9 +72,9 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - **Steam Input aware:** detects Game Mode / Big Picture and maps against Steam's virtual gamepads instead of the physical controller, keeping player order stable across sleep and resume.
 - **Gyro** on Steam Deck and ROG Ally through SDL / Steam Input, mapped to Eden motion.
 - **Add to Steam:**
-  - Add Scanline itself as a non-Steam shortcut, with artwork.
+  - Add Scanline itself as a non-Steam shortcut.
   - **Every game page has its own "Add to Steam" button.** It creates a per-game shortcut that launches that game straight from **SteamOS Game Mode** with all of its settings applied: frame generation, upscaling, controller profile and Eden overrides. No trip through the menus required.
-  - Steam's `shortcuts.vdf` is only written while Steam is closed, or after a clear warning.
+  - Steam's `shortcuts.vdf` is only written while Steam is closed: if Steam is running, Scanline offers to restart it and writes the shortcuts in between. Your own shortcuts are kept, and a backup of the file is made. Also from a terminal: `scanline steam add <game|--app|--all>`.
 - A **recommended Steam Input template** for Scanline: menu navigation plus the quick-menu hotkey chord.
 - **In-game quick menu:** hold a chord (for example View + Menu) to open an overlay where you can exit the game, save/load state where Eden supports it, toggle FSR or frame gen, change resolution scale and adjust the FPS limit. All of it works without modifying Eden.
 
@@ -171,7 +171,7 @@ Development happens in phases. Each phase lands as a pull request that merges on
 - [x] **Phase 2 — MVP** ([report](docs/phase2-report.md))
   Eden manager (including per-game key sets), library scan, controller-navigable UI, launching games fullscreen, basic global settings. CI pipeline in place.
 - [ ] **Phase 3 — Controllers and Steam**
-  Controller mapping (games only; app nav stays fixed), Steam Input handling, gyro, Add to Steam for the app and per-game Game Mode shortcuts with settings applied.
+  Controller mapping (games only; app nav stays fixed), Steam Input handling, gyro, Add to Steam for the app and per-game Game Mode shortcuts with settings applied (Add to Steam done in 0.4.3).
 - [ ] **Phase 4 — Mods and cheats**
   Mod and cheat manager, archive installer, conflict detection, version checks, backups, optional GameBanana browser.
 - [ ] **Phase 5 — Upscaling and frame generation**

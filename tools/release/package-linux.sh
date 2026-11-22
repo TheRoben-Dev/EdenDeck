@@ -14,6 +14,7 @@
 #                                                with its license and SOURCE.txt; its source tarball
 #                                                goes next to the release files
 #   Scanline/scanline.svg                        icon for the menu entry
+#   Scanline/scanline.png                        icon for Steam shortcuts (Steam can't show SVG)
 #   Scanline/README.txt
 #
 # EdenDeck-linux-x86_64.tar.gz is the same tree with the top folder named EdenDeck, for the
@@ -34,6 +35,7 @@ ln -s scanline "$APP/edendeck"
 install -m 755 "$LAYER/libVkLayer_SCANLINE_overlay.so" "$APP/vulkan/"
 install -m 644 "$LAYER/VkLayer_SCANLINE_overlay.json" "$APP/vulkan/"
 install -m 644 "$ROOT/src/EdenDeck.App/icon.svg" "$APP/scanline.svg"
+install -m 644 "$ROOT/tools/release/scanline.png" "$APP/scanline.png"
 LSFG_SRC=()
 if [ -n "$LSFG" ]; then
   mkdir -p "$APP/vulkan/lsfg-vk"

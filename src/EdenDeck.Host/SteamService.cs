@@ -59,7 +59,7 @@ public sealed class SteamService
             Exe = launcher,
             StartDir = Path.GetDirectoryName(launcher)!,
             LaunchOptions = $"launch \"{game.GameId}\"",
-            Icon = Path.Combine(Path.GetDirectoryName(launcher)!, "scanline.svg"),
+            Icon = IconIn(Path.GetDirectoryName(launcher)!),
             Tags = [Tag],
         };
     }
@@ -72,10 +72,14 @@ public sealed class SteamService
             AppName = "Scanline",
             Exe = app,
             StartDir = Path.GetDirectoryName(app)!,
-            Icon = Path.Combine(Path.GetDirectoryName(app)!, "scanline.svg"),
+            Icon = IconIn(Path.GetDirectoryName(app)!),
             Tags = [Tag],
         };
     }
+
+    /// <summary>Steam shows PNG icons, not SVG; older packages only had the SVG.</summary>
+    private static string IconIn(string dir) =>
+        File.Exists(Path.Combine(dir, "scanline.png")) ? Path.Combine(dir, "scanline.png") : Path.Combine(dir, "scanline.svg");
 
     // ---- The list Scanline manages ----------------------------------------------------------------
 
