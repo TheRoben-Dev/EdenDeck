@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.4
+- New: **button mapping for games** under Settings → Buttons. Pick **Switch positions** (A is the right face button, like on a Switch) or **Xbox letters** (A is the bottom button, as printed on a Steam Deck or Xbox pad), or point any Switch button at any button, trigger or d-pad direction. It's saved in Eden's own controller setup, so Eden shows the same mapping, and "Save player 1 as profile" on the Controller page keeps it for one game. Scanline's menus always keep A to confirm and B to go back. Works with the Steam Deck, Steam Input in Game Mode and Xbox-style pads; for others, map in Eden.
+
 ## 0.4.3
 - New: **Add to Steam.** A game's card has an **Add to Steam** button, and Settings → Steam can add Scanline itself or every game at once. Games show up in Steam's library and Game Mode under the Scanline tag, and starting one there opens it straight in Eden with that game's settings, keys, CRT effect and frame generation. Steam only reads new shortcuts when it starts, so if it's running Scanline offers to restart it for you (or adds them the next time Scanline starts with Steam closed). Your own non-Steam shortcuts are left alone, and a backup of Steam's file is kept.
 - From a terminal: `scanline steam add <game|--app|--all>`, `scanline steam remove`, `scanline steam list`.

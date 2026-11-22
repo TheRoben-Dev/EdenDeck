@@ -84,7 +84,7 @@ public partial class SmokeTest : Node
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>
         {
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 4; i++)
             {
                 Press("ui_down");
             }
@@ -126,6 +126,10 @@ public partial class SmokeTest : Node
             }
         });
         Step("settings-back-to-category", () => Press(Pad.Back), expect: "Graphics");
+        // Button mapping for games: the pane shows the face-button layout and one row per Switch button.
+        Step("buttons-category", () => FindFocusable(GetTree().Root, "Remap buttons for games")?.GrabFocus(), expect: "Buttons");
+        Step("buttons-row", () => FindFocusable(GetTree().Root, "Switch positions: A is the right face button")?.GrabFocus(), expect: "Switch positions: A is the right face button");
+        Step("buttons-zr", () => FindFocusable(GetTree().Root, "The controller button that presses Switch ZR")?.GrabFocus(), expect: "presses Switch ZR");
         // Themes switch in place: still on Settings, focus stays on the Theme row.
         Step("steam-category", () => FindFocusable(GetTree().Root, "Scanline and your games in your Steam library")?.GrabFocus(), expect: "Steam");
         Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");

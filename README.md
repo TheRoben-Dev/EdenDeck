@@ -171,7 +171,7 @@ Development happens in phases. Each phase lands as a pull request that merges on
 - [x] **Phase 2 — MVP** ([report](docs/phase2-report.md))
   Eden manager (including per-game key sets), library scan, controller-navigable UI, launching games fullscreen, basic global settings. CI pipeline in place.
 - [ ] **Phase 3 — Controllers and Steam**
-  Controller mapping (games only; app nav stays fixed), Steam Input handling, gyro, Add to Steam for the app and per-game Game Mode shortcuts with settings applied (Add to Steam done in 0.4.3).
+  Controller mapping (games only; app nav stays fixed), Steam Input handling, gyro, Add to Steam for the app and per-game Game Mode shortcuts with settings applied (Add to Steam done in 0.4.3, button mapping in 0.4.4).
 - [ ] **Phase 4 — Mods and cheats**
   Mod and cheat manager, archive installer, conflict detection, version checks, backups, optional GameBanana browser.
 - [ ] **Phase 5 — Upscaling and frame generation**

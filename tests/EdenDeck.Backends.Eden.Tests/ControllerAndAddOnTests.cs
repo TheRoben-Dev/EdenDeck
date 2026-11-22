@@ -68,6 +68,47 @@ public sealed class ControllerAndAddOnTests : IDisposable
         Assert.Equal("[Controls]\n", File.ReadAllText(cfg));
     }
 
+    [Fact]
+    public void ButtonMapReadsAndWritesEdenParams()
+    {
+        var cfg = Path.Combine(_dir, "qt-config.ini");
+        File.WriteAllText(cfg, "[Controls]\nplayer_0_button_a=\"engine:keyboard,code:67,toggle:0\"\n");
+        // Nothing mapped yet: games get Eden's auto map, by position.
+        Assert.Equal("position", EdenButtonMap.PresetOf(EdenButtonMap.Read(cfg)));
+
+        EdenButtonMap.Apply(cfg, SteamPad, EdenButtonMap.LabelLayout);
+        var ini = QtIni.Load(cfg);
+        Assert.Equal("engine:sdl,port:0,guid:03000000de280000ff11000001000000,button:0", ini.Get("Controls", "player_0_button_a"));
+        Assert.Contains("axis:5,threshold:0.5", ini.Get("Controls", "player_0_button_zr"));  // auto map filled the rest
+        Assert.Contains("axis_x:0,axis_y:1", ini.Get("Controls", "player_0_lstick"));
+        var map = EdenButtonMap.Read(cfg);
+        Assert.Equal("label", EdenButtonMap.PresetOf(map));
+        Assert.Equal("south", map["button_a"]);
+
+        EdenButtonMap.Set(cfg, SteamPad, "button_zl", "dup");
+        EdenButtonMap.Set(cfg, SteamPad, "button_home", EdenButtonMap.None);
+        map = EdenButtonMap.Read(cfg);
+        Assert.Equal("dup", map["button_zl"]);
+        Assert.Equal(EdenButtonMap.None, map["button_home"]);
+        Assert.Null(EdenButtonMap.PresetOf(map));
+    }
+
+    [Fact]
+    public void ButtonMapLeavesWhatItCannotShowAlone()
+    {
+        Assert.Equal(EdenButtonMap.Other, EdenButtonMap.InputOf("engine:keyboard,code:67,toggle:0"));
+        Assert.Equal(EdenButtonMap.Other, EdenButtonMap.InputOf("engine:sdl,port:0,guid:x,button:14"));
+        Assert.Equal(EdenButtonMap.Other, EdenButtonMap.InputOf("engine:sdl,port:0,guid:x,axis:2,threshold:0.5,invert:-"));
+        Assert.Equal("ddown", EdenButtonMap.InputOf("\"engine:sdl,port:0,guid:x,hat:0,direction:down\""));
+        Assert.Equal(EdenButtonMap.None, EdenButtonMap.InputOf("[empty]"));
+        foreach (var input in EdenButtonMap.Inputs)
+        {
+            Assert.Equal(input.Id, EdenButtonMap.InputOf(EdenButtonMap.ParamFor(input.Id, "g")));
+        }
+        Assert.Throws<InvalidOperationException>(() =>
+            EdenButtonMap.Set(Path.Combine(_dir, "x.ini"), new PadInfo("03000000aaaa0000bbbb000001000000", "Some Pad", 0xaaaa, 0xbbbb), "button_a", "south"));
+    }
+
     private LibraryGame Game(string lib, string other)
     {
         GameEntry E(string path, ContentKind kind, string? ver = null) =>

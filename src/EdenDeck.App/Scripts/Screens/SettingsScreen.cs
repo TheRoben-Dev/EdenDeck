@@ -13,6 +13,7 @@ public partial class SettingsScreen : TwoPaneScreen
     private static readonly (string Name, string Summary)[] CategoryList =
     [
         ("Controller", "Controller style, rumble, motion and button mapping."),
+        ("Buttons", "Remap buttons for games. The app's own controls never change."),
         ("Graphics", "Resolution, upscaling, anti-aliasing and VSync for all games."),
         ("System", "Console mode and speed limit for all games."),
         ("Library", "Game folders and rescanning."),
@@ -36,6 +37,9 @@ public partial class SettingsScreen : TwoPaneScreen
         {
             case "Controller":
                 BuildController(col, Add);
+                break;
+            case "Buttons":
+                BuildButtons(col, Add);
                 break;
             case "Graphics":
                 BuildEdenOptions(col, Add, o => o.Group == "Graphics" && !AdvancedOptions.Contains(o.Id));
@@ -115,6 +119,93 @@ public partial class SettingsScreen : TwoPaneScreen
             App.Success($"Saved profile \"{styleName}\". Pick it on a game's page to use it just for that game.");
         }), "Saves the current mapping and controller style as an Eden input profile you can pick per game."));
         BuildEdenOptions(col, Add, o => o.Group == "Controls", note: false);
+    }
+
+    private void BuildButtons(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(UiTheme.Label("Which button on your controller presses each Switch button in games. Menus here keep A to confirm and B to go back. Sticks, motion and other players are set in Eden.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        var pad = Pad.ActivePad();
+        if (pad == null)
+        {
+            col.AddChild(UiTheme.Label(Pad.AllPads().Count == 0
+                    ? "Connect a controller to change the mapping."
+                    : "Scanline doesn't know this controller's layout. Use Map buttons in Eden on the Controller page.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        Dictionary<string, string> map;
+        try
+        {
+            map = Host.Eden.ButtonMap();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            col.AddChild(UiTheme.Label($"Couldn't read the button mapping: {e.Message}", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            return;
+        }
+
+        void Change(Action<PadInfo> act)
+        {
+            if (pad == null)
+            {
+                App.Error("Connect a controller Scanline knows (Steam Deck, Steam Input or an Xbox-style pad) to change the mapping.");
+            }
+            else
+            {
+                App.Guard(() => act(pad));
+            }
+            RefreshPane();
+        }
+
+        var preset = EdenButtonMap.PresetOf(map) ?? "custom";
+        var layouts = new List<(string, string)>
+        {
+            ("position", "Switch positions"),
+            ("label", "Xbox letters"),
+        };
+        if (preset == "custom")
+        {
+            layouts.Add(("custom", "Custom"));
+        }
+        var layout = new Stepper("Face buttons", layouts, preset,
+            "Switch positions: A is the right face button, like on a Switch. Xbox letters: A is the bottom button, matching the letters on a Steam Deck or Xbox pad.")
+        {
+            Expands = true,
+            DetailFor = v => v switch
+            {
+                "position" => "A right, B bottom, X top, Y left. Games' button prompts match where you press.",
+                "label" => "A bottom, B right, X top, Y left. Press the letter the game shows.",
+                _ => "Your own mapping. Pick a layout to start over from it.",
+            },
+        };
+        layout.Changed += v =>
+        {
+            if (v != "custom")
+            {
+                Change(p => Host.Eden.ApplyButtonLayout(p, v == "label" ? EdenButtonMap.LabelLayout : EdenButtonMap.PositionLayout));
+            }
+        };
+        Add(layout);
+
+        foreach (var button in EdenButtonMap.Buttons)
+        {
+            var current = map.GetValueOrDefault(button.Key, EdenButtonMap.None);
+            var choices = EdenButtonMap.Inputs.Select(i => (i.Id, i.Label)).ToList();
+            if (current == EdenButtonMap.Other)
+            {
+                choices.Insert(0, (EdenButtonMap.Other, "Set in Eden"));
+            }
+            var key = button.Key;
+            var row = new Stepper(button.Label, choices, current, $"The controller button that presses Switch {button.Label} in games.");
+            row.Changed += v =>
+            {
+                if (v != EdenButtonMap.Other)
+                {
+                    Change(p => Host.Eden.SetButton(p, key, v));
+                }
+            };
+            Add(row);
+        }
     }
 
     private void BuildLibrary(VBoxContainer col, Action<Control> Add)
