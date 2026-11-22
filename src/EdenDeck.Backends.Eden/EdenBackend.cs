@@ -109,6 +109,21 @@ public sealed class EdenBackend : IEmulatorBackend
     /// <summary>Gives player 1 a controller mapping if Eden still has only the keyboard mapped.</summary>
     public bool EnsureControllerMapping(PadInfo pad) => EdenControllerDefaults.EnsurePlayer1(Paths.GlobalConfigFile, pad);
 
+    /// <summary>Player 1's button mapping (games only), one pad input per Switch button.</summary>
+    public Dictionary<string, string> ButtonMap() => EdenButtonMap.Read(Paths.GlobalConfigFile);
+
+    public void SetButton(PadInfo pad, string buttonKey, string input)
+    {
+        EnsureClosed();
+        EdenButtonMap.Set(Paths.GlobalConfigFile, pad, buttonKey, input);
+    }
+
+    public void ApplyButtonLayout(PadInfo pad, IReadOnlyDictionary<string, string> layout)
+    {
+        EnsureClosed();
+        EdenButtonMap.Apply(Paths.GlobalConfigFile, pad, layout);
+    }
+
     public int PlayerStyle() => EdenControls.PlayerStyle(Paths.GlobalConfigFile);
 
     public void SetPlayerStyle(int style)
