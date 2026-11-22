@@ -27,6 +27,23 @@ public partial class EdenScreen : Screen
         }
 
         var install = Host.Eden.Install;
+        if (App.EdenUpdate is { } upd && install.Current is { } now)
+        {
+            // Banner: a newer build on the channel you use (found by the background check).
+            var banner = new PanelContainer();
+            banner.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.PanelHi, 2, 12, UiTheme.Warn));
+            var inner = Column(8);
+            inner.AddChild(UiTheme.Label($"Eden {Cap(upd.Channel)} {upd.Version} is available", UiTheme.FontSize + 2, UiTheme.Warn));
+            inner.AddChild(UiTheme.Label($"You have {now.Version}. The update is checksum-verified and your current version is kept for rollback.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            var go = new ActionButton($"Update to {upd.Version}", () => Install(upd), "Downloads from Eden's official site.");
+            inner.AddChild(go);
+            items.Add(go);
+            banner.AddChild(inner);
+            col.AddChild(banner);
+            Anim.FadeIn(banner);
+        }
+        App.CheckForEdenUpdate();
         col.AddChild(Section("Emulator"));
         if (install.Current is { } cur)
         {
@@ -129,6 +146,7 @@ public partial class EdenScreen : Screen
         App.Busy($"Downloading Eden {release.Version}…", (p, ct) => Host.Eden.Install.InstallAsync(release, p, ct), installed =>
         {
             Host.Eden.ReloadPaths();
+            App.SetEdenUpdate(null);
             App.Success($"Eden {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
             Rebuild();
         });

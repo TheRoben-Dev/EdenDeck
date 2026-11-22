@@ -1,3 +1,4 @@
+using EdenDeck.Core.Backends;
 using EdenDeck.Host.Updates;
 using EdenDeck.App.Screens;
 using EdenDeck.App.Ui;
@@ -24,6 +25,9 @@ public partial class Main : Control
     private Control _overlay = null!;
     private Backdrop _backdrop = null!;
     private Header _header = null!;
+    private Control _bgLayer = null!;
+    private VBoxContainer _root = null!;
+    private FocusHighlight _highlight = null!;
     private HintBar _hints = null!;
     private Toast _toast = null!;
     private int _tab;
@@ -35,7 +39,20 @@ public partial class Main : Control
     public AppHost? Host { get; private set; }
 
     /// <summary>True while a game runs: the app ignores controller input so game presses don't leak in.</summary>
-    public bool GameRunning { get; private set; }
+    public bool GameRunning
+    {
+        get => _gameRunning;
+        private set
+        {
+            _gameRunning = value;
+            if (_highlight != null)
+            {
+                _highlight.Suspended = value;
+            }
+        }
+    }
+
+    private bool _gameRunning;
 
     public override void _Ready()
     {
@@ -65,39 +82,10 @@ public partial class Main : Control
             DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
         }
 
-        var bg = new ColorRect { Color = UiTheme.Bg };
-        bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        AddChild(bg);
-        // Soft accent glow from the top-left corner so the background isn't flat.
-        var glow = new TextureRect
-        {
-            Texture = new GradientTexture2D
-            {
-                Gradient = new Gradient
-                {
-                    Offsets = [0f, 1f],
-                    Colors = [UiTheme.Accent with { A = UiTheme.Terminal ? 0.07f : UiTheme.Nightgrid ? 0.06f : 0.13f }, UiTheme.Accent with { A = 0f }],
-                },
-                Fill = GradientTexture2D.FillEnum.Radial,
-                FillFrom = new Vector2(0.1f, 0f),
-                FillTo = new Vector2(0.85f, 0.9f),
-                Width = 256,
-                Height = 256,
-            },
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.Scale,
-            MouseFilter = MouseFilterEnum.Ignore,
-        };
-        glow.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        AddChild(glow);
-        if (UiTheme.Nightgrid)
-        {
-            AddChild(new DotGrid());
-        }
-        if (UiTheme.Terminal)
-        {
-            AddChild(new Scanlines());
-        }
+        _bgLayer = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        _bgLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(_bgLayer);
+        BuildBackground();
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -112,14 +100,8 @@ public partial class Main : Control
         var root = new VBoxContainer();
         root.AddThemeConstantOverride("separation", 16);
         margin.AddChild(root);
-        _header = new Header(TabNames);
-        _header.TabClicked += i =>
-        {
-            if (_stack.Count == 1 && !GameRunning)
-            {
-                SwitchTab(i);
-            }
-        };
+        _root = root;
+        _header = NewHeader();
         root.AddChild(_header);
         _content = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
         root.AddChild(_content);
@@ -139,10 +121,13 @@ public partial class Main : Control
             }
         };
         _overlay.AddChild(_backdrop);
+        _highlight = new FocusHighlight();
+        AddChild(_highlight);
         _toast = new Toast();
         AddChild(_toast);
 
-        GetViewport().GuiFocusChanged += c => _hints.SetHelp(c.TooltipText);
+        // Rows with an expanding explanation show it in place; the hint bar would only repeat it.
+        GetViewport().GuiFocusChanged += c => _hints.SetHelp(c.HasMeta(Stepper.ExpandsMeta) ? "" : c.TooltipText);
 
         Host = host;
         if (startupError is { } e)
@@ -161,9 +146,190 @@ public partial class Main : Control
         {
             AddChild(new SmokeTest(args[smoke + 1]));
         }
-        else if (Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
+        else
         {
-            CheckForAppUpdate(silent: true);
+            if (Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
+            {
+                CheckForAppUpdate(silent: true);
+            }
+            CheckForEdenUpdate();
+        }
+    }
+
+    private Header NewHeader()
+    {
+        var h = new Header(TabNames);
+        h.TabClicked += i =>
+        {
+            if (_stack.Count == 1 && !GameRunning)
+            {
+                SwitchTab(i);
+            }
+        };
+        return h;
+    }
+
+    /// <summary>Background colour, accent glow and the theme's decoration (dot grid, scanlines, LCD grid).</summary>
+    private void BuildBackground()
+    {
+        foreach (var c in _bgLayer.GetChildren())
+        {
+            c.QueueFree();
+        }
+        var bg = new ColorRect { Color = UiTheme.Bg, MouseFilter = MouseFilterEnum.Ignore };
+        bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        _bgLayer.AddChild(bg);
+        if (UiTheme.Spec.Glow > 0)
+        {
+            // Soft accent glow from the top-left corner so the background isn't flat.
+            var glow = new TextureRect
+            {
+                Texture = new GradientTexture2D
+                {
+                    Gradient = new Gradient
+                    {
+                        Offsets = [0f, 1f],
+                        Colors = [UiTheme.Accent with { A = UiTheme.Spec.Glow }, UiTheme.Accent with { A = 0f }],
+                    },
+                    Fill = GradientTexture2D.FillEnum.Radial,
+                    FillFrom = new Vector2(0.1f, 0f),
+                    FillTo = new Vector2(0.85f, 0.9f),
+                    Width = 256,
+                    Height = 256,
+                },
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.Scale,
+                MouseFilter = MouseFilterEnum.Ignore,
+            };
+            glow.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            _bgLayer.AddChild(glow);
+        }
+        switch (UiTheme.Spec.Decor)
+        {
+            case Decor.DotGrid:
+                _bgLayer.AddChild(new DotGrid());
+                break;
+            case Decor.PixelGrid:
+                _bgLayer.AddChild(new PixelGrid());
+                break;
+        }
+        // Scanlines sit above everything (ZIndex), from the theme or the CRT setting.
+        if (UiTheme.Spec.Decor == Decor.Scanlines || Host?.Settings.Crt == true)
+        {
+            _bgLayer.AddChild(new Scanlines(strong: UiTheme.Spec.Decor != Decor.Scanlines));
+        }
+    }
+
+    /// <summary>
+    /// Switches theme in place: same tab, same page stack, same focus and scroll position. The old
+    /// frame is kept as a picture on top and faded out, so the change is a quick crossfade.
+    /// </summary>
+    public void ApplyTheme(string name)
+    {
+        TextureRect? snap = null;
+        if (Anim.Enabled)
+        {
+            var img = GetViewport().GetTexture().GetImage();
+            snap = new TextureRect
+            {
+                Texture = ImageTexture.CreateFromImage(img),
+                MouseFilter = MouseFilterEnum.Ignore,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.Scale,
+                ZIndex = 200,
+            };
+            snap.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        }
+        UiTheme.Use(name);
+        Theme = UiTheme.Build();
+        BuildBackground();
+        var header = NewHeader();
+        header.SetBadge(Array.IndexOf(TabNames, "Eden"), EdenUpdate != null);
+        _root.AddChild(header);
+        _root.MoveChild(header, _header.GetIndex());
+        _header.QueueFree();
+        _header = header;
+        var hints = new HintBar();
+        _root.AddChild(hints);
+        _root.MoveChild(hints, _hints.GetIndex());
+        _hints.QueueFree();
+        _hints = hints;
+        _toast.Restyle();
+        _highlight.Restyle();
+        for (var i = 0; i < _stack.Count; i++)
+        {
+            _stack[i].Rebuild();
+            if (i < _stack.Count - 1 && _stack[i + 1].IsOverlay)
+            {
+                SetFocusable(_stack[i], false);
+            }
+        }
+        UpdateChrome();
+        if (GetViewport().GuiGetFocusOwner() is { } f)
+        {
+            _hints.SetHelp(f.HasMeta(Stepper.ExpandsMeta) ? "" : f.TooltipText);
+        }
+        if (snap != null)
+        {
+            AddChild(snap);
+            var t = snap.CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+            t.TweenProperty(snap, "modulate:a", 0f, Anim.Slow + 0.08);
+            t.TweenCallback(Callable.From(snap.QueueFree));
+        }
+    }
+
+    /// <summary>Re-applies the background decoration (CRT setting changed).</summary>
+    public void RefreshBackground() => BuildBackground();
+
+    /// <summary>Newer Eden build on the installed channel, found by the last background check.</summary>
+    public AvailableRelease? EdenUpdate { get; private set; }
+
+    private DateTime _edenCheckedAt = DateTime.MinValue;
+    private bool _edenChecking;
+
+    /// <summary>
+    /// Quietly asks Eden's official feed whether the installed channel has a newer build (only for
+    /// copies Eden Deck installed; a user's own AppImage has no comparable version). Shows a badge
+    /// on the Eden tab and a banner on the Eden page. Throttled to once every 15 minutes.
+    /// </summary>
+    public async void CheckForEdenUpdate(bool force = false)
+    {
+        if (Host?.Eden.Install.Current is not { ManagedByEdenDeck: true } cur || _edenChecking ||
+            (!force && DateTime.UtcNow - _edenCheckedAt < TimeSpan.FromMinutes(15)))
+        {
+            return;
+        }
+        _edenChecking = true;
+        try
+        {
+            var install = Host.Eden.Install;
+            var found = await Task.Run(() => install.CheckForUpdateAsync(cur.Channel, CancellationToken.None));
+            _edenCheckedAt = DateTime.UtcNow;
+            SetEdenUpdate(found);
+        }
+        catch (Exception e)
+        {
+            // Offline or feed hiccup: keep whatever we knew. A background check never interrupts.
+            GD.Print("Eden update check failed: " + e.Message);
+        }
+        finally
+        {
+            _edenChecking = false;
+        }
+    }
+
+    /// <summary>Records the check result; the Eden page rebuilds to show or drop its banner.</summary>
+    public void SetEdenUpdate(AvailableRelease? release)
+    {
+        var changed = release?.Version != EdenUpdate?.Version;
+        EdenUpdate = release;
+        _header.SetBadge(Array.IndexOf(TabNames, "Eden"), release != null);
+        if (changed)
+        {
+            foreach (var s in _stack.OfType<EdenScreen>())
+            {
+                s.Rebuild();
+            }
         }
     }
 
@@ -330,7 +496,15 @@ public partial class Main : Control
         _tab = index;
         foreach (var s in _stack)
         {
-            s.QueueFree();
+            if (dir != 0 && s.Visible && !s.IsOverlay)
+            {
+                SetFocusable(s, false);
+                Anim.Exit(s, -dir);
+            }
+            else
+            {
+                s.QueueFree();
+            }
         }
         _stack.Clear();
         var screen = TabFactories[index]();
@@ -346,9 +520,6 @@ public partial class Main : Control
         }
         UpdateChrome();
     }
-
-    /// <summary>Re-creates the whole UI (after a theme change).</summary>
-    public void Reload() => GetTree().ReloadCurrentScene();
 
     private bool OverlayOpen => _stack.Any(x => x.IsOverlay);
 
@@ -402,7 +573,8 @@ public partial class Main : Control
         }
         else
         {
-            top.QueueFree();
+            SetFocusable(top, false);
+            Anim.Exit(top, 1);
             prev.Visible = true;
             Anim.Enter(prev, -1);
         }

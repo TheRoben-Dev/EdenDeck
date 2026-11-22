@@ -44,7 +44,7 @@ public partial class Cartridge : Control
         _tween.TweenMethod(Callable.From<float>(v => { _lift = v; QueueRedraw(); }), _lift, target, on ? Anim.Normal : Anim.Fast);
     }
 
-    private static Color Shell => UiTheme.Nightgrid ? new Color("151a22") : UiTheme.Terminal ? new Color("0e1912") : new Color("2a303c");
+    private static Color Shell => UiTheme.Spec.Shell;
 
     public override void _Draw()
     {
@@ -110,7 +110,7 @@ public partial class Cartridge : Control
         {
             var chipSize = textSize - 3;
             DrawString(font, new Vector2(10 * s, textTop + lines.Count * lineH + font.GetAscent(chipSize) + 1), _chips,
-                HorizontalAlignment.Left, textW, chipSize, UiTheme.Accent.Lightened(0.2f) with { A = 0.85f });
+                HorizontalAlignment.Left, textW, chipSize, UiTheme.AccentText with { A = 0.85f });
         }
     }
 

@@ -75,6 +75,7 @@ public partial class LibraryScreen : Screen
         {
             b.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
         }
+        b.SetMeta(FocusHighlight.OwnFocus, true);
         var cart = new Cartridge(g.Base.Title, Monogram(g.Base.Title), extras.Count > 0 ? string.Join("  ·  ", extras) : null);
         cart.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         b.AddChild(cart);

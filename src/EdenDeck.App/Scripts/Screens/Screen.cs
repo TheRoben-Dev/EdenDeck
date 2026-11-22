@@ -41,12 +41,22 @@ public abstract partial class Screen : MarginContainer
     public void Rebuild()
     {
         var focusedIndex = FocusIndex();
+        var scrolls = Scrollers(this).Select(x => x.ScrollVertical).ToList();
         foreach (var c in GetChildren())
         {
             RemoveChild(c);
             c.QueueFree();
         }
         Build();
+        // Keep the lists where they were (theme switch, data change) instead of jumping to the top.
+        var fresh = Scrollers(this);
+        for (var i = 0; i < Math.Min(scrolls.Count, fresh.Count); i++)
+        {
+            foreach (var f in fresh[i].GetChildren().OfType<ScrollFollower>())
+            {
+                f.Restore(scrolls[i]);
+            }
+        }
         if (IsVisibleInTree())
         {
             if (!RefocusIndex(focusedIndex))
@@ -81,6 +91,24 @@ public abstract partial class Screen : MarginContainer
         {
             FocusDefault();
         }
+    }
+
+    private static List<ScrollContainer> Scrollers(Node root)
+    {
+        var list = new List<ScrollContainer>();
+        void Walk(Node n)
+        {
+            foreach (var c in n.GetChildren())
+            {
+                if (c is ScrollContainer s && !s.IsQueuedForDeletion())
+                {
+                    list.Add(s);
+                }
+                Walk(c);
+            }
+        }
+        Walk(root);
+        return list;
     }
 
     private int FocusIndex()
@@ -127,12 +155,12 @@ public abstract partial class Screen : MarginContainer
         return v;
     }
 
-    /// <summary>Vertical scroller that keeps the focused control visible.</summary>
+    /// <summary>Vertical scroller that glides to keep the focused control visible.</summary>
     protected static ScrollContainer Scroller(Control content)
     {
         var s = new ScrollContainer
         {
-            FollowFocus = true,
+            FollowFocus = false,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             // No visible bar: lists scroll with focus, the stick, the wheel or a finger drag.
             VerticalScrollMode = ScrollContainer.ScrollMode.ShowNever,
@@ -148,6 +176,7 @@ public abstract partial class Screen : MarginContainer
         gutter.AddThemeConstantOverride("margin_bottom", 4);
         gutter.AddChild(content);
         s.AddChild(gutter);
+        s.AddChild(new ScrollFollower());
         return s;
     }
 

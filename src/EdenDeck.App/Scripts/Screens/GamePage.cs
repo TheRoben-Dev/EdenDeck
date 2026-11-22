@@ -116,7 +116,9 @@ public partial class GamePage : Screen
         var playFocus = UiTheme.Focus();
         playFocus.BorderColor = UiTheme.Text;
         _play.AddThemeStyleboxOverride("focus", playFocus);
-        if (UiTheme.Accent.Luminance > 0.5f)
+        // The shared focus ring glides onto Play and fades: Play's own filled style takes over.
+        _play.SetMeta(FocusHighlight.OwnFocus, true);
+        if (UiTheme.Accent.Luminance > 0.5f || UiTheme.Spec.Light)
         {
             _play.AddThemeColorOverride("font_color", UiTheme.Bg);
             _play.AddThemeColorOverride("font_focus_color", UiTheme.Bg);
@@ -132,7 +134,11 @@ public partial class GamePage : Screen
         var keySets = new List<(string, string)> { ("", "Default keys") };
         keySets.AddRange(Host.Eden.KeySets.List().Select(k => (k.Id, k.Label + (k.HasFirmware ? " + firmware" : ""))));
         var keys = new Stepper("Keys", keySets, p.KeySet ?? "",
-            "Use one of your own key sets (and its firmware) just for this game. Add sets on the Eden tab.");
+            "Use one of your own key sets (and its firmware) just for this game. Add sets on the Eden tab.")
+        {
+            Expands = true,
+            DetailFor = v => v == "" ? "Uses the keys and firmware you imported on the Eden tab." : "Swapped in when this game starts and put back when it closes.",
+        };
         keys.Changed += v => SetProfile(x => x with { KeySet = v == "" ? null : v });
         Add(keys);
         if (_game.Updates.Count > 0 || _game.Dlc.Count > 0)
@@ -147,7 +153,13 @@ public partial class GamePage : Screen
         var nightly = Host.Eden.Schema.Channel == "nightly";
         var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Eden built-in")],
             p.FrameGen == FrameGenMode.Builtin ? nameof(FrameGenMode.Builtin) : nameof(FrameGenMode.Off),
-            "Doubles a 30 fps game to 60 fps using Eden's built-in frame generation. Never goes above 60.");
+            "Doubles a 30 fps game to 60 fps using Eden's built-in frame generation. Never goes above 60.")
+        {
+            Expands = true,
+            DetailFor = v => v == nameof(FrameGenMode.Builtin)
+                ? "Smoother motion, with slightly more input lag and occasional artifacts around fast-moving edges."
+                : "The game runs at its own frame rate with no added lag.",
+        };
         fg.Changed += v =>
         {
             SetProfile(x => x with { FrameGen = Enum.Parse<FrameGenMode>(v) });
@@ -156,7 +168,16 @@ public partial class GamePage : Screen
         Add(fg);
         var fps = new Stepper("Game's own frame rate", [("", "Unknown"), ("20", "20 fps"), ("30", "30 fps"), ("60", "60 fps")],
             p.NativeFps?.ToString() ?? "",
-            "What the game normally runs at. Games that already run at 60 get no frame generation.");
+            "What the game normally runs at. Games that already run at 60 get no frame generation.")
+        {
+            Expands = true,
+            DetailFor = v => v switch
+            {
+                "" => "Frame generation stays off until you set this.",
+                "60" => "Already 60: frame generation is skipped for this game.",
+                _ => $"Frame generation targets 60 fps from {v}.",
+            },
+        };
         fps.Changed += v =>
         {
             SetProfile(x => x with { NativeFps = v == "" ? null : int.Parse(v) });

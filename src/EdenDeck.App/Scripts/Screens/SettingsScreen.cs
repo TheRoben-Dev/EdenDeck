@@ -54,7 +54,7 @@ public partial class SettingsScreen : Screen
             if (o.Group != group)
             {
                 group = o.Group;
-                col.AddChild(UiTheme.Label(group, UiTheme.SmallSize + 1, UiTheme.Accent.Lightened(0.3f)));
+                col.AddChild(UiTheme.Label(group, UiTheme.SmallSize + 1, UiTheme.AccentText));
             }
             var opt = o;
             Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
@@ -62,24 +62,37 @@ public partial class SettingsScreen : Screen
         }
 
         col.AddChild(Section("Appearance"));
-        var theme = new Stepper("Theme", [("dark", "Dark"), ("terminal", "Retro terminal"), ("nightgrid", "Nightgrid")], Host.Settings.Theme,
-            "Dark is the default. Retro terminal: phosphor green and scanlines. Nightgrid: void black, dot grid, magenta highlights.");
+        var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label)), UiTheme.Name,
+            "Changes apply right away, so you can flip through them here.")
+        {
+            Expands = true,
+            DetailFor = v => UiTheme.Themes.FirstOrDefault(t => t.Id == v)?.Blurb,
+        };
         theme.Changed += v =>
         {
             Host.SaveSettings(Host.Settings with { Theme = v });
-            App.Reload();
+            App.ApplyTheme(v);
         };
         Add(theme);
+        Add(Toggle.Create("CRT scanlines", Host.Settings.Crt, on =>
+        {
+            Host.SaveSettings(Host.Settings with { Crt = on });
+            App.RefreshBackground();
+        }, "Scanlines and darkened edges over the whole screen, like an old TV.",
+            "Works with every theme. Retro terminal always has its own lighter scanlines.", null));
         Add(Toggle.Create("Animations", !Host.Settings.ReduceMotion, on =>
         {
             Host.SaveSettings(Host.Settings with { ReduceMotion = !on });
             Anim.Enabled = on;
-        }, "Short transitions and focus effects. Turn off for a static UI."));
+        }, "Sliding focus, smooth scrolling and page transitions.", null,
+            "Everything changes instantly, nothing slides or fades."));
 
         col.AddChild(Section("Eden Deck"));
         Add(Toggle.Create("Performance overlay layer", !Host.Settings.LayerKillSwitch,
             on => Host.SaveSettings(Host.Settings with { LayerKillSwitch = !on }),
-            "Eden Deck's Vulkan layer (FPS and frame-time stats). Turn off if a game misbehaves with it."));
+            "Eden Deck's Vulkan layer (FPS and frame-time stats).",
+            "Shows stats in game. It's tiny, but turn it off if a game crashes or looks wrong only with Eden Deck.",
+            "No overlay and no stats; games run exactly as in plain Eden."));
 
         col.AddChild(Section("Updates"));
         var updater = Host.Updater;

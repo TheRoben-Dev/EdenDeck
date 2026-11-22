@@ -56,6 +56,7 @@ public static class Anim
     {
         b.ButtonDown += () =>
         {
+            FocusHighlight.Instance?.Pulse();
             var t = Tween(b);
             if (t == null)
             {
@@ -101,6 +102,22 @@ public static class Anim
             var t = Tween(c);
             t?.TweenProperty(c, "modulate:a", 1f, Slow).SetDelay(delay);
         }
+    }
+
+    /// <summary>Page leaves: fade out while sliding away (dir -1 to the left, +1 to the right), then free it.</summary>
+    public static void Exit(Control c, int dir)
+    {
+        c.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var t = Tween(c, Godot.Tween.TransitionType.Cubic);
+        if (t == null)
+        {
+            c.QueueFree();
+            return;
+        }
+        t.SetEase(Godot.Tween.EaseType.In).SetParallel();
+        t.TweenProperty(c, "modulate:a", 0f, Normal);
+        t.TweenProperty(c, "position", c.Position + new Vector2(28 * dir, 0), Normal);
+        t.Chain().TweenCallback(Callable.From(c.QueueFree));
     }
 
     public static void FadeIn(CanvasItem c, double time = Slow)

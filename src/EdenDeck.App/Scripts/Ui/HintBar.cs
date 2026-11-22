@@ -19,10 +19,40 @@ public partial class HintBar : HBoxContainer
         AddChild(_hints);
     }
 
-    public void SetHelp(string text) => _help.Text = text;
+    private Tween? _helpTween;
+
+    /// <summary>Help text crossfades: out quickly, swap, in.</summary>
+    public void SetHelp(string text)
+    {
+        if (_help.Text == text)
+        {
+            return;
+        }
+        _helpTween?.Kill();
+        if (!Anim.Enabled || !IsInsideTree())
+        {
+            _help.Text = text;
+            _help.Modulate = Colors.White;
+            return;
+        }
+        _helpTween = CreateTween();
+        _helpTween.TweenProperty(_help, "modulate:a", 0f, Anim.Fast * 0.6);
+        _helpTween.TweenCallback(Callable.From(() => _help.Text = text));
+        _helpTween.TweenProperty(_help, "modulate:a", 1f, Anim.Normal);
+    }
+
+    private string _sig = "";
 
     public void SetHints(IEnumerable<(string Action, string Label)> hints)
     {
+        var list = hints.ToList();
+        var sig = string.Join("|", list.Select(h => Pad.Glyph(h.Action) + h.Label));
+        if (sig == _sig)
+        {
+            return;
+        }
+        _sig = sig;
+        hints = list;
         foreach (var c in _hints.GetChildren())
         {
             c.QueueFree();
@@ -36,6 +66,11 @@ public partial class HintBar : HBoxContainer
             text.VerticalAlignment = VerticalAlignment.Center;
             row.AddChild(text);
             _hints.AddChild(row);
+        }
+        if (Anim.Enabled && IsInsideTree())
+        {
+            _hints.Modulate = Colors.White with { A = 0.3f };
+            CreateTween().TweenProperty(_hints, "modulate:a", 1f, Anim.Normal);
         }
     }
 }

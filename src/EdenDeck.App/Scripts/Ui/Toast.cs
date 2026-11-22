@@ -22,6 +22,9 @@ public partial class Toast : PanelContainer
         OffsetBottom = -86;
     }
 
+    /// <summary>Theme changed: pick up the new font and colours.</summary>
+    public void Restyle() => _label.RemoveThemeColorOverride("font_color");
+
     public void Show(string text, Color? color = null)
     {
         _label.Text = text;
