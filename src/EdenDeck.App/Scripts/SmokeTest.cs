@@ -147,6 +147,10 @@ public partial class SmokeTest : Node
             SetTheme("dark");
         });
         Step("poly-restore-appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
+        // Accent colour: pick one (applies live, focus stays on the row), then back to the theme's own.
+        Step("accent-focus", () => FindFocusable(GetTree().Root, "The highlight colour for this theme")?.GrabFocus(), expect: "The highlight colour for this theme");
+        Step("accent-pick", () => Press("ui_right"), wait: 0.8, expect: "The highlight colour for this theme");
+        Step("accent-reset", () => Press("ui_left"), wait: 0.8, expect: "The highlight colour for this theme");
         Step("crt-strong", () =>
         {
             FindFocusable(GetTree().Root, "Makes the whole screen")?.GrabFocus();

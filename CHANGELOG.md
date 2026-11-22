@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.3.5
+- Pick an accent colour for any theme under Settings → Appearance: gold, orange, red, pink, violet, blue, cyan or green. Pocket LCD offers whole screen colours instead (grey, ice blue, amber, rose) so it keeps its four shades. Each theme remembers its own, and it applies instantly.
+- Entering a Settings or Eden category no longer makes the category list twitch at the end of its slide.
+
 ## 0.3.4
 - New theme: 32-bit 3D. Your games become real low-poly 3D cartridges with printed labels; the one you pick slides toward you, and opening it spins it into the game card. Rendered the way late-90s consoles did it: wobbly vertices, warped textures, dithered colour and fog.
 - Era toys float around the edges (a TV, video tape, disc player, pet egg, flip phone, lava lamp and more, a different handful each day). They're always gently moving, and tapping one bops it or plays its own animation.

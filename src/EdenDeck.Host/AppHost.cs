@@ -24,6 +24,9 @@ public sealed record AppSettings
     /// <summary>UI theme id (see the app's theme list); unknown ids fall back to "dark".</summary>
     public string Theme { get; init; } = "dark";
 
+    /// <summary>Accent colour per theme id (a swatch id from the app's list); missing = the theme's own.</summary>
+    public Dictionary<string, string> Accents { get; init; } = new();
+
     /// <summary>Turns off UI animations.</summary>
     public bool ReduceMotion { get; init; }
 

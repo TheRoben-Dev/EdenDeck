@@ -153,10 +153,66 @@ public static class UiTheme
 
     private static readonly string[] MonoFonts = ["JetBrains Mono", "Fira Code", "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono", "monospace"];
 
-    /// <summary>Selects the palette. Main rebuilds the UI after a change.</summary>
-    public static void Use(string name)
+    /// <summary>
+    /// Accent colours anyone can pick for any theme, chosen to stay readable on every dark theme.
+    /// Light themes get a darker shade of the same hue (see <see cref="AccentFor"/>).
+    /// </summary>
+    public static readonly IReadOnlyList<(string Id, string Label, Color Color)> AccentSwatches =
+    [
+        ("gold", "Gold", new Color("ffc23d")),
+        ("orange", "Orange", new Color("ff8a3d")),
+        ("red", "Red", new Color("ff5a6a")),
+        ("pink", "Pink", new Color("ff5ab4")),
+        ("violet", "Violet", new Color("9b7cff")),
+        ("blue", "Blue", new Color("4f8ff0")),
+        ("cyan", "Cyan", new Color("3fd6e6")),
+        ("green", "Green", new Color("4fd88a")),
+    ];
+
+    /// <summary>The swatch's colour as used on <paramref name="theme"/>, or null for an unknown id.</summary>
+    public static Color? AccentFor(ThemeSpec theme, string? id) =>
+        AccentSwatches.FirstOrDefault(s => s.Id == id) is { Id: not null } s ? (theme.Light ? s.Color.Darkened(0.62f) : s.Color) : null;
+
+    /// <summary>
+    /// Pocket LCD's whole point is its four-shade screen, so instead of an accent it offers other
+    /// four-shade screens: (lightest background, panel, raised panel, lines, darkest ink, text, dim, shell).
+    /// </summary>
+    private static readonly IReadOnlyList<(string Id, string Label, string[] Shades)> PocketPalettes =
+    [
+        ("grey", "Grey screen", ["c4c7bd", "aeb2a6", "d2d5cb", "51554c", "2a2c28", "1e201c", "50544a", "9a9d93"]),
+        ("ice", "Ice blue", ["b8d4dc", "9cbcc8", "cce2e8", "3c5c6c", "1c3440", "142630", "3e5e6c", "8aa8b4"]),
+        ("amber", "Amber", ["e0c890", "c8ac70", "ecd8a8", "6c4c1c", "3c2408", "2c1a06", "6a4a1e", "b49660"]),
+        ("rose", "Rose", ["e4c0c8", "cca4b0", "f0d4da", "6c3448", "3c1424", "2c0e1a", "6c3a4c", "b88c98"]),
+    ];
+
+    /// <summary>What the "Accent colour" row offers for a theme: accent swatches, or whole palettes for Pocket LCD.</summary>
+    public static IEnumerable<(string Id, string Label)> SwatchesFor(ThemeSpec theme) =>
+        theme.Id == "pocket" ? PocketPalettes.Select(p => (p.Id, p.Label)) : AccentSwatches.Select(s => (s.Id, s.Label));
+
+    /// <summary>The theme with a swatch (or Pocket palette) applied; unknown ids leave it as designed.</summary>
+    public static ThemeSpec WithSwatch(ThemeSpec theme, string? id)
+    {
+        if (theme.Id == "pocket")
+        {
+            if (PocketPalettes.FirstOrDefault(p => p.Id == id) is { Shades: { } s })
+            {
+                var ink = new Color(s[4]);
+                return theme with
+                {
+                    Bg = new(s[0]), Panel = new(s[1]), PanelHi = new(s[2]), Line = new(s[3]), Accent = ink,
+                    Text = new(s[5]), Dim = new(s[6]), Shell = new(s[7]), Good = ink, Info = ink,
+                };
+            }
+            return theme;
+        }
+        return AccentFor(theme, id) is { } a ? theme with { Accent = a } : theme;
+    }
+
+    /// <summary>Selects the palette (with an optional accent swatch). Main rebuilds the UI after a change.</summary>
+    public static void Use(string name, string? accent = null)
     {
         Spec = Themes.FirstOrDefault(t => t.Id == name) ?? Themes[0];
+        Spec = WithSwatch(Spec, accent);
         _font = Spec.FontKind switch
         {
             "mono" => new FontVariation { BaseFont = new SystemFont { FontNames = MonoFonts }, SpacingGlyph = Nightgrid ? 1 : 0 },

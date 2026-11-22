@@ -88,7 +88,8 @@ public partial class Main : Control
         {
             startupError = ex;
         }
-        UiTheme.Use(host?.Settings.Theme ?? "dark");
+        var startTheme = host?.Settings.Theme ?? "dark";
+        UiTheme.Use(startTheme, host?.Settings.Accents.GetValueOrDefault(startTheme));
         Anim.Enabled = !(host?.Settings.ReduceMotion ?? false);
         Theme = UiTheme.Build();
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -264,7 +265,7 @@ public partial class Main : Control
             };
             snap.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         }
-        UiTheme.Use(name);
+        UiTheme.Use(name, Host?.Settings.Accents.GetValueOrDefault(name));
         Theme = UiTheme.Build();
         BuildBackground();
         var header = NewHeader();

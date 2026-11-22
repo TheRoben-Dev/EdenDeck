@@ -151,6 +151,33 @@ public partial class SettingsScreen : TwoPaneScreen
             App.ApplyTheme(v);
         };
         Add(theme);
+        var themeId = UiTheme.Name;
+        var pocket = themeId == "pocket";
+        var accent = new Stepper(pocket ? "Screen colour" : "Accent colour",
+            [("", pocket ? "Classic green" : "Theme's own"), .. UiTheme.SwatchesFor(UiTheme.Themes.First(t => t.Id == themeId))],
+            Host.Settings.Accents.GetValueOrDefault(themeId) ?? "",
+            pocket ? "Pocket LCD's four shades, in another screen colour. Saved for this theme." : "The highlight colour for this theme. Each theme remembers its own.")
+        {
+            Expands = true,
+            DetailFor = v => v == ""
+                ? (pocket ? "The original pea-green screen." : "The colour this theme was designed with.")
+                : (pocket ? "All four shades change together, so it still looks like one screen." : "Focus, selected values and highlights use this colour."),
+        };
+        accent.Changed += v =>
+        {
+            var accents = new Dictionary<string, string>(Host.Settings.Accents);
+            if (v == "")
+            {
+                accents.Remove(themeId);
+            }
+            else
+            {
+                accents[themeId] = v;
+            }
+            Host.SaveSettings(Host.Settings with { Accents = accents });
+            App.ApplyTheme(themeId);
+        };
+        Add(accent);
         Add(Toggle.Create("Animated background", Host.Settings.AnimatedBackground, on =>
         {
             Host.SaveSettings(Host.Settings with { AnimatedBackground = on });
