@@ -31,7 +31,7 @@ public static class OptionRows
     /// <summary>Global row: current value, falling back to the emulator default.</summary>
     public static Stepper Global(OptionDefinition o, string? current, Action<string> changed)
     {
-        var s = new Stepper(o.Label, Values(o), current ?? o.DefaultValue, o.Help) { Wrap = o.Type != OptionType.Int };
+        var s = new Stepper(o.Label, Values(o), current ?? o.DefaultValue, o.Help) { Wrap = o.Type != OptionType.Int, Expands = true, DetailFor = o.DetailFor };
         s.Changed += changed;
         return s;
     }
@@ -44,7 +44,14 @@ public static class OptionRows
     {
         var values = new List<(string, string)> { (UseGlobal, "Global · " + Flat(LabelFor(o, globalValue))) };
         values.AddRange(Values(o));
-        var s = new Stepper(o.Label, values, overrideValue ?? UseGlobal, o.Help) { Wrap = o.Type != OptionType.Int };
+        var s = new Stepper(o.Label, values, overrideValue ?? UseGlobal, o.Help)
+        {
+            Wrap = o.Type != OptionType.Int,
+            Expands = true,
+            DetailFor = v => v == UseGlobal
+                ? "Follows your global setting." + (o.DetailFor(globalValue ?? o.DefaultValue) is { } d ? " " + d : "")
+                : o.DetailFor(v),
+        };
         s.Changed += v => changed(v == UseGlobal ? null : v);
         return s;
     }

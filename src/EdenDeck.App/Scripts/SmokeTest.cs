@@ -74,6 +74,12 @@ public partial class SmokeTest : Node
                 Press("ui_down");
             }
         });
+        // Themes switch in place: still on Settings, focus stays on the Theme row.
+        Step("theme-focus", () => FindFocusable(GetTree().Root, "Changes apply right away")?.GrabFocus(), expect: "Changes apply right away");
+        for (var i = 1; i <= UiTheme.Themes.Count; i++)
+        {
+            Step($"theme-{i}", () => Press("ui_right"), wait: 0.8, expect: "Changes apply right away");
+        }
         Step("choice", () =>
         {
             Press(Pad.TabNext);  // wraps to Library
@@ -89,6 +95,22 @@ public partial class SmokeTest : Node
     }
 
     private void Step(string name, Action act, double wait = 1.0, string? expect = null) => _steps.Enqueue((name, act, wait, expect));
+
+    private static Control? FindFocusable(Node root, string tooltip)
+    {
+        foreach (var c in root.GetChildren())
+        {
+            if (c is Control { FocusMode: Control.FocusModeEnum.All } ctl && ctl.TooltipText.StartsWith(tooltip, StringComparison.Ordinal) && ctl.IsVisibleInTree())
+            {
+                return ctl;
+            }
+            if (FindFocusable(c, tooltip) is { } found)
+            {
+                return found;
+            }
+        }
+        return null;
+    }
 
     private static void Joy(JoyButton b, bool pressed) =>
         Input.ParseInputEvent(new InputEventJoypadButton { Device = 0, ButtonIndex = b, Pressed = pressed });

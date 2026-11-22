@@ -67,18 +67,6 @@ public static class TouchScroll
         if (_dragging)
         {
             _dragging = false;
-            if (_target != null && GodotObject.IsInstanceValid(_target))
-            {
-                var t = _target;
-                // Re-enable after momentum has had a moment; the next d-pad move scrolls to focus again.
-                t.GetTree().CreateTimer(1.2).Timeout += () =>
-                {
-                    if (GodotObject.IsInstanceValid(t))
-                    {
-                        t.FollowFocus = true;
-                    }
-                };
-            }
             return true;  // swallow the release so the row under the finger doesn't fire
         }
         return false;
@@ -108,13 +96,13 @@ public static class TouchScroll
             _injecting = false;
             _lastMoveUs = Time.GetTicksUsec();
             // The press also focused the row under the finger; a scroll shouldn't move focus.
-            // Follow-focus is paused while dragging so restoring focus doesn't snap the list back.
-            _target.FollowFocus = false;
             if (_focusBeforePress != null && GodotObject.IsInstanceValid(_focusBeforePress) && _focusBeforePress.IsVisibleInTree() &&
                 vp.GuiGetFocusOwner() != _focusBeforePress)
             {
                 _focusBeforePress.GrabFocus();
             }
+            // Then stop following focus, so restoring it doesn't pull the list back under the finger.
+            ScrollFollower.Pause(_target);
         }
         if (!_dragging)
         {
@@ -128,6 +116,15 @@ public static class TouchScroll
         _lastMoveUs = now;
         _velocity = Mathf.Clamp(Mathf.Lerp(_velocity, -dy / dt, 0.4f), -3000f, 3000f);
         return true;
+    }
+
+    /// <summary>Cancels leftover fling momentum (the d-pad took over).</summary>
+    public static void StopMomentum()
+    {
+        if (!_down)
+        {
+            _velocity = 0;
+        }
     }
 
     /// <summary>Momentum after the finger lifts. Call every frame.</summary>

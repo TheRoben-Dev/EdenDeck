@@ -21,11 +21,14 @@ public sealed record AppSettings
     /// <summary>Global kill switch for EdenDeck's Vulkan layer.</summary>
     public bool LayerKillSwitch { get; init; }
 
-    /// <summary>UI theme: "dark" (default) or "terminal".</summary>
+    /// <summary>UI theme id (see the app's theme list); unknown ids fall back to "dark".</summary>
     public string Theme { get; init; } = "dark";
 
     /// <summary>Turns off UI animations.</summary>
     public bool ReduceMotion { get; init; }
+
+    /// <summary>CRT scanlines over the UI in any theme.</summary>
+    public bool Crt { get; init; }
 
     /// <summary>Check GitHub Releases for a new Eden Deck version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;

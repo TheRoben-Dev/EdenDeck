@@ -2,90 +2,189 @@ using Godot;
 
 namespace EdenDeck.App.Ui;
 
-/// <summary>Dark, high-contrast 10-foot theme built in code (no .tres to drift out of sync).</summary>
+/// <summary>Background decoration drawn behind the UI.</summary>
+public enum Decor
+{
+    None,
+    DotGrid,
+    Scanlines,
+    PixelGrid,
+}
+
+/// <summary>One selectable look. All themes are original palettes; retro ones only evoke an era.</summary>
+public sealed record ThemeSpec(string Id, string Label, string Blurb)
+{
+    public Color Bg { get; init; }
+    public Color Panel { get; init; }
+    public Color PanelHi { get; init; }
+    public Color Line { get; init; }
+    public Color Accent { get; init; }
+    public Color Text { get; init; }
+    public Color Dim { get; init; }
+    public Color Good { get; init; }
+    public Color Warn { get; init; }
+    public Color Bad { get; init; }
+    public Color Info { get; init; } = new("5cc8e0");
+    public Color Shell { get; init; } = new("2a303c");
+
+    /// <summary>Corner radius cap (0 = square corners).</summary>
+    public int Radius { get; init; } = 10;
+
+    /// <summary>Straight-cut corners instead of round ones.</summary>
+    public bool Chamfer { get; init; }
+
+    /// <summary>Every opaque panel gets a 1-2 px border in Line.</summary>
+    public int Hairline { get; init; }
+
+    /// <summary>Hard drop "bevel" under opaque panels, in px (early-3D / chunky pixel look).</summary>
+    public int Bevel { get; init; }
+
+    public string FontKind { get; init; } = "";
+    public bool Upper { get; init; }
+    public Decor Decor { get; init; }
+    public float Glow { get; init; } = 0.13f;
+    public bool Light { get; init; }
+    public string Wordmark { get; init; } = "EDEN DECK";
+
+    /// <summary>Tile label colours: hue spread, saturation, value.</summary>
+    public (float Sat, float Val, int HueFrom, int HueSpan) Tiles { get; init; } = (0.45f, 0.30f, 0, 360);
+}
+
+/// <summary>High-contrast 10-foot themes built in code (no .tres to drift out of sync).</summary>
 public static class UiTheme
 {
-    public static Color Bg { get; private set; }
-    public static Color Panel { get; private set; }
-    public static Color PanelHi { get; private set; }
-    public static Color Accent { get; private set; }
-    public static Color Text { get; private set; }
-    public static Color Dim { get; private set; }
-    public static Color Good { get; private set; }
-    public static Color Warn { get; private set; }
-    public static Color Bad { get; private set; }
-    public static string Name { get; private set; } = "dark";
-    public static Color Info { get; private set; }
-    public static Color Line { get; private set; }
+    public static readonly IReadOnlyList<ThemeSpec> Themes =
+    [
+        new("dark", "Dark", "The default: calm dark panels with a violet accent.")
+        {
+            Bg = new("0d0f14"), Panel = new("161a22"), PanelHi = new("1f2430"), Line = new("262c38"),
+            Accent = new("7c6cff"), Text = new("e8eaf0"), Dim = new("8a91a3"),
+            Good = new("4ccb8a"), Warn = new("f0b452"), Bad = new("ef6b6b"),
+        },
+        new("nightgrid", "Nightgrid", "Void black, dot grid, magenta highlights and chamfered corners.")
+        {
+            Bg = new("07080B"), Panel = new("0D0F14"), PanelHi = new("141821"), Line = new("1F2633"),
+            Accent = new("FF2A6D"), Text = new("E6EDF3"), Dim = new("8B98A9"),
+            Good = new("2BFF88"), Warn = new("FF9F1C"), Bad = new("FF003C"), Info = new("00E5FF"),
+            Shell = new("151a22"), Chamfer = true, Hairline = 1, FontKind = "mono", Upper = true,
+            Decor = Decor.DotGrid, Glow = 0.06f, Wordmark = "EDEN·DECK", Tiles = (0.35f, 0.14f, 0, 360),
+        },
+        new("terminal", "Retro terminal", "Phosphor green on black with CRT scanlines.")
+        {
+            Bg = new("050806"), Panel = new("0b120d"), PanelHi = new("122019"), Line = new("1d3a28"),
+            Accent = new("3dff8f"), Text = new("c9ffdc"), Dim = new("5f9a76"),
+            Good = new("3dff8f"), Warn = new("ffd166"), Bad = new("ff5f6d"),
+            Shell = new("0e1912"), Radius = 3, FontKind = "mono", Upper = true,
+            Decor = Decor.Scanlines, Glow = 0.07f, Wordmark = "> EDEN_DECK_", Tiles = (0.55f, 0.18f, 130, 40),
+        },
+        new("brick", "8-bit brick", "Warm grey and black with a red accent, square corners and a chunky pixel font.")
+        {
+            Bg = new("1f1d1b"), Panel = new("34302c"), PanelHi = new("464039"), Line = new("0c0b0a"),
+            Accent = new("e0353b"), Text = new("f3eee6"), Dim = new("a89f94"),
+            Good = new("6cc04a"), Warn = new("f2b33d"), Bad = new("ff5a4c"),
+            Shell = new("595249"), Radius = 0, Hairline = 2, Bevel = 4, FontKind = "pixel", Upper = true,
+            Glow = 0.05f, Wordmark = "EDEN DECK", Tiles = (0.55f, 0.42f, 0, 360),
+        },
+        new("sixteen", "16-bit", "Lavender and purple with rounded panels and colourful accents.")
+        {
+            Bg = new("221f35"), Panel = new("34304f"), PanelHi = new("443f66"), Line = new("575081"),
+            Accent = new("b7a4ff"), Text = new("f3f0ff"), Dim = new("a9a3cc"),
+            Good = new("5ccf7e"), Warn = new("f2c94c"), Bad = new("ec5a68"), Info = new("4f8ff0"),
+            Shell = new("8e88ab"), Radius = 16, Hairline = 1, Glow = 0.16f, Tiles = (0.5f, 0.48f, 0, 360),
+        },
+        new("pocket", "Pocket LCD", "Four shades of green on a pale screen, with a visible pixel grid.")
+        {
+            Bg = new("b9c47e"), Panel = new("a4b267"), PanelHi = new("c8d290"), Line = new("4f6233"),
+            Accent = new("27391c"), Text = new("1c2914"), Dim = new("4a5e30"),
+            Good = new("27391c"), Warn = new("5b4a14"), Bad = new("6b2714"), Info = new("27391c"),
+            Shell = new("8f9e5a"), Radius = 0, Hairline = 2, FontKind = "pixel", Upper = true,
+            Decor = Decor.PixelGrid, Glow = 0f, Light = true, Tiles = (0.45f, 0.42f, 70, 25),
+        },
+        new("cdera", "CD era", "Dark grey with blue and orange accents and raised, early-3D panels.")
+        {
+            Bg = new("17191e"), Panel = new("2a2d35"), PanelHi = new("363a44"), Line = new("4a505d"),
+            Accent = new("3478f0"), Text = new("eef1f6"), Dim = new("9aa1ad"),
+            Good = new("47c27a"), Warn = new("ff8a1f"), Bad = new("f0524f"), Info = new("ff8a1f"),
+            Shell = new("3d414b"), Radius = 5, Hairline = 1, Bevel = 3, Glow = 0.12f, Tiles = (0.5f, 0.36f, 0, 360),
+        },
+    ];
+
+    public static ThemeSpec Spec { get; private set; } = Themes[0];
+
+    public static Color Bg => Spec.Bg;
+    public static Color Panel => Spec.Panel;
+    public static Color PanelHi => Spec.PanelHi;
+    public static Color Accent => Spec.Accent;
+    public static Color Text => Spec.Text;
+    public static Color Dim => Spec.Dim;
+    public static Color Good => Spec.Good;
+    public static Color Warn => Spec.Warn;
+    public static Color Bad => Spec.Bad;
+    public static Color Info => Spec.Info;
+    public static Color Line => Spec.Line;
+    public static string Name => Spec.Id;
     public static bool Terminal => Name == "terminal";
     public static bool Nightgrid => Name == "nightgrid";
 
-    /// <summary>Themes with uppercase, letter-spaced, monospace labels.</summary>
-    public static bool Mono => Terminal || Nightgrid;
-    private static Font? _font;
+    /// <summary>Themes with uppercase labels (terminal, pixel and grid looks).</summary>
+    public static bool Mono => Spec.Upper;
 
-    public static readonly string[] Names = ["dark", "terminal", "nightgrid"];
+    /// <summary>Text colour for focused/pressed controls: brighter than Text on dark themes.</summary>
+    public static Color Bright => Spec.Light ? Spec.Text : Colors.White;
+
+    /// <summary>Accent used for text (values, labels): lifted on dark themes, as-is on light ones.</summary>
+    public static Color AccentText => Spec.Light ? Accent : Accent.Lightened(0.35f);
+
+    private static Font? _font;
+    private static Font? _pixel;
+
+    public static IEnumerable<string> Names => Themes.Select(t => t.Id);
 
     private static readonly string[] MonoFonts = ["JetBrains Mono", "Fira Code", "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono", "monospace"];
 
-    static UiTheme() => Use("dark");
-
-    /// <summary>Selects the palette. Call before building any UI (Main reloads the scene on change).</summary>
+    /// <summary>Selects the palette. Main rebuilds the UI after a change.</summary>
     public static void Use(string name)
     {
-        Name = Names.Contains(name) ? name : "dark";
-        Info = new("5cc8e0");
-        if (Nightgrid)
+        Spec = Themes.FirstOrDefault(t => t.Id == name) ?? Themes[0];
+        _font = Spec.FontKind switch
         {
-            // Nightgrid "void" tokens: near-black surfaces, hairline borders, magenta for
-            // active/selected, cyan for info, green for OK. Chamfered corners, monospace type.
-            Bg = new("07080B");
-            Panel = new("0D0F14");
-            PanelHi = new("141821");
-            Line = new("1F2633");
-            Accent = new("FF2A6D");
-            Text = new("E6EDF3");
-            Dim = new("8B98A9");
-            Good = new("2BFF88");
-            Warn = new("FF9F1C");
-            Bad = new("FF003C");
-            Info = new("00E5FF");
-            _font = new FontVariation { BaseFont = new SystemFont { FontNames = MonoFonts }, SpacingGlyph = 1 };
-        }
-        else if (Terminal)
+            "mono" => new FontVariation { BaseFont = new SystemFont { FontNames = MonoFonts }, SpacingGlyph = Nightgrid ? 1 : 0 },
+            "pixel" => PixelFont(),
+            _ => null,
+        };
+    }
+
+    /// <summary>Pixelify Sans (SIL OFL 1.1, bundled under Assets/Fonts) with the mono font as fallback.</summary>
+    private static Font PixelFont()
+    {
+        if (_pixel == null)
         {
-            // Retro terminal: phosphor green on near-black, monospace type.
-            Bg = new("050806");
-            Panel = new("0b120d");
-            PanelHi = new("122019");
-            Accent = new("3dff8f");
-            Text = new("c9ffdc");
-            Dim = new("5f9a76");
-            Good = new("3dff8f");
-            Warn = new("ffd166");
-            Bad = new("ff5f6d");
-            Line = new("1d3a28");
-            _font = new SystemFont { FontNames = MonoFonts };
+            var file = ResourceLoader.Exists("res://Assets/Fonts/PixelifySans.ttf") ? GD.Load<FontFile>("res://Assets/Fonts/PixelifySans.ttf") : null;
+            _pixel = file == null
+                ? new SystemFont { FontNames = MonoFonts }
+                : new FontVariation
+                {
+                    BaseFont = file,
+                    VariationOpentype = new Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("wght")] = 500 },
+                    // Its fi/fl ligatures read as odd single glyphs at small sizes.
+                    OpentypeFeatures = new Godot.Collections.Dictionary
+                    {
+                        [TextServerManager.GetPrimaryInterface().NameToTag("liga")] = 0,
+                        [TextServerManager.GetPrimaryInterface().NameToTag("clig")] = 0,
+                    },
+                    SpacingGlyph = 1,
+                    Fallbacks = [new SystemFont { FontNames = MonoFonts }],
+                };
         }
-        else
-        {
-            Bg = new("0d0f14");
-            Panel = new("161a22");
-            PanelHi = new("1f2430");
-            Accent = new("7c6cff");
-            Text = new("e8eaf0");
-            Dim = new("8a91a3");
-            Good = new("4ccb8a");
-            Warn = new("f0b452");
-            Bad = new("ef6b6b");
-            Line = new("262c38");
-            _font = null;
-        }
+        return _pixel;
     }
 
     public const int FontSize = 20;
     public const int TitleSize = 34;
     public const int SmallSize = 15;
+
+    /// <summary>The font in use (theme default or Godot's fallback).</summary>
+    public static Font CurrentFont => _font ?? ThemeDB.FallbackFont;
 
     public static Theme Build()
     {
@@ -99,14 +198,15 @@ public static class UiTheme
         {
             t.SetStylebox("normal", type, Box(Panel, 0));
             t.SetStylebox("hover", type, Box(PanelHi, 0));
-            t.SetStylebox("pressed", type, Box(Accent.Darkened(0.35f), 0));
+            t.SetStylebox("pressed", type, Box(Spec.Light ? Panel.Darkened(0.12f) : Accent.Darkened(0.35f), 0));
             t.SetStylebox("disabled", type, Box(Panel.Darkened(0.3f), 0));
-            t.SetStylebox("focus", type, Focus());
+            // Focus is drawn by the shared, sliding FocusHighlight, not per control.
+            t.SetStylebox("focus", type, new StyleBoxEmpty());
             t.SetColor("font_color", type, Text);
             t.SetColor("font_hover_color", type, Text);
-            t.SetColor("font_focus_color", type, Colors.White);
-            t.SetColor("font_pressed_color", type, Colors.White);
-            t.SetColor("font_disabled_color", type, Dim.Darkened(0.3f));
+            t.SetColor("font_focus_color", type, Bright);
+            t.SetColor("font_pressed_color", type, Bright);
+            t.SetColor("font_disabled_color", type, Spec.Light ? Dim.Lightened(0.2f) : Dim.Darkened(0.3f));
         }
         t.SetConstant("h_separation", "Button", 12);
 
@@ -114,7 +214,6 @@ public static class UiTheme
         t.SetStylebox("panel", "PanelContainer", Box(Panel, 0));
         t.SetStylebox("panel", "Panel", Box(Panel, 0));
 
-        // Scrollbars stay thin: navigation is by focus, the bar is only an indicator.
         foreach (var bar in new[] { "VScrollBar", "HScrollBar" })
         {
             t.SetStylebox("scroll", bar, Thin(new Color(0, 0, 0, 0.15f)));
@@ -137,22 +236,32 @@ public static class UiTheme
             ContentMarginBottom = 10,
             BorderColor = borderColor ?? Accent,
         };
-        if (Nightgrid)
+        var r = Math.Min(radius, Spec.Radius);
+        if (Spec.Chamfer)
         {
-            // Chamfered corners (a one-segment "radius" is a straight cut) and hairline borders.
+            // A one-segment "radius" is a straight cut.
             b.CornerDetail = 1;
-            b.SetCornerRadiusAll(Math.Min(radius, 10));
-            if (border == 0 && bg.A > 0.5f)
-            {
-                border = 1;
-                b.BorderColor = borderColor ?? Line;
-            }
         }
-        else
+        else if (r <= 4)
         {
-            b.SetCornerRadiusAll(Terminal ? Math.Min(radius, 3) : radius);
+            b.CornerDetail = Math.Max(1, r);
+        }
+        b.SetCornerRadiusAll(r);
+        var opaque = bg.A > 0.5f;
+        if (border == 0 && opaque && Spec.Hairline > 0)
+        {
+            border = Spec.Hairline;
+            b.BorderColor = borderColor ?? Line;
+        }
+        if (Spec.Bevel > 0 && opaque)
+        {
+            // Solid offset shadow, no blur: reads as a raised block. Only under opaque fills, so no dithering.
+            b.ShadowColor = Spec.Light ? Line with { A = 0.75f } : new Color(0, 0, 0, 0.8f);
+            b.ShadowSize = 2;
+            b.ShadowOffset = new Vector2(Spec.Bevel * 0.5f, Spec.Bevel);
         }
         b.SetBorderWidthAll(border);
+        b.AntiAliasing = Spec.Radius > 4 && !Spec.Chamfer;
         return b;
     }
 
@@ -166,13 +275,28 @@ public static class UiTheme
     }
 
     /// <summary>
-    /// Focus ring drawn over the normal style: a flat accent tint and one crisp accent border.
-    /// No shadow: a StyleBox shadow is drawn under the whole box, so behind a translucent fill it
-    /// showed as a noisy, dithered glow on the Deck's panel, and its blur doubled the edge.
+    /// Focus ring: a flat accent tint and one crisp accent border. No shadow: a StyleBox shadow
+    /// is drawn under the whole box, so behind a translucent fill it showed as a dithered glow.
     /// </summary>
     public static StyleBoxFlat Focus()
     {
-        var b = Box(Accent with { A = Nightgrid ? 0.12f : 0.16f }, 3, 10, Accent);
+        var b = new StyleBoxFlat
+        {
+            BgColor = Accent with { A = Spec.Light ? 0.14f : Nightgrid ? 0.12f : 0.16f },
+            BorderColor = Accent,
+        };
+        b.SetBorderWidthAll(3);
+        var r = Math.Min(10, Spec.Radius);
+        if (Spec.Chamfer)
+        {
+            b.CornerDetail = 1;
+        }
+        else if (r <= 4)
+        {
+            b.CornerDetail = Math.Max(1, r);
+        }
+        b.SetCornerRadiusAll(r);
+        b.AntiAliasing = Spec.Radius > 4 && !Spec.Chamfer;
         return b;
     }
 
@@ -184,13 +308,8 @@ public static class UiTheme
         {
             h = (h ^ ch) * 16777619;
         }
-        if (Nightgrid)
-        {
-            return Color.FromHsv(h % 360 / 360f, 0.35f, 0.13f + h % 5 / 100f);
-        }
-        return Terminal
-            ? Color.FromHsv((130 + h % 40) / 360f, 0.55f, 0.16f + h % 7 / 100f)
-            : Color.FromHsv(h % 360 / 360f, 0.45f, 0.30f);
+        var (sat, val, from, span) = Spec.Tiles;
+        return Color.FromHsv((from + h % (uint)span) / 360f, sat, val + h % 5 / 100f);
     }
 
     public static Label Label(string text, int size = FontSize, Color? color = null, bool wrap = false)
