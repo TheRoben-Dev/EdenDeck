@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.9
+- The library's cartridges now show **each game's own icon**, pixelated onto the label like the Steam art, in every theme (including the 3D carts) and on the game card. Icons come from your game files with your own keys and are cached; games without a readable icon keep their generated label.
+
 ## 0.4.8
 - Adding games to Steam no longer offers to restart Steam or the Deck. Scanline just tells you to restart Steam to see them, whenever it suits you; the shortcuts are written the moment Steam closes (restarting the Deck works too). Settings → Steam shows how many are waiting.
 

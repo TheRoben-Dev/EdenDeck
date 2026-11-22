@@ -17,6 +17,7 @@ public partial class Cartridge : Control
     private float _lift;
     private bool _focused;
     private Tween? _tween;
+    private ImageTexture? _icon;
 
     /// <summary>Draw only the title and chips (the 32-bit 3D theme draws the cart itself in 3D).</summary>
     public bool TitleOnly { get; init; }
@@ -29,6 +30,14 @@ public partial class Cartridge : Control
         _large = large;
         MouseFilter = MouseFilterEnum.Ignore;
         Resized += QueueRedraw;
+    }
+
+    /// <summary>Shows the game's own icon (already pixel-sized, see <see cref="GameIcons"/>) on the label instead of the monogram.</summary>
+    public void SetIcon(Image? icon)
+    {
+        _icon = icon == null || icon.IsEmpty() ? null : ImageTexture.CreateFromImage(icon);
+        TextureFilter = TextureFilterEnum.Nearest;  // chunky pixels, like the era
+        QueueRedraw();
     }
 
     /// <summary>Focus state from the owning button: lifts the cart and outlines it in the accent colour.</summary>
@@ -97,10 +106,21 @@ public partial class Cartridge : Control
         sheen.SetCornerRadiusAll((int)(7 * s));
         DrawStyleBox(sheen, new Rect2(labelRect.Position, new Vector2(labelRect.Size.X, labelRect.Size.Y * 0.38f)));
 
+        if (_icon != null)
+        {
+            // Square icon centred on the label, framed by the label colour.
+            var side = Mathf.Min(labelRect.Size.X, labelRect.Size.Y) - 6 * s;
+            var at = labelRect.Position + (labelRect.Size - new Vector2(side, side)) / 2;
+            DrawRect(new Rect2(at - Vector2.One * 2 * s, new Vector2(side, side) + Vector2.One * 4 * s), tile.Darkened(0.5f));
+            DrawTextureRect(_icon, new Rect2(at, new Vector2(side, side)), false);
+        }
         var monoSize = (int)(labelRect.Size.Y * 0.42f);
         var ms = font.GetStringSize(_monogram, HorizontalAlignment.Left, -1, monoSize);
-        DrawString(font, labelRect.Position + new Vector2((labelRect.Size.X - ms.X) / 2, (labelRect.Size.Y - ms.Y) / 2 + font.GetAscent(monoSize)),
-            _monogram, HorizontalAlignment.Left, -1, monoSize, tile.Lightened(0.4f) with { A = 0.45f });
+        if (_icon == null)
+        {
+            DrawString(font, labelRect.Position + new Vector2((labelRect.Size.X - ms.X) / 2, (labelRect.Size.Y - ms.Y) / 2 + font.GetAscent(monoSize)),
+                _monogram, HorizontalAlignment.Left, -1, monoSize, tile.Lightened(0.4f) with { A = 0.45f });
+        }
 
         if (_large)
         {

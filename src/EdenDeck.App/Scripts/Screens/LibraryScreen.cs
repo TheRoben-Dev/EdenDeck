@@ -46,6 +46,7 @@ public partial class LibraryScreen : Screen
         col.AddChild(scroller);
 
         var tiles = new List<Control>();
+        _carts.Clear();
         foreach (var g in games)
         {
             var tile = Tile(g);
@@ -65,6 +66,35 @@ public partial class LibraryScreen : Screen
             // Same grid, same focus; the carts are drawn in 3D on top of the tiles.
             _stage = new CartStage(tiles.Select((t, i) => (t, games[i].Base.Title)).ToList(), scroller);
             AddChild(_stage);
+        }
+        LoadIcons(games, _stage);
+    }
+
+    private readonly List<Cartridge> _carts = new();
+
+    /// <summary>Puts each game's own icon on its cartridge as it's read (cached ones appear at once).</summary>
+    private async void LoadIcons(IReadOnlyList<LibraryGame> games, CartStage? stage)
+    {
+        var carts = _carts.ToList();
+        for (var i = 0; i < games.Count && i < carts.Count; i++)
+        {
+            var icon = await GameIcons.Load(games[i].Base);
+            if (!IsInstanceValid(this) || !IsInsideTree())
+            {
+                return;
+            }
+            if (icon == null)
+            {
+                continue;
+            }
+            if (IsInstanceValid(carts[i]))
+            {
+                carts[i].SetIcon(icon);
+            }
+            if (stage != null && IsInstanceValid(stage))
+            {
+                stage.SetIcon(i, icon);
+            }
         }
     }
 
@@ -117,6 +147,7 @@ public partial class LibraryScreen : Screen
         var cart = new Cartridge(g.Base.Title, Monogram(g.Base.Title), extras.Count > 0 ? string.Join("  ·  ", extras) : null) { TitleOnly = UiTheme.Poly3D };
         cart.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         b.AddChild(cart);
+        _carts.Add(cart);
         b.FocusEntered += () => cart.SetFocused(true);
         b.FocusExited += () => cart.SetFocused(false);
         b.MouseEntered += () => { if (!b.HasFocus()) { b.GrabFocus(); } };

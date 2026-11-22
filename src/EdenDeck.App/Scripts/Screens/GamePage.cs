@@ -33,6 +33,25 @@ public partial class GamePage : Screen
     private void SetProfile(Func<GameProfile, GameProfile> change) =>
         App.Guard(() => Host.Profiles.Set(_game.GameId, change(Profile)));
 
+    /// <summary>The game's own icon on the big cartridge, once it's read.</summary>
+    private async void ShowIcon(Control cart)
+    {
+        var icon = await EdenDeck.App.Ui.GameIcons.Load(_game.Base);
+        if (icon == null || !IsInstanceValid(cart))
+        {
+            return;
+        }
+        switch (cart)
+        {
+            case Cartridge c:
+                c.SetIcon(icon);
+                break;
+            case EdenDeck.App.Ui.Poly.CartStage stage:
+                stage.SetIcon(0, icon);
+                break;
+        }
+    }
+
     protected override void Build()
     {
         // A large card over the (blurred) library. Clicks outside the card reach the backdrop.
@@ -70,6 +89,7 @@ public partial class GamePage : Screen
         cart.CustomMinimumSize = new Vector2(220, 300);
         cart.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         info.AddChild(cart);
+        ShowIcon(cart);
         info.AddChild(UiTheme.Label(_game.Base.Title, UiTheme.TitleSize - 8, wrap: true));
         var b = _game.Base;
         var facts = new List<string>
