@@ -122,12 +122,20 @@ public partial class SmokeTest : Node
         Step("theme-focus", () =>
         {
             SetAnimatedBackground(true);
-            FindFocusable(GetTree().Root, "Changes apply right away")?.GrabFocus();
-        }, expect: "Changes apply right away");
+            FindFocusable(GetTree().Root, "Pick a theme, then choose Restart")?.GrabFocus();
+        }, expect: "Pick a theme, then choose Restart");
         for (var i = 1; i <= UiTheme.Themes.Count; i++)
         {
-            Step($"theme-{i}", () => Press("ui_right"), wait: 0.8, expect: "Changes apply right away");
+            Step($"theme-{i}", () => Press("ui_right"), wait: 0.8, expect: "Pick a theme, then choose Restart");
         }
+        // Themes apply by restarting: picking another one offers the restart, picking the current one doesn't.
+        Step("theme-pick", () => Press("ui_right"), wait: 0.5, expect: "Pick a theme, then choose Restart");
+        Step("theme-restart-offered", () => FindFocusable(GetTree().Root, "Saves the theme and restarts")?.GrabFocus(), expect: "Restart to apply");
+        Step("theme-unpick", () =>
+        {
+            FindFocusable(GetTree().Root, "Pick a theme, then choose Restart")?.GrabFocus();
+            Press("ui_left");
+        }, wait: 0.5, expect: "Pick a theme, then choose Restart");
         // The 32-bit 3D theme: 3D carts over the same grid, a prop scene behind, era rendering.
         Step("poly-settings", () => SetTheme("polygon"), wait: 1.5);
         // A tap on empty space bops the prop there (bottom-right slot) and touches no UI.
@@ -135,7 +143,7 @@ public partial class SmokeTest : Node
         {
             Mouse(new Vector2(1216, 672), true);
             Mouse(new Vector2(1216, 672), false);
-        }, wait: 0.45, expect: "Changes apply right away");
+        }, wait: 0.45, expect: "Pick a theme, then choose Restart");
         Step("poly-library", () =>
         {
             Tap(JoyButton.LeftShoulder);

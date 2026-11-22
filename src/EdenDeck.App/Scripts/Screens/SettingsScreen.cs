@@ -137,25 +137,40 @@ public partial class SettingsScreen : TwoPaneScreen
         Add(new ActionButton("Rescan library", Rescan));
     }
 
+    private string? _pendingTheme;
+    private string? _pendingBase;
+    private Dictionary<string, string>? _pendingAccents;
+
     private void BuildAppearance(VBoxContainer col, Action<Control> Add)
     {
-        var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label)), UiTheme.Name,
-            "Changes apply right away, so you can flip through them here.")
+        // Theme and accent are picked here and applied by restarting the app: switching them live
+        // left the library unable to open games until the next start.
+        var active = UiTheme.Name;
+        if (_pendingBase != active)
+        {
+            _pendingBase = active;
+            _pendingTheme = null;
+            _pendingAccents = null;
+        }
+        _pendingTheme ??= active;
+        _pendingAccents ??= new Dictionary<string, string>(Host.Settings.Accents);
+        var themeId = _pendingTheme;
+        var theme = new Stepper("Theme", UiTheme.Themes.Select(t => (t.Id, t.Label + (t.Id == active ? "  (current)" : ""))), themeId,
+            "Pick a theme, then choose Restart to apply. The app restarts and comes back here.")
         {
             Expands = true,
             DetailFor = v => UiTheme.Themes.FirstOrDefault(t => t.Id == v)?.Blurb,
         };
         theme.Changed += v =>
         {
-            Host.SaveSettings(Host.Settings with { Theme = v });
-            App.ApplyTheme(v);
+            _pendingTheme = v;
+            RefreshPane();  // the accent row's choices depend on the theme
         };
         Add(theme);
-        var themeId = UiTheme.Name;
         var pocket = themeId == "pocket";
         var accent = new Stepper(pocket ? "Screen colour" : "Accent colour",
             [("", pocket ? "Classic green" : "Theme's own"), .. UiTheme.SwatchesFor(UiTheme.Themes.First(t => t.Id == themeId))],
-            Host.Settings.Accents.GetValueOrDefault(themeId) ?? "",
+            _pendingAccents.GetValueOrDefault(themeId) ?? "",
             pocket ? "Pocket LCD's four shades, in another screen colour. Saved for this theme." : "The highlight colour for this theme. Each theme remembers its own.")
         {
             Expands = true,
@@ -165,19 +180,28 @@ public partial class SettingsScreen : TwoPaneScreen
         };
         accent.Changed += v =>
         {
-            var accents = new Dictionary<string, string>(Host.Settings.Accents);
             if (v == "")
             {
-                accents.Remove(themeId);
+                _pendingAccents.Remove(themeId);
             }
             else
             {
-                accents[themeId] = v;
+                _pendingAccents[themeId] = v;
             }
-            Host.SaveSettings(Host.Settings with { Accents = accents });
-            App.ApplyTheme(themeId);
+            RefreshPane();
         };
         Add(accent);
+        var changed = themeId != active ||
+                      (_pendingAccents.GetValueOrDefault(themeId) ?? "") != (Host.Settings.Accents.GetValueOrDefault(themeId) ?? "");
+        if (changed)
+        {
+            var label = UiTheme.Themes.First(t => t.Id == themeId).Label;
+            Add(new ActionButton($"↻  Restart to apply {label}", () =>
+            {
+                Host.SaveSettings(Host.Settings with { Theme = themeId, Accents = new Dictionary<string, string>(_pendingAccents) });
+                App.RestartApp("--open=appearance");
+            }, "Saves the theme and restarts the app. You come back to this page."));
+        }
         Add(Toggle.Create("Animated background", Host.Settings.AnimatedBackground, on =>
         {
             Host.SaveSettings(Host.Settings with { AnimatedBackground = on });

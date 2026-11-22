@@ -183,7 +183,19 @@ public partial class Main : Control
             _content.AddChild(msg);
             return;
         }
-        SwitchTab(0);
+        if (OS.GetCmdlineUserArgs().Contains("--open=appearance"))
+        {
+            // Back from a restart that applied a theme: Settings → Appearance, on the theme row.
+            _tab = 2;
+            var settings = new SettingsScreen { StartIn = "Appearance" };
+            _stack.Add(settings);
+            _content.AddChild(settings);
+            UpdateChrome();
+        }
+        else
+        {
+            SwitchTab(0);
+        }
 
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
@@ -275,6 +287,8 @@ public partial class Main : Control
     }
 
     /// <summary>
+    /// Used by the UI smoke test only: players change theme through Settings, which restarts the
+    /// app (switching live left the library unable to open games on the Deck).
     /// Switches theme in place: same tab, same page stack, same focus and scroll position. The old
     /// frame is kept as a picture on top and faded out, so the change is a quick crossfade.
     /// </summary>
@@ -490,6 +504,24 @@ public partial class Main : Control
     }
 
     /// <summary>Starts the given app binary with the same arguments and quits this one.</summary>
+    /// <summary>
+    /// Restarts the app with the same arguments (plus <paramref name="extra"/>), e.g. to apply a
+    /// theme. Godot starts the new instance as this one exits, so it works from source and exported.
+    /// </summary>
+    public void RestartApp(params string[] extra)
+    {
+        AppLog.Info($"restart ({string.Join(' ', extra)})");
+        var user = OS.GetCmdlineUserArgs().Where(a => !a.StartsWith("--open=", StringComparison.Ordinal)).Concat(extra).ToList();
+        var args = OS.GetCmdlineArgs().ToList();
+        if (user.Count > 0)
+        {
+            args.Add("--");
+            args.AddRange(user);
+        }
+        OS.SetRestartOnExit(true, args.ToArray());
+        GetTree().Quit();
+    }
+
     private void Restart(string exe)
     {
         try
