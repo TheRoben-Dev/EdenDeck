@@ -6,6 +6,7 @@ using EdenDeck.Core.Backends;
 using EdenDeck.Core.Launch;
 using EdenDeck.Core.Library;
 using EdenDeck.Core.Profiles;
+using EdenDeck.Host.Updates;
 
 namespace EdenDeck.Host;
 
@@ -20,7 +21,14 @@ public sealed record AppSettings
     /// <summary>Global kill switch for EdenDeck's Vulkan layer.</summary>
     public bool LayerKillSwitch { get; init; }
 
+    /// <summary>UI theme: "dark" (default) or "terminal".</summary>
     public string Theme { get; init; } = "dark";
+
+    /// <summary>Turns off UI animations.</summary>
+    public bool ReduceMotion { get; init; }
+
+    /// <summary>Check GitHub Releases for a new Eden Deck version at startup.</summary>
+    public bool CheckForUpdates { get; init; } = true;
 }
 
 /// <summary>
@@ -43,6 +51,7 @@ public sealed class AppHost
     public LibraryService LibraryService { get; }
     public AppSettings Settings { get; private set; }
     public IReadOnlyList<LibraryGame> Library { get; private set; } = [];
+    public AppUpdater Updater { get; }
 
     public AppHost(AppPaths? paths = null, HttpClient? http = null)
     {
@@ -55,6 +64,7 @@ public sealed class AppHost
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
         Library = LoadJson<List<LibraryGame>>(Paths.LibraryCacheFile) ?? [];
+        Updater = new AppUpdater();
     }
 
     public IEmulatorBackend Backend(string id) =>

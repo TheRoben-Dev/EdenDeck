@@ -9,15 +9,24 @@ public sealed class LibraryService
 
     public LibraryService(IReadOnlyList<IEmulatorBackend> backends) => _backends = backends;
 
+    /// <summary>Files skipped by the last scan because they were still being written (copy in progress).</summary>
+    public int LastSkippedInProgress { get; private set; }
+
+    /// <summary>Files changed this recently are treated as still copying (SFTP, network shares, downloads).</summary>
+    public TimeSpan InProgressWindow { get; init; } = TimeSpan.FromSeconds(20);
+
+    private static readonly string[] PartialSuffixes = [".filepart", ".part", ".partial", ".tmp", ".crdownload", ".download", ".!sync", "~"];
+
     public IReadOnlyList<LibraryGame> Scan(IEnumerable<LibraryFolder> folders, CancellationToken ct = default)
     {
         var entries = new List<GameEntry>();
-        foreach (var folder in folders)
+        // The same file can be reached twice: a folder added as both /home/x and /var/home/x
+        // (Bazzite symlinks /home), nested library folders, or symlinked subfolders.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var skipped = 0;
+        var cutoff = DateTime.UtcNow - InProgressWindow;
+        foreach (var folder in CanonicalFolders(folders))
         {
-            if (!Directory.Exists(folder.Path))
-            {
-                continue;
-            }
             var option = new EnumerationOptions
             {
                 RecurseSubdirectories = folder.Recursive,
@@ -29,22 +38,49 @@ public sealed class LibraryService
             {
                 ct.ThrowIfCancellationRequested();
                 var ext = Path.GetExtension(file).ToLowerInvariant();
-                foreach (var backend in _backends)
+                if (PartialSuffixes.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (!backend.FileExtensions.Contains(ext))
+                    skipped++;
+                    continue;
+                }
+                var backend = _backends.FirstOrDefault(b => b.FileExtensions.Contains(ext));
+                if (backend == null || !seen.Add(PathUtil.RealPath(file)))
+                {
+                    continue;
+                }
+                try
+                {
+                    if (File.GetLastWriteTimeUtc(file) > cutoff)
                     {
+                        skipped++;
                         continue;
                     }
-                    var entry = SafeRead(backend, file);
-                    if (entry != null)
-                    {
-                        entries.Add(entry);
-                        break;
-                    }
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+                var entry = SafeRead(backend, file);
+                if (entry != null)
+                {
+                    entries.Add(entry);
                 }
             }
         }
+        LastSkippedInProgress = skipped;
         return Group(entries);
+    }
+
+    /// <summary>Resolves symlinks and drops folders that are missing, repeated or inside another recursive folder.</summary>
+    internal static IReadOnlyList<LibraryFolder> CanonicalFolders(IEnumerable<LibraryFolder> folders)
+    {
+        var real = folders.Where(f => Directory.Exists(f.Path))
+            .Select(f => f with { Path = PathUtil.RealPath(f.Path).TrimEnd('/') })
+            .GroupBy(f => f.Path, StringComparer.Ordinal)
+            .Select(g => g.OrderByDescending(f => f.Recursive).First())
+            .ToList();
+        return real.Where(f => !real.Any(o => o.Recursive && !ReferenceEquals(o, f) &&
+                                              f.Path.StartsWith(o.Path + "/", StringComparison.Ordinal))).ToList();
     }
 
     private static GameEntry? SafeRead(IEmulatorBackend backend, string file)
@@ -67,17 +103,26 @@ public sealed class LibraryService
     {
         var list = entries.ToList();
         var games = new List<LibraryGame>();
-        foreach (var b in list.Where(e => e.Kind is ContentKind.Base or ContentKind.Homebrew or ContentKind.Unknown))
+        var bases = list.Where(e => e.Kind is ContentKind.Base or ContentKind.Homebrew or ContentKind.Unknown)
+            // One tile per title: several copies of the same base game (e.g. an NSP and an XCI) collapse.
+            .GroupBy(e => string.IsNullOrEmpty(e.TitleId) ? "path:" + e.Path : e.BackendId + ":" + e.TitleId)
+            .Select(g => g.OrderBy(e => e.TitleIdSource == "nca-header" ? 0 : 1).ThenBy(e => e.Path, StringComparer.Ordinal).First());
+        foreach (var b in bases)
         {
             var baseId = BaseTitleId(b.TitleId);
             var updates = list.Where(e => e.Kind == ContentKind.Update && e.BackendId == b.BackendId &&
-                                          BaseTitleId(e.TitleId) == baseId && baseId.Length > 0).ToList();
+                                          BaseTitleId(e.TitleId) == baseId && baseId.Length > 0)
+                .DistinctBy(e => (e.TitleId, e.Version ?? Path.GetFileName(e.Path)))
+                .OrderByDescending(e => VersionNumber(e.Version)).ToList();
             var dlc = list.Where(e => e.Kind == ContentKind.Dlc && e.BackendId == b.BackendId &&
-                                      DlcBaseTitleId(e.TitleId) == baseId && baseId.Length > 0).ToList();
+                                      DlcBaseTitleId(e.TitleId) == baseId && baseId.Length > 0)
+                .DistinctBy(e => e.TitleId).ToList();
             games.Add(new LibraryGame(b, updates, dlc));
         }
         return games.OrderBy(g => g.Base.Title, StringComparer.OrdinalIgnoreCase).ToList();
     }
+
+    private static long VersionNumber(string? v) => long.TryParse(v, out var n) ? n : -1;
 
     // Switch title id conventions: update = base | 0x800; DLC = (base + 0x1000) & ~0xFFF + n.
     // Non-Switch backends will provide their own grouping when they arrive.

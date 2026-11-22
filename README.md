@@ -211,7 +211,9 @@ On SteamOS, Bazzite or any x86_64 Linux, open a terminal in Desktop Mode and run
 curl -fsSL https://github.com/TheRoben-Dev/EdenDeck/releases/latest/download/install.sh | bash
 ```
 
-This installs to `~/Applications/EdenDeck` (no root), adds a menu entry, and puts the `edendeck` launcher on your PATH. Run it again to update.
+This installs to `~/Applications/EdenDeck` (no root), adds a menu entry, and puts the `edendeck` launcher on your PATH.
+
+**Updates (0.2.0 and later) install from inside the app.** Eden Deck checks GitHub Releases at startup and offers *Update and restart*; you can also check from *Settings → Updates*. The download is checksum-verified, your games, keys and settings are never touched, and the previous version is kept so you can roll back from the same screen. The version you're running shows in the top-right corner. Re-running the install command also works.
 
 **Use a controller by starting Eden Deck from Steam**, in both Desktop and Game Mode: in Steam, choose *Games → Add a Non-Steam Game to My Library*, then tick Eden Deck. If you start it outside Steam while Steam is running, Steam's desktop controller layout turns your pad into keyboard and mouse input. Eden Deck still understands the arrow keys, Enter, Esc, and Tab/Shift+Tab for switching tabs, but gamepad buttons won't work.
 

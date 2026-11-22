@@ -27,8 +27,23 @@ public partial class Toast : PanelContainer
         _label.Text = text;
         AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.PanelHi, 2, 12, color ?? UiTheme.Accent));
         _tween?.Kill();
-        Modulate = Colors.White;
-        _tween = CreateTween();
+        _tween = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        if (Anim.Enabled)
+        {
+            // Rise in from just below its spot.
+            Modulate = Colors.Transparent;
+            OffsetBottom = -66;
+            OffsetTop = OffsetBottom - Size.Y;
+            _tween.SetParallel();
+            _tween.TweenProperty(this, "modulate", Colors.White, Anim.Normal);
+            _tween.TweenProperty(this, "offset_bottom", -86f, Anim.Slow);
+            _tween.TweenProperty(this, "offset_top", -86f - Size.Y, Anim.Slow);
+            _tween.SetParallel(false);
+        }
+        else
+        {
+            Modulate = Colors.White;
+        }
         _tween.TweenInterval(Math.Clamp(text.Length / 18.0, 2.5, 8));
         _tween.TweenProperty(this, "modulate", Colors.Transparent, 0.4);
     }

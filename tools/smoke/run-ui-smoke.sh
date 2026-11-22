@@ -22,11 +22,24 @@ for t in "Mountain Climb Deluxe" "Sky Racers" "Pixel Farm Story" "Ocean Odyssey"
   head -c 4096 /dev/urandom > "$HOME/Games/Switch/$t [01000000000${i}0000][v0].nsp"
 done
 head -c 512 /dev/urandom > "$HOME/Games/Switch/Sky Racers [0100000000020800][v131072].nsp"
+# A second copy of a game and a file still being copied must not add tiles.
+cp "$HOME/Games/Switch/Sky Racers [0100000000020000][v0].nsp" "$HOME/Games/Switch/Sky Racers copy [0100000000020000][v0].nsp"
+touch -d '10 minutes ago' "$HOME/Games/Switch/"*.nsp
+head -c 512 /dev/urandom > "$HOME/Games/Switch/Copying Now [0100000000090000][v0].nsp"
 
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/edendeck.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/edendeck.dll"
 dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
 dotnet "$CLI" scan
+if [ -n "${SMOKE_THEME:-}" ]; then  # e.g. SMOKE_THEME=nightgrid for theme screenshots
+  python3 - "$HOME/.config/edendeck/settings.json" "$SMOKE_THEME" <<'PY'
+import json, sys
+p, theme = sys.argv[1], sys.argv[2]
+s = json.load(open(p))
+s["Theme"] = theme
+json.dump(s, open(p, "w"))
+PY
+fi
 
 # Fake Eden: records its arguments and exits after a moment, to exercise the real launch path.
 FAKE="$WORK/Eden-Linux-v0.2.1-amd64.AppImage"

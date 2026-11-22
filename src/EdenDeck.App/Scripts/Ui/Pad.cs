@@ -284,8 +284,11 @@ public static class Pad
         }
     }
 
+    /// <summary>Which button set to draw: handhelds show Xbox glyphs even when Steam sends keys.</summary>
+    public static PadFamily GlyphFamily => LastFamily == PadFamily.Keyboard && IsHandheld ? PadFamily.Xbox : LastFamily;
+
     /// <summary>The label printed on the button for an action, for the current controller.</summary>
-    public static string Glyph(string action) => (LastFamily == PadFamily.Keyboard && IsHandheld ? PadFamily.Xbox : LastFamily, action) switch
+    public static string Glyph(string action) => (GlyphFamily, action) switch
     {
         (PadFamily.Keyboard, Accept) => "Enter",
         (PadFamily.Keyboard, Back) => "Esc",

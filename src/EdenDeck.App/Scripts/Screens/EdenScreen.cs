@@ -88,6 +88,7 @@ public partial class EdenScreen : Screen
         Add(new ActionButton("Add key set", AddKeySet, "Pick a prod.keys file. The folder name becomes the set's name."));
 
         Focus.Column(items);
+        Anim.Stagger(items, 0.015);
         _first = items.FirstOrDefault();
     }
 

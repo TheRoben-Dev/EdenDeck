@@ -31,15 +31,10 @@ public partial class HintBar : HBoxContainer
         {
             var row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 8);
-            var glyph = UiTheme.Label(Pad.Glyph(action), UiTheme.SmallSize, Colors.White);
-            var badge = new PanelContainer();
-            var box = UiTheme.Box(UiTheme.PanelHi, 1, 14, UiTheme.Dim.Darkened(0.3f));
-            box.ContentMarginLeft = box.ContentMarginRight = 9;
-            box.ContentMarginTop = box.ContentMarginBottom = 2;
-            badge.AddThemeStyleboxOverride("panel", box);
-            badge.AddChild(glyph);
-            row.AddChild(badge);
-            row.AddChild(UiTheme.Label(label, UiTheme.SmallSize + 1, UiTheme.Dim));
+            row.AddChild(new ButtonGlyph(Pad.Glyph(action)));
+            var text = UiTheme.Label(UiTheme.Mono ? label.ToUpperInvariant() : label, UiTheme.SmallSize + 1, UiTheme.Dim);
+            text.VerticalAlignment = VerticalAlignment.Center;
+            row.AddChild(text);
             _hints.AddChild(row);
         }
     }
