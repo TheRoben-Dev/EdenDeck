@@ -49,6 +49,9 @@ dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
 dotnet "$CLI" scan
 # One game with an icon already read (normally from the game's control data with the player's
 # keys): its cartridge shows it pixelated on the label.
+# A shader cache for Castle Defenders, for the Storage pages.
+mkdir -p "$XDG_CACHE_HOME/eden/shader/0100000000070000"
+head -c 300000 /dev/zero > "$XDG_CACHE_HOME/eden/shader/0100000000070000/vulkan.bin"
 mkdir -p "$XDG_DATA_HOME/scanline/icons"
 cp "$ROOT/tools/smoke/icon.jpg" "$XDG_DATA_HOME/scanline/icons/0100000000010000.jpg"
 if [ -n "${SMOKE_THEME:-}" ]; then  # e.g. SMOKE_THEME=nightgrid for theme screenshots

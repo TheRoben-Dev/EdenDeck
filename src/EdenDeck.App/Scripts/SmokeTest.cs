@@ -162,6 +162,16 @@ public partial class SmokeTest : Node
         Step("sound-pane", () => Press(Pad.Accept), expect: "Short sounds when you move");
         Step("sound-level", () => Press("ui_right"), expect: "Short sounds when you move");
         Step("sound-back", () => Press(Pad.Back), expect: "Sound & feel");
+        // Storage: sizes, the shader cache clean-up, and a game's own page.
+        Step("storage-category", () => FindFocusable(GetTree().Root, "What takes up space")?.GrabFocus(), expect: "Storage");
+        Step("storage-pane", () => Press(Pad.Accept), expect: "Rebuild all shader caches");
+        Step("storage-game", () => FindFocusable(GetTree().Root, "What this game takes up, and tidying it up")?.GrabFocus(), expect: "Castle Defenders");
+        Step("storage-game-page", () => Press(Pad.Accept), expect: "Rebuild shader cache");
+        Step("storage-clear", () => Press(Pad.Accept), expect: "Cancel");  // confirm opens on Cancel
+        Step("storage-clear-yes", () => Press("ui_down"), expect: "Clear");
+        Step("storage-cleared", () => Press(Pad.Accept), expect: "Done");
+        Step("storage-game-back", () => Press(Pad.Back));
+        Step("storage-back", () => Press(Pad.Back), expect: "Storage");
         Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         Step("theme-focus", () =>
         {

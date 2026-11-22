@@ -197,6 +197,9 @@ public partial class GamePage : Screen
                 () => App.Push(new SavesPage(_game, Rebuild)), "Back up, restore or delete this game's save."));
         }
 
+        var usage = Try(() => Host.Eden.Usage(_game), null, "sizes", col);
+        Add(new ActionButton("Storage" + (usage == null ? "" : "  ·  " + EdenDeck.Backends.Eden.Storage.StorageReport.Format(usage.Total)),
+            () => App.Push(new GameStoragePage(_game, Rebuild)), "What this game takes up, and rebuilding its shader cache."));
         var fav = Profile.Favorite;
         Add(Toggle.Create("★ Favorite", fav, on =>
             {

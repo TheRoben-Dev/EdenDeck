@@ -1,3 +1,4 @@
+using EdenDeck.Backends.Eden.Storage;
 using EdenDeck.Core.Launch;
 using EdenDeck.Backends.Eden.Config;
 using EdenDeck.Host.Updates;
@@ -21,6 +22,7 @@ public partial class SettingsScreen : TwoPaneScreen
         ("Appearance", "Theme, CRT effect and animations."),
         ("Sound & feel", "Menu sounds and controller rumble."),
         ("Steam", "Scanline and your games in your Steam library."),
+        ("Storage", "What takes up space, and tidying up."),
         ("Updates", "Version, changelog and updates."),
         ("Advanced", "Overlay layer and expert Eden options."),
     ];
@@ -74,6 +76,9 @@ public partial class SettingsScreen : TwoPaneScreen
                 break;
             case "Steam":
                 BuildSteam(col, Add);
+                break;
+            case "Storage":
+                BuildStorage(col, Add);
                 break;
             case "Updates":
                 BuildUpdates(col, Add);
@@ -459,6 +464,57 @@ public partial class SettingsScreen : TwoPaneScreen
             "No overlay and no stats; games run exactly as in plain Eden."));
         col.AddChild(Section("Expert Eden options"));
         BuildEdenOptions(col, Add, o => AdvancedOptions.Contains(o.Id), showGroups: true);
+    }
+
+    private void BuildStorage(VBoxContainer col, Action<Control> Add)
+    {
+        var eden = Host.Eden;
+        var disks = Try(() => StorageReport.Disks(Host.Settings.LibraryFolders.Select(f => f.Path).Append(eden.Paths.DataDir)), [], "drives", col);
+        foreach (var d in disks)
+        {
+            var low = d.Free < d.Total / 10;
+            col.AddChild(UiTheme.Label($"{(d.Mount == "/" ? "Main drive" : d.Mount)}: {StorageReport.Format(d.Free)} free of {StorageReport.Format(d.Total)}",
+                UiTheme.SmallSize + 2, low ? UiTheme.Warn : UiTheme.Text, wrap: true));
+        }
+        var games = Try(() => StorageReport.Games(Host.Library.Where(g => g.Base.BackendId == eden.Id), eden.Paths), [], "game sizes", col);
+        var shaders = Try(() => ShaderCache.All(eden.Paths).Sum(e => e.Bytes), 0L, "shader caches", col);
+        var saves = Try(() => StorageReport.Saves(eden.Paths), 0L, "saves", col);
+        col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+        {
+            $"Games {StorageReport.Format(games.Sum(g => g.Base + g.Updates + g.Dlc))}",
+            $"Shader caches {StorageReport.Format(shaders)}",
+            $"Mods {StorageReport.Format(games.Sum(g => g.Mods))}",
+            $"Saves {StorageReport.Format(saves)}",
+        }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        var older = games.Sum(g => g.OlderUpdates);
+        if (older > 0)
+        {
+            col.AddChild(UiTheme.Label($"{StorageReport.Format(older)} is in old update files Eden no longer loads. Remove them from a game below.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        if (shaders > 0)
+        {
+            Add(new ActionButton($"Rebuild all shader caches ({StorageReport.Format(shaders)})", () => App.Confirm(
+                "Clear every game's shader cache? Eden builds each one again while you play, so expect some stutter at first. Useful after a graphics driver or Eden update.",
+                "Clear all", () =>
+                {
+                    if (App.Guard(() => eden.ClearAllShaderCaches()))
+                    {
+                        App.Success("Shader caches cleared");
+                        Rebuild();
+                    }
+                }), "Fixes flicker or glitches after a driver or Eden update."));
+        }
+        if (games.Count > 0)
+        {
+            col.AddChild(Section("Games by size"));
+        }
+        foreach (var u in games)
+        {
+            var game = u.Game;
+            Add(new ActionButton($"{game.Base.Title}  ·  {StorageReport.Format(u.Total)}{(u.OlderUpdates > 0 ? "  ·  old updates" : "")}",
+                () => App.Push(new GameStoragePage(game, Rebuild)), "What this game takes up, and tidying it up."));
+        }
     }
 
     private void Rescan() =>

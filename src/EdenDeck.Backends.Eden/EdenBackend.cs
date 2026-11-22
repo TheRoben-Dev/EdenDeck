@@ -196,6 +196,22 @@ public sealed class EdenBackend : IEmulatorBackend
         EdenControls.SetGameProfile(Paths.PerGameConfigFile(titleId), name);
     }
 
+    /// <summary>What a game takes up on disk (game files, shader cache, mods).</summary>
+    public Storage.GameUsage Usage(EdenDeck.Core.Library.LibraryGame game) => Storage.StorageReport.For(game, Paths);
+
+    /// <summary>Deletes a game's shader cache (Eden rebuilds it while the game runs); returns the bytes freed.</summary>
+    public long ClearShaderCache(string titleId)
+    {
+        EnsureClosed();
+        return Storage.ShaderCache.Clear(Paths, titleId);
+    }
+
+    public long ClearAllShaderCaches()
+    {
+        EnsureClosed();
+        return Storage.ShaderCache.ClearAll(Paths);
+    }
+
     private static void EnsureClosed()
     {
         if (EdenProcess.IsRunning())
