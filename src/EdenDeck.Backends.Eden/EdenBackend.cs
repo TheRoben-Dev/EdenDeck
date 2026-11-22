@@ -1,6 +1,7 @@
 using EdenDeck.Backends.Eden.Config;
 using EdenDeck.Backends.Eden.Install;
 using EdenDeck.Backends.Eden.Library;
+using EdenDeck.Backends.Eden.Mods;
 using EdenDeck.Backends.Eden.SystemFiles;
 using EdenDeck.Core;
 using EdenDeck.Core.Backends;
@@ -25,7 +26,32 @@ public sealed class EdenBackend : IEmulatorBackend
         Library = new EdenLibraryScanner(LoadHeaderKey);
         Launch = new EdenLaunchPlanner(this, app.Runtime);
         SystemFilesImpl = new EdenSystemFiles(() => Paths, Path.Combine(app.Data, "backups"));
+        Cheats = new CheatDatabase(http ?? CheatHttp());
     }
+
+    private static HttpClient CheatHttp()
+    {
+        var h = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        h.DefaultRequestHeaders.UserAgent.ParseAdd("Scanline");
+        return h;
+    }
+
+    /// <summary>The community cheat database, fetched one game at a time when the player asks.</summary>
+    public CheatDatabase Cheats { get; }
+
+    public IReadOnlyList<ModInfo> Mods(string titleId) => EdenMods.List(Paths, titleId);
+
+    public void SetModEnabled(string titleId, string name, bool enabled) => EdenMods.SetEnabled(Paths.GlobalConfigFile, titleId, name, enabled);
+
+    public void RemoveMod(string titleId, string name) => EdenMods.Remove(Paths, titleId, name);
+
+    /// <summary>Installs a mod from a .zip or a folder; returns the installed names.</summary>
+    public IReadOnlyList<string> InstallMod(string titleId, string path, bool replace = false) =>
+        Directory.Exists(path) ? EdenMods.InstallFolder(Paths, titleId, path, replace) : EdenMods.InstallZip(Paths, titleId, path, replace);
+
+    /// <summary>The game version Eden will run: the newest update from the library if it's loaded, else the base game (0).</summary>
+    public static uint GameVersion(Core.Library.LibraryGame game, bool loadAddOns) =>
+        loadAddOns && game.Updates.Count > 0 && uint.TryParse(game.Updates[0].Version, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
 
     public string Id => BackendId;
     public string DisplayName => "Eden";

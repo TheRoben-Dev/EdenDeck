@@ -19,6 +19,13 @@ export HOME="$WORK/home" XDG_RUNTIME_DIR="$WORK/run"
 export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share" XDG_CACHE_HOME="$HOME/.cache"
 mkdir -p "$HOME/Games/Switch" "$HOME/.config/eden" "$XDG_RUNTIME_DIR" "$OUT"
 cp "$ROOT/tests/EdenDeck.Backends.Eden.Tests/Fixtures/nightly-467ab644/qt-config.ini" "$HOME/.config/eden/"
+# The fixture's mod folder is a Deck path; keep it inside the fake home, with two mods for
+# "Castle Defenders" that both replace one file (the mods page warns about it).
+sed -i "s|^load_directory=.*|load_directory=$HOME/eden-mods/|" "$HOME/.config/eden/qt-config.ini"
+for m in "Better Water" "HD Textures"; do
+  mkdir -p "$HOME/eden-mods/0100000000070000/$m/romfs/Data"
+  echo "$m" > "$HOME/eden-mods/0100000000070000/$m/romfs/Data/water.bin"
+done
 i=0
 for t in "Mountain Climb Deluxe" "Sky Racers" "Pixel Farm Story" "Ocean Odyssey" "Robot Rumble" "Starlight Saga" "Castle Defenders"; do
   i=$((i + 1))
