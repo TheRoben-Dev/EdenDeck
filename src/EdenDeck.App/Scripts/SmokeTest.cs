@@ -72,6 +72,10 @@ public partial class SmokeTest : Node
             Press("ui_right");
             Press("ui_left");
         }, expect: "CRT effect");
+        // Performance presets: one press sets a group of Eden's per-game settings, and back.
+        Step("game-preset", () => FindFocusable(GetTree().Root, "Presets set resolution")?.GrabFocus(), expect: "Presets set resolution");
+        Step("game-preset-battery", () => Press("ui_right"), expect: "Longest battery life");
+        Step("game-preset-global", () => Press("ui_left"), expect: "Presets set resolution");
         // Add to Steam: the button is there (CI has no Steam, so pressing it only explains why).
         Step("game-steam", () => FindFocusable(GetTree().Root, "Puts this game in your Steam library")?.GrabFocus(), expect: "Add to Steam");
         // Mods & cheats: the smoke home has two mods for this game that replace the same file.
@@ -158,6 +162,16 @@ public partial class SmokeTest : Node
         Step("sound-pane", () => Press(Pad.Accept), expect: "Short sounds when you move");
         Step("sound-level", () => Press("ui_right"), expect: "Short sounds when you move");
         Step("sound-back", () => Press(Pad.Back), expect: "Sound & feel");
+        // Storage: sizes, the shader cache clean-up, and a game's own page.
+        Step("storage-category", () => FindFocusable(GetTree().Root, "What takes up space")?.GrabFocus(), expect: "Storage");
+        Step("storage-pane", () => Press(Pad.Accept), expect: "Rebuild all shader caches");
+        Step("storage-game", () => FindFocusable(GetTree().Root, "What this game takes up, and tidying it up")?.GrabFocus(), expect: "Castle Defenders");
+        Step("storage-game-page", () => Press(Pad.Accept), expect: "Rebuild shader cache");
+        Step("storage-clear", () => Press(Pad.Accept), expect: "Cancel");  // confirm opens on Cancel
+        Step("storage-clear-yes", () => Press("ui_down"), expect: "Clear");
+        Step("storage-cleared", () => Press(Pad.Accept), expect: "Done");
+        Step("storage-game-back", () => Press(Pad.Back));
+        Step("storage-back", () => Press(Pad.Back), expect: "Storage");
         Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
         Step("theme-focus", () =>
         {

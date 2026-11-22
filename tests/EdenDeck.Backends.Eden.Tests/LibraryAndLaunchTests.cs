@@ -467,6 +467,36 @@ public class LaunchTests : IDisposable
     }
 
     [Fact]
+    public void ConsoleModeFollowsTheScreenForOneLaunch()
+    {
+        var b = IsolatedBackend();
+        Assert.StartsWith(_env.Home, b.Paths.GlobalConfigFile);
+        string? Global() => b.EdenSettings.ReadGlobal().GetValueOrDefault("use_docked_mode");
+        var before = Global();
+        var plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile(), new LaunchOptions { Docked = false });
+        Assert.Contains(plan.Notes, n => n == "console mode: Handheld (built-in screen)");
+        Assert.Equal(before, Global());  // nothing written while planning
+        foreach (var p in plan.Prepare)
+        {
+            p();
+        }
+        Assert.Equal("Handheld", Global());
+        foreach (var c in plan.Cleanup)
+        {
+            c();
+        }
+        Assert.Equal(before, Global());
+
+        // A console mode set for the game itself wins.
+        b.EdenSettings.WritePerGame("0100ABCD00000000", new Dictionary<string, string?> { ["use_docked_mode"] = "Docked" });
+        plan = b.Launch.Plan(Game("0100ABCD00000000"), new GameProfile(), new LaunchOptions { Docked = false });
+        Assert.Contains(plan.Notes, n => n == "console mode: Docked (set for this game)");
+        Assert.DoesNotContain(plan.Notes, n => n.Contains("built-in screen"));
+        // Off: Eden's own setting, no note.
+        Assert.DoesNotContain(b.Launch.Plan(Game(), new GameProfile(), new LaunchOptions()).Notes, n => n.StartsWith("console mode"));
+    }
+
+    [Fact]
     public void FrameGenRemovesOldEdenBuiltinOverride()
     {
         var b = IsolatedBackend();

@@ -154,6 +154,28 @@ public class SettingsTests
         Assert.False(read.ContainsKey("gpu_accuracy"));
     }
 
+    [Theory]
+    [MemberData(nameof(TestEnv.Fixtures), MemberType = typeof(TestEnv))]
+    public void PerformancePresetsApplyAndReadBack(string fixture)
+    {
+        using var env = new TestEnv(fixture);
+        var s = Make(env, fixture);
+        var tid = "0100000000010000";
+        Assert.Equal(PerformancePresets.Custom, PerformancePresets.Current(s.ReadPerGame(tid), s.Options));  // fixture overrides GPU accuracy only
+        foreach (var p in PerformancePresets.All)
+        {
+            PerformancePresets.Apply(s, tid, p.Id);
+            Assert.Equal(p.Id, PerformancePresets.Current(s.ReadPerGame(tid), s.Options));
+        }
+        PerformancePresets.Apply(s, tid, "battery");
+        Assert.Equal("Low", s.ReadPerGame(tid)["gpu_accuracy"]);
+        s.WritePerGame(tid, new Dictionary<string, string?> { ["anti_aliasing"] = "Smaa" });  // tweaked by hand
+        Assert.Equal(PerformancePresets.Custom, PerformancePresets.Current(s.ReadPerGame(tid), s.Options));
+        PerformancePresets.Apply(s, tid, PerformancePresets.Global);
+        Assert.Equal(PerformancePresets.Global, PerformancePresets.Current(s.ReadPerGame(tid), s.Options));
+        Assert.Equal(PerformancePresets.Global, PerformancePresets.Current(s.ReadPerGame("0100000000099000"), s.Options));
+    }
+
     [Fact]
     public void NewPerGameFileIsCreatedUppercase()
     {

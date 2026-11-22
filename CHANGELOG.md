@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.5.5
+- New: **performance presets** on every game card, under Eden settings for this game. One press sets resolution, upscaling, anti-aliasing, GPU accuracy and async shaders: **Battery saver**, **Balanced** (the Steam Deck sweet spot), **TV quality** or **Sharp** (desktop GPUs). Change any setting by hand and the row says so; pick Eden's settings to go back to your global ones.
+- New: **console mode follows the screen.** Games start docked when a TV or monitor is connected and handheld on the Deck's own screen, picked each time a game starts. Your Eden setting is put back when the game closes. A console mode set on a game's card still wins, and you can turn this off under Settings → System.
+- New: **Storage** under Settings. Free space on each drive, what games, shader caches, mods, saves and save backups take up, and every game by size. Each game's page (also on its card) can **rebuild the shader cache**, which fixes flicker after a driver or Eden update, and **remove older update files** Eden no longer loads (they go to the trash). There's also a button to rebuild every shader cache at once.
+
 ## 0.5.4
 - New: **favorites and collections.** Star a game on its card and it comes first in the library. Put games on shelves like Playing now, Up next, Finished or Multiplayer from Collections on the card. Once you've starred or shelved something, a **Show** row at the top of the library lets you see just your favorites or one shelf.
 

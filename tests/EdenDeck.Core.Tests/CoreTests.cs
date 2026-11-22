@@ -148,3 +148,42 @@ public class ProcessLauncherTests
         Assert.Equal("/run/user/1000/scanline", p.Runtime);
     }
 }
+
+public class ScreenDetectTests
+{
+    [Fact]
+    public void TellsTvFromBuiltInPanel()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "scanline-drm-" + Guid.NewGuid().ToString("N"));
+        void Connector(string name, string status)
+        {
+            Directory.CreateDirectory(Path.Combine(root, name));
+            File.WriteAllText(Path.Combine(root, name, "status"), status + "\n");
+        }
+        try
+        {
+            Assert.Null(EdenDeck.Core.Launch.ScreenDetect.External(root));  // missing
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(Path.Combine(root, "card0"));
+            Directory.CreateDirectory(Path.Combine(root, "renderD128"));
+            Assert.Null(EdenDeck.Core.Launch.ScreenDetect.External(root));  // no connectors
+            Connector("card0-eDP-1", "connected");
+            Connector("card0-DP-1", "disconnected");
+            Assert.False(EdenDeck.Core.Launch.ScreenDetect.External(root));  // Steam Deck, handheld
+            Connector("card0-DP-1", "connected");
+            Assert.True(EdenDeck.Core.Launch.ScreenDetect.External(root));   // docked to a TV
+            Directory.Delete(Path.Combine(root, "card0-eDP-1"), true);
+            Connector("card0-DP-1", "disconnected");
+            Assert.Null(EdenDeck.Core.Launch.ScreenDetect.External(root));
+            Connector("card1-HDMI-A-1", "connected");
+            Assert.True(EdenDeck.Core.Launch.ScreenDetect.External(root));   // desktop PC
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, true);
+            }
+        }
+    }
+}

@@ -46,6 +46,9 @@ public sealed class EdenBackend : IEmulatorBackend
 
     public string SaveBackupDir(string titleId) => EdenSaves.BackupDir(_app.Data, titleId);
 
+    /// <summary>All of Scanline's save backups, every game.</summary>
+    public long SaveBackupBytes() => Storage.ShaderCache.DirBytes(System.IO.Path.Combine(_app.Data, "saves"));
+
     public SaveBackup? BackupSaves(string titleId, bool automatic = false) => EdenSaves.Backup(Paths, _app.Data, titleId, automatic);
 
     /// <summary>Restores a backup (Eden must be closed); returns the backup of what was replaced.</summary>
@@ -194,6 +197,22 @@ public sealed class EdenBackend : IEmulatorBackend
     {
         EnsureClosed();
         EdenControls.SetGameProfile(Paths.PerGameConfigFile(titleId), name);
+    }
+
+    /// <summary>What a game takes up on disk (game files, shader cache, mods).</summary>
+    public Storage.GameUsage Usage(EdenDeck.Core.Library.LibraryGame game) => Storage.StorageReport.For(game, Paths);
+
+    /// <summary>Deletes a game's shader cache (Eden rebuilds it while the game runs); returns the bytes freed.</summary>
+    public long ClearShaderCache(string titleId)
+    {
+        EnsureClosed();
+        return Storage.ShaderCache.Clear(Paths, titleId);
+    }
+
+    public long ClearAllShaderCaches()
+    {
+        EnsureClosed();
+        return Storage.ShaderCache.ClearAll(Paths);
     }
 
     private static void EnsureClosed()
