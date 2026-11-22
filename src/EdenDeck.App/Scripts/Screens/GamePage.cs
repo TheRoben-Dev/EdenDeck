@@ -364,7 +364,7 @@ public partial class GamePage : Screen
         var row = new Stepper("Performance preset", choices, current,
             PerformancePresets.All.FirstOrDefault(p => p.Id == current)?.Detail
             ?? (current == PerformancePresets.Global
-                ? "Presets set console mode, resolution, upscaling, anti-aliasing and GPU accuracy for this game in one go."
+                ? "Presets set resolution, upscaling, anti-aliasing and GPU accuracy for this game in one go."
                 : "You've changed the settings below by hand. Pick a preset to replace them."));
         row.Changed += v =>
         {
