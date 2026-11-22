@@ -40,6 +40,34 @@ public static class Pad
     private static float _heldFor;
     private static float _sinceRepeat;
 
+    // Direction state comes from the events themselves (not polling Input), so it works for any
+    // device SDL reports and can be exercised by the smoke test with synthetic events.
+    private static readonly List<string> _dpadHeld = new();
+    private static readonly Dictionary<int, Vector2> _sticks = new();
+
+    /// <summary>
+    /// True on handheld PCs (Steam Deck, ROG Ally, Legion Go, MSI Claw). Used to show gamepad
+    /// glyphs even when Steam's desktop layout turns the built-in controls into keyboard keys.
+    /// </summary>
+    public static bool IsHandheld { get; } = DetectHandheld();
+
+    private static bool DetectHandheld()
+    {
+        try
+        {
+            string Read(string f) => File.Exists(f) ? File.ReadAllText(f).Trim() : "";
+            var vendor = Read("/sys/class/dmi/id/board_vendor") + " " + Read("/sys/class/dmi/id/sys_vendor");
+            var product = Read("/sys/class/dmi/id/product_name") + " " + Read("/sys/class/dmi/id/board_name");
+            return vendor.Contains("Valve") || product.Contains("Jupiter") || product.Contains("Galileo")
+                || product.Contains("ROG Ally") || product.Contains("RC71L") || product.Contains("RC72L")
+                || product.Contains("Legion Go") || product.Contains("83E1") || product.Contains("Claw");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     public static void Setup()
     {
         // Keyboard keeps Godot's defaults (arrows, Enter, Esc). Drop the default joypad events so
@@ -58,6 +86,12 @@ public static class Pad
         AddKeyAction(TabNext, Key.E, Key.Pagedown);
         AddKeyAction(Secondary, Key.R);
         AddKeyAction(Tertiary, Key.F);
+        // Steam's Desktop Mode layout and handheld "lizard mode" send keys and mouse clicks
+        // instead of gamepad buttons; accept the common ones.
+        AddKeyAction(Back, Key.Backspace);
+        InputMap.ActionAddEvent(Back, new InputEventMouseButton { ButtonIndex = MouseButton.Xbutton1 });
+        InputMap.ActionAddEvent(TabPrev, new InputEventMouseButton { ButtonIndex = MouseButton.WheelLeft });
+        InputMap.ActionAddEvent(TabNext, new InputEventMouseButton { ButtonIndex = MouseButton.WheelRight });
     }
 
     private static void AddKeyAction(string action, params Key[] keys)
@@ -94,6 +128,15 @@ public static class Pad
     {
         switch (e)
         {
+            case InputEventKey { Keycode: Key.Tab } tab:
+                // Tab / Shift+Tab (and Ctrl+Tab) switch the top tabs; focus moves with arrows.
+                if (tab.Pressed && !tab.Echo)
+                {
+                    SetFamily(PadFamily.Keyboard);
+                    Emit(tab.ShiftPressed ? TabPrev : TabNext, true);
+                    Emit(tab.ShiftPressed ? TabPrev : TabNext, false);
+                }
+                return true;
             case InputEventKey { Pressed: true }:
                 SetFamily(PadFamily.Keyboard);
                 return false;
@@ -106,16 +149,30 @@ public static class Pad
                 }
                 if (Directions.Contains(action))
                 {
-                    return true;  // d-pad is polled in Process() for repeat
+                    _dpadHeld.Remove(action);
+                    if (jb.Pressed)
+                    {
+                        _dpadHeld.Add(action);  // most recent last
+                        // Move on the press itself, so a tap shorter than a frame still counts
+                        // (frames are slow in low-processor mode). Process() only repeats.
+                        StartHold(action);
+                    }
+                    return true;
                 }
                 Emit(action, jb.Pressed);
                 return true;
             case InputEventJoypadMotion jm:
+                if (jm.Axis is JoyAxis.LeftX or JoyAxis.LeftY)
+                {
+                    var v = _sticks.GetValueOrDefault(jm.Device);
+                    v = jm.Axis == JoyAxis.LeftX ? v with { X = jm.AxisValue } : v with { Y = jm.AxisValue };
+                    _sticks[jm.Device] = v;
+                }
                 if (Mathf.Abs(jm.AxisValue) > StickDeadzone)
                 {
                     SetFamily(FamilyOf(jm.Device));
                 }
-                return true;  // sticks are polled in Process()
+                return true;
             default:
                 return false;
         }
@@ -142,18 +199,27 @@ public static class Pad
         };
     }
 
+    private static void StartHold(string dir)
+    {
+        _held = dir;
+        _heldFor = 0;
+        _sinceRepeat = 0;
+        Tap(dir);
+    }
+
     /// <summary>Called every frame: d-pad and left stick with delayed auto-repeat.</summary>
     public static void Process(double delta)
     {
         var dir = CurrentDirection();
         if (dir != _held)
         {
-            _held = dir;
-            _heldFor = 0;
-            _sinceRepeat = 0;
-            if (dir != null)
+            if (dir == null)
             {
-                Tap(dir);
+                _held = null;
+            }
+            else
+            {
+                StartHold(dir);
             }
             return;
         }
@@ -176,14 +242,12 @@ public static class Pad
 
     private static string? CurrentDirection()
     {
-        foreach (var dev in Input.GetConnectedJoypads())
+        if (_dpadHeld.Count > 0)
         {
-            if (Input.IsJoyButtonPressed(dev, JoyButton.DpadUp)) return "ui_up";
-            if (Input.IsJoyButtonPressed(dev, JoyButton.DpadDown)) return "ui_down";
-            if (Input.IsJoyButtonPressed(dev, JoyButton.DpadLeft)) return "ui_left";
-            if (Input.IsJoyButtonPressed(dev, JoyButton.DpadRight)) return "ui_right";
-            var x = Input.GetJoyAxis(dev, JoyAxis.LeftX);
-            var y = Input.GetJoyAxis(dev, JoyAxis.LeftY);
+            return _dpadHeld[^1];
+        }
+        foreach (var (x, y) in _sticks.Values.Select(v => (v.X, v.Y)))
+        {
             if (Mathf.Max(Mathf.Abs(x), Mathf.Abs(y)) < StickDeadzone)
             {
                 continue;
@@ -192,6 +256,14 @@ public static class Pad
             return Mathf.Abs(x) > Mathf.Abs(y) ? (x < 0 ? "ui_left" : "ui_right") : (y < 0 ? "ui_up" : "ui_down");
         }
         return null;
+    }
+
+    /// <summary>Forget held directions (on focus loss / game start) so nothing keeps repeating.</summary>
+    public static void ReleaseAll()
+    {
+        _dpadHeld.Clear();
+        _sticks.Clear();
+        _held = null;
     }
 
     private static void Tap(string action)
@@ -213,7 +285,7 @@ public static class Pad
     }
 
     /// <summary>The label printed on the button for an action, for the current controller.</summary>
-    public static string Glyph(string action) => (LastFamily, action) switch
+    public static string Glyph(string action) => (LastFamily == PadFamily.Keyboard && IsHandheld ? PadFamily.Xbox : LastFamily, action) switch
     {
         (PadFamily.Keyboard, Accept) => "Enter",
         (PadFamily.Keyboard, Back) => "Esc",

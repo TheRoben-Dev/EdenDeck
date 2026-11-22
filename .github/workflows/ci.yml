@@ -90,7 +90,7 @@ jobs:
       - name: Headless launcher (edendeck) for Steam shortcuts
         run: |
           dotnet publish src/EdenDeck.Cli -c Release -r linux-x64 --self-contained \
-            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o build/godot
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o build/godot
           build/godot/edendeck --help
 
       - name: UI smoke test (exported build)
