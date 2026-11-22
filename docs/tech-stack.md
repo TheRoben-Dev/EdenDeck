@@ -8,10 +8,11 @@ class libraries that don't reference Godot:
 ```
 src/
   EdenDeck.Core/         library scan, settings model, Eden manager, mod manager, self-update
-  EdenDeck.EdenAdapter/  ALL Eden-specific knowledge (paths, keys, flags, version detection)
+  EdenDeck.Backends.Eden/  ALL Eden-specific knowledge (paths, keys, flags, version detection),
+                           implements IEmulatorBackend (docs/backends.md)
   EdenDeck.App/          Godot project: screens, focus, input, theming, animation
 tests/
-  EdenDeck.EdenAdapter.Tests/  xUnit, runs against eden_adapter/schema/*.json + sample INIs
+  EdenDeck.Backends.Eden.Tests/  xUnit, runs against eden_adapter/schema/*.json + sample INIs
   EdenDeck.Core.Tests/
 layer/                   C++20/CMake Vulkan layer (separate build, packaged alongside)
 ```
