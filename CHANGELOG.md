@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.4.6
+- **Steam artwork, made by Scanline.** Shortcuts now come with a cover, wide banner, hero, logo and icon in the 32-bit 3D theme's style: a 3D cartridge with the game's own label over the fogged grid floor, and the title in the theme's lettering. Scanline's own shortcut uses a set that ships with the app. Each game's set is drawn on your device when you add it (games you already added get theirs the next time Scanline starts). Nothing is downloaded, and art you pick yourself in Steam is never replaced.
+
 ## 0.4.5
 - Fix: in Game Mode, adding shortcuts to Steam no longer shuts Steam down. That could leave the Deck stuck on Scanline with no way back. Scanline now offers **Restart the Deck now** instead and adds the shortcuts while the Deck shuts down, so they're in your library after the restart. On the desktop, Scanline still restarts just Steam.
 
