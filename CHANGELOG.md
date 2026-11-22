@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.5.4
+- New: **favorites and collections.** Star a game on its card and it comes first in the library. Put games on shelves like Playing now, Up next, Finished or Multiplayer from Collections on the card. Once you've starred or shelved something, a **Show** row at the top of the library lets you see just your favorites or one shelf.
+
 ## 0.5.3
 - New: **Saves** on every game card. See how big your save is and when it last changed, back it up with one press, and go back to any backup. Restoring or deleting always backs up what it replaces first, so nothing is lost. By default Scanline also makes a backup right before each play and keeps the last 5 of those per game (turn it off on the Saves page). Manual backups are never deleted automatically.
 
