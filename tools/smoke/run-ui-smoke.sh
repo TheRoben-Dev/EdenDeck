@@ -22,6 +22,10 @@ cp "$ROOT/tests/EdenDeck.Backends.Eden.Tests/Fixtures/nightly-467ab644/qt-config
 # The fixture's mod folder is a Deck path; keep it inside the fake home, with two mods for
 # "Castle Defenders" that both replace one file (the mods page warns about it).
 sed -i "s|^load_directory=.*|load_directory=$HOME/eden-mods/|" "$HOME/.config/eden/qt-config.ini"
+# Same for the NAND, with a save for "Castle Defenders" (the saves page backs it up).
+sed -i "s|^nand_directory=.*|nand_directory=$HOME/eden-nand/|" "$HOME/.config/eden/qt-config.ini"
+mkdir -p "$HOME/eden-nand/user/save/0000000000000000/00000000000000000000000000000001/0100000000070000"
+echo "slot 1" > "$HOME/eden-nand/user/save/0000000000000000/00000000000000000000000000000001/0100000000070000/save.dat"
 for m in "Better Water" "HD Textures"; do
   mkdir -p "$HOME/eden-mods/0100000000070000/$m/romfs/Data"
   echo "$m" > "$HOME/eden-mods/0100000000070000/$m/romfs/Data/water.bin"

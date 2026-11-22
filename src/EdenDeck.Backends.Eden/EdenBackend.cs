@@ -1,6 +1,7 @@
 using EdenDeck.Backends.Eden.Config;
 using EdenDeck.Backends.Eden.Install;
 using EdenDeck.Backends.Eden.Library;
+using EdenDeck.Backends.Eden.Saves;
 using EdenDeck.Backends.Eden.Mods;
 using EdenDeck.Backends.Eden.SystemFiles;
 using EdenDeck.Core;
@@ -38,6 +39,27 @@ public sealed class EdenBackend : IEmulatorBackend
 
     /// <summary>The community cheat database, fetched one game at a time when the player asks.</summary>
     public CheatDatabase Cheats { get; }
+
+    public IReadOnlyList<SaveFolder> Saves(string titleId) => EdenSaves.Find(Paths, titleId);
+
+    public IReadOnlyList<SaveBackup> SaveBackups(string titleId) => EdenSaves.Backups(_app.Data, titleId);
+
+    public string SaveBackupDir(string titleId) => EdenSaves.BackupDir(_app.Data, titleId);
+
+    public SaveBackup? BackupSaves(string titleId, bool automatic = false) => EdenSaves.Backup(Paths, _app.Data, titleId, automatic);
+
+    /// <summary>Restores a backup (Eden must be closed); returns the backup of what was replaced.</summary>
+    public SaveBackup? RestoreSaves(string titleId, string backupZip)
+    {
+        EnsureClosed();
+        return EdenSaves.Restore(Paths, _app.Data, titleId, backupZip);
+    }
+
+    public SaveBackup? DeleteSaves(string titleId)
+    {
+        EnsureClosed();
+        return EdenSaves.DeleteSaves(Paths, _app.Data, titleId);
+    }
 
     public IReadOnlyList<ModInfo> Mods(string titleId) => EdenMods.List(Paths, titleId);
 

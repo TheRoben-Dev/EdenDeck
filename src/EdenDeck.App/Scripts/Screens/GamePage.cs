@@ -171,6 +171,11 @@ public partial class GamePage : Screen
             }.Where(x => x != null));
             Add(new ActionButton("Mods & cheats" + summary, () => App.Push(new ModsPage(_game, Rebuild)),
                 "Install and switch mods, and get cheats for the version you play."));
+            var tid = _game.Base.TitleId;
+            var lastBackup = Try(() => Host.Eden.SaveBackups(tid).FirstOrDefault(), null, "save backups", col);
+            var hasSave = Try(() => Host.Eden.Saves(tid).Count > 0, false, "saves", col);
+            Add(new ActionButton("Saves" + (!hasSave ? "" : lastBackup == null ? "  ·  not backed up" : $"  ·  backed up {lastBackup.CreatedUtc.ToLocalTime():d MMM}"),
+                () => App.Push(new SavesPage(_game, Rebuild)), "Back up, restore or delete this game's save."));
         }
 
         col.AddChild(Section("Launch setup"));
