@@ -253,6 +253,7 @@ public partial class GamePage : Screen
         catch (Exception e)
         {
             GD.PushError($"GamePage: reading {what} failed: {e}");
+            EdenDeck.Host.AppLog.Error($"GamePage: reading {what} failed: {e}");
             noteParent.AddChild(UiTheme.Label($"Couldn't read {what}: {e.Message}", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
             return fallback;
         }

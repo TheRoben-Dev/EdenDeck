@@ -57,6 +57,7 @@ timeout 300 xvfb-run -a -s "-screen 0 1280x800x24" "$GODOT" "${PROJECT[@]}" --re
   -- --windowed --smoke "$OUT" 2>&1 | tee "$OUT/godot.log"
 code=${PIPESTATUS[0]}
 set -e
+cp "$HOME"/.local/share/*/logs/app.log "$OUT/app.log" 2>/dev/null || true
 if grep -qE "Unhandled exception|System\.[A-Za-z.]*Exception|smoke: step .* failed" "$OUT/godot.log"; then
   echo "::error::exceptions during the UI smoke test (see godot.log)"
   exit 1

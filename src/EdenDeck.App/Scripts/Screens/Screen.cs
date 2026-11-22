@@ -56,6 +56,7 @@ public abstract partial class Screen : MarginContainer
         {
             // Never leave a half-built (or invisible) page holding focus: show what went wrong and a way back.
             GD.PushError($"{GetType().Name} could not be built: {e}");
+            AppLog.Error($"{GetType().Name} could not be built: {e}");
             foreach (var c in GetChildren())
             {
                 RemoveChild(c);
