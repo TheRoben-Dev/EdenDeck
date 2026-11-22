@@ -27,6 +27,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 
 - 🎮 **Gamepad-only 10-foot UI** that reads well on an 800p handheld and a 4K TV
 - 📦 **Eden manager** to install, update and roll back Eden Stable or Nightly
+- 🔑 **Per-game key sets** so you can assign a different set of your own keys/firmware to games that need it
 - 🗂️ **Game library** with per-game settings, mods, cheats and controller profiles
 - 🕹️ **Controller mapping** written straight into Eden's own input profiles, with Steam Input handled properly
 - 🚂 **Per-game "Add to Steam"** so each game launches from Game Mode with its own settings applied
@@ -45,6 +46,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - **Stable / Nightly** channel picker, update checks, and the previous version kept around for **one-click rollback**.
 - Checksums or signatures verified wherever Eden publishes them.
 - **Guided import of your own** `prod.keys`, `title.keys` and firmware into the right Eden folders, with validation and clear error messages. EdenDeck never downloads or bundles keys, firmware or games.
+- **Per-game key sets.** Import several sets of your own keys (and matching firmware), label them, and assign a specific set to any game. Handy when one set won't boot a newer or older title. EdenDeck puts the assigned set in place right before launch and restores your default afterwards, so Eden itself needs no changes.
 
 ### 2. Controller-first UI
 
@@ -55,7 +57,7 @@ Eden stays a separate program. You can update it (Stable or Nightly) on its own 
 - Controller-navigable file and folder pickers. No native GTK/Qt dialogs.
 - Screens:
   - **Library grid:** scans your game folders and shows title, icon, title ID, version, update and DLC status.
-  - **Game page:** launch, settings, mods, cheats, controller profile, frame gen / upscaling, Add to Steam.
+  - **Game page:** launch, settings, key set, mods, cheats, controller profile, frame gen / upscaling, Add to Steam.
   - **Global settings**, **Eden manager**, **controller setup**.
 - Modern dark theme by default, with short smooth animations. An optional **retro-terminal theme**.
 - **Settings that matter, explained.** Only the Eden options worth changing (resolution scale, renderer, VSync, docked/handheld, shader cache, CPU accuracy and so on), each with a one-line explanation. Per-game overrides are written in Eden's own per-game config format.
@@ -171,7 +173,7 @@ Development happens in phases, and each one ends with a review before the next s
 - [ ] **Phase 1 — Research spike**
   Verify Eden's CLI flags, config format and keys, data and mod paths, per-game config and disabled add-ons on current Stable and Nightly. Write [`docs/eden-integration.md`](docs/eden-integration.md). Prototype a minimal Vulkan layer that hooks present in Eden under X11, Wayland and gamescope. Settle the frontend tech stack.
 - [ ] **Phase 2 — MVP**
-  Eden manager, library scan, controller-navigable UI, launching games fullscreen, basic global settings. CI pipeline in place.
+  Eden manager (including per-game key sets), library scan, controller-navigable UI, launching games fullscreen, basic global settings. CI pipeline in place.
 - [ ] **Phase 3 — Controllers and Steam**
   Controller mapping (games only; app nav stays fixed), Steam Input handling, gyro, Add to Steam for the app and per-game Game Mode shortcuts with settings applied.
 - [ ] **Phase 4 — Mods and cheats**
