@@ -134,6 +134,17 @@ public partial class CartStage : PolyStage
         }
         cart.Launch = 0;
         cart.OnLaunched = done;
+        // The spin runs in the per-frame update; if that ever stalls (stage held, cart scrolled
+        // out of view), the game still opens.
+        GetTree().CreateTimer(0.6).Timeout += () =>
+        {
+            if (cart.OnLaunched == done && IsInstanceValid(this) && IsInstanceValid(tile))
+            {
+                cart.Launch = -1;
+                cart.OnLaunched = null;
+                done();
+            }
+        };
     }
 
     protected override void Tick(float dt)

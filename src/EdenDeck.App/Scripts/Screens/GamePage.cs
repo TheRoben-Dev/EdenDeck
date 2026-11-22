@@ -84,7 +84,7 @@ public partial class GamePage : Screen
             info.AddChild(l);
         }
         // Whether Eden will actually load the update / DLC that was found (its own add-on switches included).
-        foreach (var a in Host.Eden.AddOnStatus(_game, Profile.LoadAddOns))
+        foreach (var a in Try(() => Host.Eden.AddOnStatus(_game, Profile.LoadAddOns).ToList(), [], "update/DLC status", info))
         {
             var (mark, text, color) = a.State switch
             {
@@ -132,7 +132,7 @@ public partial class GamePage : Screen
         col.AddChild(Section("Launch setup"));
         var p = Profile;
         var keySets = new List<(string, string)> { ("", "Default keys") };
-        keySets.AddRange(Host.Eden.KeySets.List().Select(k => (k.Id, k.Label + (k.HasFirmware ? " + firmware" : ""))));
+        keySets.AddRange(Try(() => Host.Eden.KeySets.List().Select(k => (k.Id, k.Label + (k.HasFirmware ? " + firmware" : ""))).ToList(), [], "key sets", col));
         var keys = new Stepper("Keys", keySets, p.KeySet ?? "",
             "Use one of your own key sets (and its firmware) just for this game. Add sets on the Eden tab.")
         {
@@ -144,9 +144,14 @@ public partial class GamePage : Screen
         if (!string.IsNullOrEmpty(_game.Base.TitleId))
         {
             var profiles = new List<(string, string)> { ("", "Global setup") };
-            profiles.AddRange(Host.Eden.InputProfiles().Select(n => (n, n)));
+            profiles.AddRange(Try(() => Host.Eden.InputProfiles().Select(n => (n, n)).ToList(), [], "controller profiles", col));
             var tid = _game.Base.TitleId;
-            var ctl = new Stepper("Controller", profiles, Host.Eden.GameInputProfile(tid) ?? "",
+            var current = Try(() => Host.Eden.GameInputProfile(tid), null, "this game's controller profile", col) ?? "";
+            if (profiles.All(x => x.Item1 != current))
+            {
+                current = "";
+            }
+            var ctl = new Stepper("Controller", profiles, current,
                 "Which controller setup player 1 uses in this game. Save setups as profiles in Settings → Controller.")
             {
                 Expands = true,
@@ -200,14 +205,17 @@ public partial class GamePage : Screen
         _frameGenNote = UiTheme.Label("", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true);
         col.AddChild(_frameGenNote);
         UpdateFrameGenNote();
-        var lsfg = Host.Eden.FindLsfgVk();
-        if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
+        var lsfg = Try(() => Host.Eden.FindLsfgVk(), null, "lsfg-vk status", col);
+        if (lsfg == null)
+        {
+        }
+        else if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
         {
             col.AddChild(UiTheme.Label(lsfg.Kind == EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.Legacy
                 ? "Frame generation needs lsfg-vk 2.x. The installed lsfg-vk is an older 1.x version."
                 : "Frame generation needs lsfg-vk, which isn't installed yet.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
-        else if (Host.Eden.LosslessDllPath() == null)
+        else if (Try(() => Host.Eden.LosslessDllPath(), "", "Lossless.dll status", col) == null)
         {
             col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and EdenDeck finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
@@ -220,8 +228,8 @@ public partial class GamePage : Screen
         else
         {
             var settings = Host.Eden.Settings;
-            var global = settings.ReadGlobal();
-            var overrides = settings.ReadPerGame(b.TitleId);
+            var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "Eden's settings", col);
+            var overrides = Try(() => settings.ReadPerGame(b.TitleId), new Dictionary<string, string>(), "this game's Eden settings", col);
             foreach (var o in settings.Options.Where(o => o.PerGame))
             {
                 var row = OptionRows.PerGame(o, overrides.GetValueOrDefault(o.Id), global.GetValueOrDefault(o.Id), v =>
@@ -233,6 +241,21 @@ public partial class GamePage : Screen
         Focus.Column(items);
         Anim.Stagger(items, 0.02);
         Anim.Stagger(info.GetChildren().OfType<Control>().ToList(), 0.04);
+    }
+
+    /// <summary>Reads something for the card; a failure shows a note there instead of stopping the card from opening.</summary>
+    private static T Try<T>(Func<T> read, T fallback, string what, Control noteParent)
+    {
+        try
+        {
+            return read();
+        }
+        catch (Exception e)
+        {
+            GD.PushError($"GamePage: reading {what} failed: {e}");
+            noteParent.AddChild(UiTheme.Label($"Couldn't read {what}: {e.Message}", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            return fallback;
+        }
     }
 
     private void UpdateFrameGenNote()
@@ -250,7 +273,7 @@ public partial class GamePage : Screen
 
     public override void AnimateOpen()
     {
-        if (_card == null || _opened)
+        if (_card == null || !IsInstanceValid(_card) || _opened)
         {
             return;
         }

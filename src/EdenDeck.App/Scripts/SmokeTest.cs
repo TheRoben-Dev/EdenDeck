@@ -47,6 +47,10 @@ public partial class SmokeTest : Node
         Step("key-shift-tab", () => Key(Godot.Key.Tab, shift: true), expect: "Castle Defenders");
         Step("joy-a-open", () => Tap(JoyButton.A), expect: "Play");
         Step("joy-b-back", () => Tap(JoyButton.B), expect: "Castle Defenders");
+        // A finger tap on another tile (as gamescope delivers it: move there, press, release) opens it.
+        Step("touch-tap-open", () => TouchTap(FindFocusable(GetTree().Root, "Sky Racers")), wait: 1.2, expect: "Play");
+        Step("touch-tap-back", () => Tap(JoyButton.B), expect: "Sky Racers");
+        Step("touch-refocus", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("game-page", () => Press(Pad.Accept));
         Step("game-stepper", () =>
         {
@@ -160,6 +164,33 @@ public partial class SmokeTest : Node
             }
         }, expect: "Makes the whole screen");
         Step("crt-off", () => Press("ui_right"), expect: "Makes the whole screen");
+        // Every theme, after switching to it: a game card opens (A and a finger tap) and Play starts the game.
+        foreach (var t in UiTheme.Themes)
+        {
+            var id = t.Id;
+            Step($"open-{id}-switch", () =>
+            {
+                SetTheme(id);
+                Tap(JoyButton.LeftShoulder);
+                Tap(JoyButton.LeftShoulder);
+            }, wait: 1.2);
+            Step($"open-{id}-a", () =>
+            {
+                FindFocusable(GetTree().Root, "Mountain Climb")?.GrabFocus();
+                Press(Pad.Accept);
+            }, wait: 1.2, expect: "Play");
+            Step($"open-{id}-play", () => Press(Pad.Accept), wait: 3.0, expect: "OK");
+            Step($"open-{id}-ok", () => Press(Pad.Accept), wait: 0.8, expect: "Play");
+            Step($"open-{id}-back", () => Press(Pad.Back), wait: 0.8, expect: "Mountain Climb");
+            Step($"open-{id}-tap", () => TouchTap(FindFocusable(GetTree().Root, "Sky Racers")), wait: 1.2, expect: "Play");
+            Step($"open-{id}-tap-back", () =>
+            {
+                Press(Pad.Back);
+                Tap(JoyButton.RightShoulder);
+                Tap(JoyButton.RightShoulder);
+            }, wait: 0.8);
+        }
+        Step("open-restore", () => SetTheme("dark"), wait: 1.0);
         Step("changelog", () =>
         {
             FindFocusable(GetTree().Root, "Version, changelog")?.GrabFocus();
@@ -222,6 +253,18 @@ public partial class SmokeTest : Node
 
     private static void Mouse(Vector2 at, bool pressed) =>
         Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = pressed, Position = at, GlobalPosition = at });
+
+    private static void TouchTap(Control? c)
+    {
+        if (c == null)
+        {
+            return;
+        }
+        var at = c.GetGlobalRect().GetCenter();
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at });
+        Mouse(at, true);
+        Mouse(at, false);
+    }
 
     private static void Tap(JoyButton b)
     {

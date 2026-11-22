@@ -4,6 +4,8 @@ Written for players. The app shows this under Settings → Updates → Changelog
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
 ## 0.3.5
+- Fix: opening a game's card could silently do nothing. The card now always opens; if part of it can't be read you get a note on the card, and if the whole page fails you see the error and a Back button instead of nothing.
+- 32-bit 3D theme: the CD case and disc player no longer flicker when they open, and the 3D cartridge always hands over to the game card even if its spin is interrupted.
 - Pick an accent colour for any theme under Settings → Appearance: gold, orange, red, pink, violet, blue, cyan or green. Pocket LCD offers whole screen colours instead (grey, ice blue, amber, rose) so it keeps its four shades. Each theme remembers its own, and it applies instantly.
 - Entering a Settings or Eden category no longer makes the category list twitch at the end of its slide.
 - Gets the updater ready for the app's new name (Scanline) in the next release, so updating from here just works.
