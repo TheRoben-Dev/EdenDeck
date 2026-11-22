@@ -168,7 +168,7 @@ Development happens in phases. Each phase lands as a pull request that merges on
 
 - [x] **Phase 1 — Research spike** ([report](docs/phase1-report.md))
   Verify Eden's CLI flags, config format and keys, data and mod paths, per-game config and disabled add-ons on current Stable and Nightly. Write [`docs/eden-integration.md`](docs/eden-integration.md). Prototype a minimal Vulkan layer that hooks present in Eden under X11, Wayland and gamescope. Settle the frontend tech stack.
-- [ ] **Phase 2 — MVP**
+- [x] **Phase 2 — MVP** ([report](docs/phase2-report.md))
   Eden manager (including per-game key sets), library scan, controller-navigable UI, launching games fullscreen, basic global settings. CI pipeline in place.
 - [ ] **Phase 3 — Controllers and Steam**
   Controller mapping (games only; app nav stays fixed), Steam Input handling, gyro, Add to Steam for the app and per-game Game Mode shortcuts with settings applied.
@@ -193,7 +193,27 @@ EdenDeck's core uses a generic emulator-backend interface ([`docs/backends.md`](
 | [`docs/phase1-report.md`](docs/phase1-report.md) | Phase 1 findings, assumptions, risks, verification status |
 | `eden_adapter/schema/` | Eden settings and enum snapshots per Eden version |
 | `tools/extract_eden_settings.py` | Regenerates those snapshots from an Eden source checkout |
+| [`docs/phase2-report.md`](docs/phase2-report.md) | Phase 2 (MVP) contents, verification status, known gaps |
+| `src/EdenDeck.Core/` | Backend interface, library grouping, launch plans, per-game profiles, frame gen policy |
+| `src/EdenDeck.Backends.Eden/` | Everything Eden-specific |
+| `src/EdenDeck.Host/` | Composition root shared by the app and the CLI |
+| `src/EdenDeck.Cli/` | `edendeck`, the headless launcher used by Steam shortcuts |
+| `src/EdenDeck.App/` | Godot 4 .NET app (UI built in code) |
+| `tests/` | xUnit tests with sample Eden configs |
+| `tools/smoke/` | Scripted UI smoke test with screenshots |
 | `layer/` | `VK_LAYER_EDENDECK_fsr` Vulkan layer and its hardware test procedure |
+
+## Building
+
+You need the .NET 8 SDK, and for the app, the Godot 4.7.2 .NET editor.
+
+```sh
+dotnet test EdenDeck.sln                      # backend, core and CLI tests
+dotnet run --project src/EdenDeck.Cli -- help # headless launcher
+cd src/EdenDeck.App && godot --path . -- --windowed   # run the app from source
+```
+
+CI builds the Linux export on every pull request and uploads it as the `EdenDeck-linux-x86_64` artifact, together with screenshots from the UI smoke test.
 
 ---
 

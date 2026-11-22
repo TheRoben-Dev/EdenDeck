@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EdenDeck.Host</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <ProjectReference Include="..\EdenDeck.Backends.Eden\EdenDeck.Backends.Eden.csproj" />
+    <InternalsVisibleTo Include="EdenDeck.Core.Tests" />
+  </ItemGroup>
+</Project>

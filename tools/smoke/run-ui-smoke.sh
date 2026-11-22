@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# UI smoke test: fake $HOME with a small fake library, then drives the Godot app with scripted
+# controller input (--smoke) under Xvfb and saves a screenshot per step.
+#
+#   tools/smoke/run-ui-smoke.sh <godot-mono-editor | exported EdenDeck.x86_64> <out-dir>
+#
+# The "games" are random bytes named like real dumps ("Title [TITLEID][v0].nsp"); the scanner
+# falls back to the title id in the file name. No real game, key or firmware files are used.
+set -euo pipefail
+GODOT=$(realpath "$1")
+OUT=$(realpath -m "$2")
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+export HOME="$WORK/home" XDG_RUNTIME_DIR="$WORK/run"
+mkdir -p "$HOME/Games/Switch" "$HOME/.config/eden" "$XDG_RUNTIME_DIR" "$OUT"
+cp "$ROOT/tests/EdenDeck.Backends.Eden.Tests/Fixtures/nightly-467ab644/qt-config.ini" "$HOME/.config/eden/"
+i=0
+for t in "Mountain Climb Deluxe" "Sky Racers" "Pixel Farm Story" "Ocean Odyssey" "Robot Rumble" "Starlight Saga" "Castle Defenders"; do
+  i=$((i + 1))
+  head -c 4096 /dev/urandom > "$HOME/Games/Switch/$t [01000000000${i}0000][v0].nsp"
+done
+head -c 512 /dev/urandom > "$HOME/Games/Switch/Sky Racers [0100000000020800][v131072].nsp"
+
+CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/edendeck.dll"
+[ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/edendeck.dll"
+dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
+dotnet "$CLI" scan
+
+# Fake Eden: records its arguments and exits after a moment, to exercise the real launch path.
+FAKE="$WORK/Eden-Linux-v0.2.1-amd64.AppImage"
+printf '#!/bin/sh\necho "$@" > "%s/eden-args.txt"\nsleep 1\n' "$OUT" > "$FAKE"
+chmod +x "$FAKE"
+dotnet "$CLI" eden use "$FAKE"
+
+cd "$ROOT/src/EdenDeck.App"
+PROJECT=(--path .)
+[ "$(basename "$GODOT")" = "EdenDeck.x86_64" ] && PROJECT=()  # exported build: project is embedded
+set +e
+timeout 300 xvfb-run -a -s "-screen 0 1280x800x24" "$GODOT" "${PROJECT[@]}" --rendering-driver opengl3 \
+  -- --windowed --smoke "$OUT" 2>&1 | tee "$OUT/godot.log"
+code=${PIPESTATUS[0]}
+set -e
+if grep -qE "Unhandled exception|System\.[A-Za-z.]*Exception|smoke: step .* failed" "$OUT/godot.log"; then
+  echo "::error::exceptions during the UI smoke test (see godot.log)"
+  exit 1
+fi
+if ! grep -q -- "-f -g $HOME/Games/Switch/" "$OUT/eden-args.txt" 2>/dev/null; then
+  echo "::error::the app did not launch (fake) Eden with -f -g <game>"
+  exit 1
+fi
+echo "eden args: $(cat "$OUT/eden-args.txt")"
+shots=$(ls "$OUT"/*.png 2>/dev/null | wc -l)
+echo "exit=$code screenshots=$shots"
+[ "$code" -eq 0 ] && [ "$shots" -ge 8 ]
