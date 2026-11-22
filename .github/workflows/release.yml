@@ -1,14 +1,23 @@
 name: Release
 
-# Push a tag vX.Y.Z (matching <Version> in Directory.Build.props) to publish a GitHub Release
-# with the portable Linux build. The build is smoke-tested before anything is published.
+# Publishes a GitHub Release with the portable Linux build whenever main carries a <Version>
+# (Directory.Build.props) that has no release yet. To release: bump <Version> in a PR and merge.
+# The workflow creates the vX.Y.Z tag itself. The packaged build is smoke-tested first.
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths:
+      - Directory.Build.props
+      - .github/workflows/release.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 env:
   GODOT_VERSION: 4.7.2
@@ -23,20 +32,24 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          tag=${GITHUB_REF_NAME#v}
-          props=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props)
-          if [ "$tag" != "$props" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match Directory.Build.props <Version>$props</Version>"
-            exit 1
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props)
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-          echo "VERSION=$tag" >> "$GITHUB_ENV"
 
       - uses: actions/setup-dotnet@v4
+        if: steps.version.outputs.skip != 'true'
         with:
           dotnet-version: 8.0.x
 
       - name: Cache Godot editor and export templates
+        if: steps.version.outputs.skip != 'true'
         id: godot-cache
         uses: actions/cache@v4
         with:
@@ -44,7 +57,7 @@ jobs:
           key: godot-mono-${{ env.GODOT_VERSION }}
 
       - name: Download Godot .NET ${{ env.GODOT_VERSION }}
-        if: steps.godot-cache.outputs.cache-hit != 'true'
+        if: steps.version.outputs.skip != 'true' && steps.godot-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/godot-dl && cd ~/godot-dl
           base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
@@ -56,6 +69,7 @@ jobs:
             | sha512sum -c -
 
       - name: Install tools
+        if: steps.version.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends cmake ninja-build g++ libvulkan-dev xvfb libgl1-mesa-dri libglu1-mesa
@@ -67,16 +81,19 @@ jobs:
           unzip -q -o -j templates.tpz 'templates/linux_*x86_64*' 'templates/version.txt' -d "$dest"
 
       - name: Vulkan layer
+        if: steps.version.outputs.skip != 'true'
         run: |
           cmake -S layer -B layer/build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build layer/build
 
       - name: Tests
+        if: steps.version.outputs.skip != 'true'
         run: |
           dotnet build EdenDeck.sln -c Release
           dotnet test EdenDeck.sln -c Release --no-build
 
       - name: Export app
+        if: steps.version.outputs.skip != 'true'
         working-directory: src/EdenDeck.App
         run: |
           timeout 300 "$GODOT" --headless --import
@@ -86,14 +103,17 @@ jobs:
           ! grep -E "^ERROR" export.log
 
       - name: Headless launcher
+        if: steps.version.outputs.skip != 'true'
         run: |
           dotnet publish src/EdenDeck.Cli -c Release -r linux-x64 --self-contained \
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o build/cli
 
       - name: Package
+        if: steps.version.outputs.skip != 'true'
         run: tools/release/package-linux.sh "$VERSION" build/godot build/cli/edendeck layer/build dist
 
       - name: Smoke test the packaged build
+        if: steps.version.outputs.skip != 'true'
         run: |
           mkdir -p "$RUNNER_TEMP/pkg"
           tar xzf dist/EdenDeck-$VERSION-linux-x86_64.tar.gz -C "$RUNNER_TEMP/pkg"
@@ -101,6 +121,7 @@ jobs:
           "$RUNNER_TEMP/pkg/EdenDeck/edendeck" help
 
       - name: Publish release
+        if: steps.version.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -113,10 +134,10 @@ jobs:
 
           Eden Deck never downloads keys, firmware or games. Verify the download with \`SHA256SUMS\`.
           NOTES
-          gh release create "$GITHUB_REF_NAME" dist/* --title "Eden Deck $VERSION" --notes-file notes.md --verify-tag
+          gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Eden Deck $VERSION" --notes-file notes.md
 
       - name: Upload screenshots
-        if: always()
+        if: always() && steps.version.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: release-screenshots
