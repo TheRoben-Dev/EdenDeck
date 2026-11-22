@@ -29,6 +29,7 @@ public partial class LibraryScreen : Screen
             .ThenBy(g => g.Base.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
         col.AddChild(UiTheme.Label($"{games.Count} games", UiTheme.SmallSize + 1, UiTheme.Dim));
+        var fixes = FixRows(col);
 
         var grid = new GridContainer { Columns = Columns };
         grid.AddThemeConstantOverride("h_separation", 18);
@@ -48,9 +49,36 @@ public partial class LibraryScreen : Screen
             grid.AddChild(tile);
             tiles.Add(tile);
         }
-        Focus.Grid(tiles, Columns);
+        Focus.Grid(tiles, Columns, above: fixes.LastOrDefault());
+        if (fixes.Count > 0)
+        {
+            Focus.Column(fixes, below: tiles.FirstOrDefault());
+        }
         Anim.Stagger(tiles);
         _first = tiles.FirstOrDefault();
+    }
+
+    /// <summary>One row per game file the scan found without its extension, with a rename action.</summary>
+    private List<Control> FixRows(VBoxContainer col)
+    {
+        var rows = new List<Control>();
+        foreach (var f in Host.Misnamed)
+        {
+            var file = f;
+            var row = new ActionButton($"⚠  \"{f.Name}\" is a game without a file extension  ·  Fix name", () => App.Confirm(
+                $"\"{file.Name}\" is a Switch game ({file.Extension.TrimStart('.').ToUpperInvariant()}), but its name has no extension, so Eden can't recognise it.\n\nRename it to \"{file.SuggestedName}\"? Nothing else about the file changes.",
+                "Rename", () =>
+                {
+                    if (App.Guard(() => LibraryService.FixName(file)))
+                    {
+                        Rescan();
+                    }
+                }), $"Renames it to {f.SuggestedName} so it shows up in your library.");
+            row.AddThemeColorOverride("font_color", UiTheme.Warn);
+            col.AddChild(row);
+            rows.Add(row);
+        }
+        return rows;
     }
 
     private Button Tile(LibraryGame g)
@@ -112,9 +140,10 @@ public partial class LibraryScreen : Screen
                 ? "Pick the folder that holds your own game dumps (.nsp, .xci, .nsz, .xcz). Eden Deck never downloads games."
                 : "None of your library folders contain Switch games yet. Add another folder, or rescan after copying games over.",
             UiTheme.SmallSize + 2, UiTheme.Dim, wrap: true));
+        var items = FixRows(col);
         var add = new ActionButton("Add library folder", AddFolder);
         col.AddChild(add);
-        var items = new List<Control> { add };
+        items.Add(add);
         if (!noFolders)
         {
             var rescan = new ActionButton("Rescan", Rescan);
@@ -122,7 +151,7 @@ public partial class LibraryScreen : Screen
             items.Add(rescan);
         }
         Focus.Column(items);
-        _first = add;
+        _first = items[0];
     }
 
     private void AddFolder() =>
