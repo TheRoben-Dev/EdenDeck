@@ -49,6 +49,24 @@ public partial class Main : Control
             {
                 _highlight.Suspended = value;
             }
+            PauseBackground();
+        }
+    }
+
+    private AnimatedBackground? _animBg;
+    private Scanlines? _crt;
+
+    /// <summary>Background motion stops while a game runs or the window is in the background.</summary>
+    private void PauseBackground()
+    {
+        var paused = _gameRunning || !_appFocused;
+        if (_animBg != null && IsInstanceValid(_animBg))
+        {
+            _animBg.Paused = paused;
+        }
+        if (_crt != null && IsInstanceValid(_crt))
+        {
+            _crt.Paused = paused;
         }
     }
 
@@ -56,10 +74,7 @@ public partial class Main : Control
 
     public override void _Ready()
     {
-        if (Pad.IsHandheld)
-        {
-            Input.MouseMode = Input.MouseModeEnum.Hidden;  // shown again when a real mouse moves
-        }
+        Input.MouseMode = Input.MouseModeEnum.Hidden;  // never drawn; clicks and touch still work
         Instance = this;
         Pad.Setup();
         Pad.FamilyChanged += UpdateChrome;
@@ -169,7 +184,7 @@ public partial class Main : Control
         return h;
     }
 
-    /// <summary>Background colour, accent glow and the theme's decoration (dot grid, scanlines, LCD grid).</summary>
+    /// <summary>Background colour, accent glow, the theme's animated background and decoration (dot grid, LCD grid), and the CRT effect.</summary>
     private void BuildBackground()
     {
         foreach (var c in _bgLayer.GetChildren())
@@ -204,6 +219,13 @@ public partial class Main : Control
             glow.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             _bgLayer.AddChild(glow);
         }
+        _animBg = null;
+        _crt = null;
+        if (Host?.Settings.AnimatedBackground != false)
+        {
+            _animBg = new AnimatedBackground(UiTheme.Spec);
+            _bgLayer.AddChild(_animBg);
+        }
         switch (UiTheme.Spec.Decor)
         {
             case Decor.DotGrid:
@@ -216,8 +238,10 @@ public partial class Main : Control
         // Scanlines sit above everything (ZIndex), from the theme or the CRT setting.
         if (UiTheme.Spec.Decor == Decor.Scanlines || Host?.Settings.Crt == true)
         {
-            _bgLayer.AddChild(new Scanlines(strong: UiTheme.Spec.Decor != Decor.Scanlines));
+            _crt = new Scanlines(Host?.Settings.Crt == true ? Host.Settings.CrtLevel : 0);
+            _bgLayer.AddChild(_crt);
         }
+        PauseBackground();
     }
 
     /// <summary>
@@ -454,10 +478,13 @@ public partial class Main : Control
         {
             _appFocused = false;
             Pad.ReleaseAll();
+            PauseBackground();
         }
         else if (what == NotificationApplicationFocusIn)
         {
             _appFocused = true;
+            Input.MouseMode = Input.MouseModeEnum.Hidden;
+            PauseBackground();
         }
     }
 

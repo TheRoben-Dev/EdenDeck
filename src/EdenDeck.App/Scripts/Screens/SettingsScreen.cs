@@ -244,12 +244,32 @@ public partial class SettingsScreen : Screen
             App.ApplyTheme(v);
         };
         Add(theme);
-        Add(Toggle.Create("CRT scanlines", Host.Settings.Crt, on =>
+        Add(Toggle.Create("Animated background", Host.Settings.AnimatedBackground, on =>
         {
-            Host.SaveSettings(Host.Settings with { Crt = on });
+            Host.SaveSettings(Host.Settings with { AnimatedBackground = on });
             App.RefreshBackground();
-        }, "Scanlines and darkened edges over the whole screen, like an old TV.",
-            "Works with every theme. Retro terminal always has its own lighter scanlines.", null));
+        }, "A slow animation behind the menus that matches the theme. It stops while a game runs.",
+            "Each theme has its own: drifting lights, a pulsing grid, phosphor rain, pixel clouds, a scrolling floor, an LCD shimmer or spinning shapes.",
+            "A plain background. Uses a little less battery."));
+        var crt = new Stepper("CRT effect", [("off", "Off"), ("1", "Subtle"), ("2", "Medium"), ("3", "Strong")],
+            Host.Settings.Crt ? Host.Settings.CrtLevel.ToString() : "off",
+            "Makes the whole screen look like an old TV. Works with every theme.")
+        {
+            Expands = true,
+            DetailFor = v => v switch
+            {
+                "off" => "No effect. Retro terminal still has its own light scanlines.",
+                "1" => "Faint scanlines, a slight wobble and a gentle tube curve.",
+                "2" => "Scanlines, a wobbling picture, a rolling band, colour fringes and dark edges.",
+                _ => "The full old-TV look. Text gets a little softer.",
+            },
+        };
+        crt.Changed += v =>
+        {
+            Host.SaveSettings(v == "off" ? Host.Settings with { Crt = false } : Host.Settings with { Crt = true, CrtLevel = int.Parse(v) });
+            App.RefreshBackground();
+        };
+        Add(crt);
         Add(Toggle.Create("Animations", !Host.Settings.ReduceMotion, on =>
         {
             Host.SaveSettings(Host.Settings with { ReduceMotion = !on });

@@ -30,6 +30,12 @@ public sealed record AppSettings
     /// <summary>CRT scanlines over the UI in any theme.</summary>
     public bool Crt { get; init; }
 
+    /// <summary>CRT effect strength when <see cref="Crt"/> is on: 1 subtle, 2 medium, 3 strong.</summary>
+    public int CrtLevel { get; init; } = 2;
+
+    /// <summary>The theme's slow animated background behind the menus.</summary>
+    public bool AnimatedBackground { get; init; } = true;
+
     /// <summary>Check GitHub Releases for a new Eden Deck version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
 

@@ -20,7 +20,9 @@ public partial class SmokeTest : Node
     {
         _outDir = outDir;
         Directory.CreateDirectory(outDir);
-        Step("library", () => { });
+        // The animated background costs a lot under software rendering (CI); it would skew the
+        // hold-to-repeat timing. It is switched on for the theme screenshots further down.
+        Step("library", () => SetAnimatedBackground(false));
         // Real joypad and keyboard events (not actions), through Pad's translation layer.
         Step("joy-dpad-right", () => Joy(JoyButton.DpadRight, true), wait: 0.25, expect: "Mountain Climb");
         Step("joy-dpad-release", () => Joy(JoyButton.DpadRight, false), expect: "Mountain Climb");
@@ -75,6 +77,16 @@ public partial class SmokeTest : Node
             }
             Mouse(new Vector2(800, 260), false);
         }, expect: "Library");
+        // A sideways swipe over a row is not a press either.
+        Step("touch-swipe-sideways", () =>
+        {
+            Mouse(new Vector2(800, 300), true);
+            for (var x = 812; x <= 900; x += 12)
+            {
+                Input.ParseInputEvent(new InputEventMouseMotion { Position = new Vector2(x, 302), GlobalPosition = new Vector2(x, 302), ButtonMask = MouseButtonMask.Left, Relative = new Vector2(12, 0) });
+            }
+            Mouse(new Vector2(900, 302), false);
+        }, expect: "Library");
         Step("settings-graphics", () =>
         {
             FindFocusable(GetTree().Root, "Resolution, upscaling")?.GrabFocus();
@@ -87,11 +99,24 @@ public partial class SmokeTest : Node
         Step("settings-back-to-category", () => Press(Pad.Back), expect: "Graphics");
         // Themes switch in place: still on Settings, focus stays on the Theme row.
         Step("appearance", () => FindFocusable(GetTree().Root, "Theme, CRT")?.GrabFocus(), expect: "Appearance");
-        Step("theme-focus", () => FindFocusable(GetTree().Root, "Changes apply right away")?.GrabFocus(), expect: "Changes apply right away");
+        Step("theme-focus", () =>
+        {
+            SetAnimatedBackground(true);
+            FindFocusable(GetTree().Root, "Changes apply right away")?.GrabFocus();
+        }, expect: "Changes apply right away");
         for (var i = 1; i <= UiTheme.Themes.Count; i++)
         {
             Step($"theme-{i}", () => Press("ui_right"), wait: 0.8, expect: "Changes apply right away");
         }
+        Step("crt-strong", () =>
+        {
+            FindFocusable(GetTree().Root, "Makes the whole screen")?.GrabFocus();
+            for (var i = 0; i < 3; i++)
+            {
+                Press("ui_right");
+            }
+        }, expect: "Makes the whole screen");
+        Step("crt-off", () => Press("ui_right"), expect: "Makes the whole screen");
         Step("changelog", () =>
         {
             FindFocusable(GetTree().Root, "Version, changelog")?.GrabFocus();
@@ -111,6 +136,15 @@ public partial class SmokeTest : Node
             Press("ui_down");
             Press(Pad.Accept);   // Add folder -> picker
         });
+    }
+
+    private static void SetAnimatedBackground(bool on)
+    {
+        if (Main.Instance.Host is { } host)
+        {
+            host.SaveSettings(host.Settings with { AnimatedBackground = on });
+            Main.Instance.RefreshBackground();
+        }
     }
 
     private void Step(string name, Action act, double wait = 1.0, string? expect = null) => _steps.Enqueue((name, act, wait, expect));
