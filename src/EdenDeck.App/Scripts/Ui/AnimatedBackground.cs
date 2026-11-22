@@ -1,4 +1,6 @@
+using EdenDeck.App.Ui.Poly;
 using Godot;
+using Poly3DBackdrop = EdenDeck.App.Ui.Poly.PolyBackdrop;
 
 namespace EdenDeck.App.Ui;
 
@@ -19,6 +21,7 @@ public partial class AnimatedBackground : Control
     private readonly ShaderMaterial? _material;
     private readonly ColorRect? _rect;
     private readonly Poly[] _shapes = [];
+    private readonly Poly3DBackdrop? _poly;
     private double _time = StillTime;
     private double _acc;
     private bool _paused;
@@ -30,7 +33,11 @@ public partial class AnimatedBackground : Control
         set
         {
             _paused = value;
-            SetProcess(!value);
+            SetProcess(!value && _poly == null);
+            if (_poly != null)
+            {
+                _poly.Paused = value;
+            }
         }
     }
 
@@ -38,6 +45,14 @@ public partial class AnimatedBackground : Control
     {
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        if (spec.Id == "polygon")
+        {
+            // A real 3D scene (its own low-res renderer, clock and pause).
+            _poly = new Poly3DBackdrop(spec);
+            AddChild(_poly);
+            SetProcess(false);
+            return;
+        }
         if (spec.Id == "cdera")
         {
             _shapes =
@@ -65,6 +80,10 @@ public partial class AnimatedBackground : Control
 
     public override void _Process(double delta)
     {
+        if (_poly != null)
+        {
+            return;
+        }
         if (!Anim.Enabled)
         {
             if (_time != StillTime)
@@ -85,6 +104,10 @@ public partial class AnimatedBackground : Control
 
     private void Push()
     {
+        if (_poly != null)
+        {
+            return;
+        }
         if (_material != null)
         {
             _material.SetShaderParameter("t", (float)_time);

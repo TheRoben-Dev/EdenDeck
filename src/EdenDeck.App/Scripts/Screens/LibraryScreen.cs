@@ -1,4 +1,5 @@
 using EdenDeck.App.Ui;
+using EdenDeck.App.Ui.Poly;
 using EdenDeck.Core.Library;
 using Godot;
 
@@ -9,6 +10,7 @@ public partial class LibraryScreen : Screen
 {
     private const int Columns = 6;
     private Control? _first;
+    private CartStage? _stage;
 
     public override IEnumerable<(string Action, string Label)> Hints =>
         Host.Library.Count > 0 ? [(Pad.Tertiary, "Play"), (Pad.Secondary, "Rescan")] : [];
@@ -40,7 +42,8 @@ public partial class LibraryScreen : Screen
             pad.AddThemeConstantOverride($"margin_{side}", 8);
         }
         pad.AddChild(grid);
-        col.AddChild(Scroller(pad));
+        var scroller = Scroller(pad);
+        col.AddChild(scroller);
 
         var tiles = new List<Control>();
         foreach (var g in games)
@@ -56,6 +59,13 @@ public partial class LibraryScreen : Screen
         }
         Anim.Stagger(tiles);
         _first = tiles.FirstOrDefault();
+        _stage = null;
+        if (UiTheme.Poly3D)
+        {
+            // Same grid, same focus; the carts are drawn in 3D on top of the tiles.
+            _stage = new CartStage(tiles.Select((t, i) => (t, games[i].Base.Title)).ToList(), scroller);
+            AddChild(_stage);
+        }
     }
 
     /// <summary>One row per game file the scan found without its extension, with a rename action.</summary>
@@ -104,14 +114,25 @@ public partial class LibraryScreen : Screen
             b.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
         }
         b.SetMeta(FocusHighlight.OwnFocus, true);
-        var cart = new Cartridge(g.Base.Title, Monogram(g.Base.Title), extras.Count > 0 ? string.Join("  ·  ", extras) : null);
+        var cart = new Cartridge(g.Base.Title, Monogram(g.Base.Title), extras.Count > 0 ? string.Join("  ·  ", extras) : null) { TitleOnly = UiTheme.Poly3D };
         cart.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         b.AddChild(cart);
         b.FocusEntered += () => cart.SetFocused(true);
         b.FocusExited += () => cart.SetFocused(false);
         b.MouseEntered += () => { if (!b.HasFocus()) { b.GrabFocus(); } };
         Anim.PressFlash(b);
-        b.Pressed += () => App.Push(new GamePage(g, b.GetGlobalRect()));
+        b.Pressed += () =>
+        {
+            void Open() => App.Push(new GamePage(g, b.GetGlobalRect()));
+            if (_stage != null)
+            {
+                _stage.Launch(b, Open);
+            }
+            else
+            {
+                Open();
+            }
+        };
         b.SetMeta("game", g.GameId);
         return b;
     }

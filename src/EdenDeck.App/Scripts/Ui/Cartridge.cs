@@ -18,6 +18,9 @@ public partial class Cartridge : Control
     private bool _focused;
     private Tween? _tween;
 
+    /// <summary>Draw only the title and chips (the 32-bit 3D theme draws the cart itself in 3D).</summary>
+    public bool TitleOnly { get; init; }
+
     public Cartridge(string title, string monogram, string? chips = null, bool large = false)
     {
         _title = title;
@@ -55,7 +58,18 @@ public partial class Cartridge : Control
         var origin = new Vector2(0, lift + 6 * s);  // leave room above for the lift
         var bodyH = h - 6 * s;
 
+        if (TitleOnly)
+        {
+            origin = new Vector2(0, 6 * s);
+        }
         var shell = ShellPolygon(w, bodyH, 12 * s, 20 * s).Select(p => p + origin).ToArray();
+        var labelRect = new Rect2(origin + new Vector2(10 * s, 20 * s), new Vector2(w - 20 * s, _large ? bodyH - 50 * s : bodyH * 0.6f));
+        var font = GetThemeDefaultFont();
+        if (TitleOnly)
+        {
+            DrawTitle(font, labelRect, s, w);
+            return;
+        }
         // Soft drop shadow that grows as the cart lifts.
         var shadow = shell.Select(p => p + new Vector2(0, (4 + 6 * _lift) * s)).ToArray();
         DrawColoredPolygon(shadow, new Color(0, 0, 0, 0.28f + 0.12f * _lift));
@@ -74,7 +88,6 @@ public partial class Cartridge : Control
 
         // Label window with the art.
         // The big cart on the game card has no printed title (the card shows it), so the label is taller.
-        var labelRect = new Rect2(origin + new Vector2(10 * s, 20 * s), new Vector2(w - 20 * s, _large ? bodyH - 50 * s : bodyH * 0.6f));
         var tile = UiTheme.TileColor(_title);
         var label = new StyleBoxFlat { BgColor = tile, AntiAliasing = true };
         label.SetCornerRadiusAll((int)(7 * s));
@@ -84,7 +97,6 @@ public partial class Cartridge : Control
         sheen.SetCornerRadiusAll((int)(7 * s));
         DrawStyleBox(sheen, new Rect2(labelRect.Position, new Vector2(labelRect.Size.X, labelRect.Size.Y * 0.38f)));
 
-        var font = GetThemeDefaultFont();
         var monoSize = (int)(labelRect.Size.Y * 0.42f);
         var ms = font.GetStringSize(_monogram, HorizontalAlignment.Left, -1, monoSize);
         DrawString(font, labelRect.Position + new Vector2((labelRect.Size.X - ms.X) / 2, (labelRect.Size.Y - ms.Y) / 2 + font.GetAscent(monoSize)),
@@ -94,8 +106,12 @@ public partial class Cartridge : Control
         {
             return;
         }
+        DrawTitle(font, labelRect, s, w);
+    }
 
-        // Title (two lines max) and chips on the shell under the label.
+    /// <summary>Title (two lines max) and chips under the label.</summary>
+    private void DrawTitle(Font font, Rect2 labelRect, float s, float w)
+    {
         var textSize = (int)((_large ? 17 : 14) * (UiTheme.Mono ? 0.92f : 1f));
         var textTop = labelRect.End.Y + 6 * s;
         var textW = w - 20 * s;
@@ -104,7 +120,7 @@ public partial class Cartridge : Control
         for (var i = 0; i < lines.Count; i++)
         {
             DrawString(font, new Vector2(10 * s, textTop + font.GetAscent(textSize) + i * lineH), lines[i],
-                HorizontalAlignment.Left, textW, textSize, UiTheme.Text);
+                HorizontalAlignment.Left, textW, textSize, TitleOnly && _focused ? UiTheme.AccentText : UiTheme.Text);
         }
         if (_chips != null)
         {
