@@ -105,6 +105,10 @@ public partial class EdenScreen : TwoPaneScreen
         }
         if (install.Current is { } cur)
         {
+            if (App.EdenUpdate != null)
+            {
+                col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
+            }
             col.AddChild(UiTheme.Label($"Eden {Cap(cur.Channel)} {cur.Version}", 24));
             col.AddChild(Note((cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
         }
