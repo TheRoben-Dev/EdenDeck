@@ -454,7 +454,7 @@ public partial class GamePage : Screen
         Add(CrtRow("mGBA", moving: false));
         col.AddChild(UiTheme.Label("In mGBA the CRT effect is a still picture effect: no wobble or rolling band, since mGBA's shaders have no clock.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-        col.AddChild(UiTheme.Label("Buttons use mGBA's own mapping, by name (A is A, B is B); change it in mGBA's Settings → Controllers. Hold View + Start for 2 seconds to quit. Scanline's in-game menu and performance overlay only reach Vulkan emulators, so they aren't available in mGBA.",
+        col.AddChild(UiTheme.Label("Buttons are set up like a GBA: A on the right face button, B on the bottom, L/R on the bumpers. Change them in mGBA's Settings → Controllers and Scanline keeps yours. Hold View + Start for 2 seconds to quit. Scanline's in-game menu and performance overlay only reach Vulkan emulators, so they aren't available in mGBA.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
