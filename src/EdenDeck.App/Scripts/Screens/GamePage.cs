@@ -206,6 +206,25 @@ public partial class GamePage : Screen
             Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new MgbaModsPage(_game, Rebuild)),
                 "Apply a ROM patch such as a translation, and get cheats for this game."));
         }
+        if (backend is EdenDeck.Backends.Rpcs3.Rpcs3Backend rpcs3 && !string.IsNullOrEmpty(_game.Base.TitleId))
+        {
+            var on = Try(() => rpcs3.Patches.EnabledCount(_game.Base.TitleId), 0, "patches", col);
+            Add(new ActionButton("Game patches" + (on == 0 ? "" : $"  ·  {on} on"), () => App.Push(new Rpcs3PatchesPage(_game, Rebuild)),
+                "60 fps modes, higher resolutions and fixes from RPCS3's community patch list."));
+            var usage = Try(() => rpcs3.Usage(_game.Base), null, "sizes", col);
+            if (usage is { Cache: > 0 })
+            {
+                Add(new ActionButton($"Rebuild RPCS3 cache ({EdenDeck.Backends.Eden.Storage.StorageReport.Format(usage.Cache)})", () => App.Confirm(
+                    "Clear this game's RPCS3 cache? RPCS3 compiles it again on the next start, which takes a while. Useful after an RPCS3 or driver update.", "Clear", () =>
+                    {
+                        if (App.Guard(() => rpcs3.ClearCache(_game.Base)))
+                        {
+                            App.Success("Cache cleared");
+                            Rebuild();
+                        }
+                    }), "Fixes glitches after an RPCS3 or graphics driver update."));
+            }
+        }
         if (backend.SaveData is { } saveData && !string.IsNullOrEmpty(b.TitleId))
         {
             var lastBackup = Try(() => saveData.Backups(b).FirstOrDefault(), null, "save backups", col);
@@ -242,6 +261,10 @@ public partial class GamePage : Screen
         else if (backend.Id == EdenDeck.Backends.Mgba.MgbaBackend.BackendId)
         {
             BuildMgbaLaunchSetup(col, Add);
+        }
+        else if (backend.Id == EdenDeck.Backends.Rpcs3.Rpcs3Backend.BackendId)
+        {
+            BuildRpcs3LaunchSetup(col, Add);
         }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));
@@ -314,65 +337,77 @@ public partial class GamePage : Screen
                 }, "Loads this game's update and DLC files straight from your library. Nothing is installed or copied."));
             }
 
-            var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Lossless (lsfg-vk)")],
-                p.FrameGen == FrameGenMode.Builtin ? nameof(FrameGenMode.Builtin) : nameof(FrameGenMode.Off),
-                "Doubles a 30 fps game to 60 fps with Lossless Scaling frame generation (lsfg-vk). Never goes above 60.")
-            {
-                Expands = true,
-                DetailFor = v => v == nameof(FrameGenMode.Builtin)
-                    ? "Smoother motion, with slightly more input lag and occasional artifacts around fast-moving edges."
-                    : "The game runs at its own frame rate with no added lag.",
-            };
-            fg.Changed += v =>
-            {
-                SetProfile(x => x with { FrameGen = Enum.Parse<FrameGenMode>(v) });
-                UpdateFrameGenNote();
-            };
-            Add(fg);
-            var fps = new Stepper("Game's own frame rate", [("", "Unknown"), ("20", "20 fps"), ("30", "30 fps"), ("60", "60 fps")],
-                p.NativeFps?.ToString() ?? "",
-                "What the game normally runs at. Games that already run at 60 get no frame generation.")
-            {
-                Expands = true,
-                DetailFor = v => v switch
-                {
-                    "" => "Frame generation still runs, capped at 60. Set 60 for games that already run at 60.",
-                    "60" => "Already 60: frame generation is skipped for this game.",
-                    _ => $"Frame generation targets 60 fps from {v}.",
-                },
-            };
-            fps.Changed += v =>
-            {
-                SetProfile(x => x with { NativeFps = v == "" ? null : int.Parse(v) });
-                UpdateFrameGenNote();
-            };
-            Add(fps);
-            _frameGenNote = UiTheme.Label("", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true);
-            col.AddChild(_frameGenNote);
-            UpdateFrameGenNote();
-            var lsfg = Try(() => Host.Eden.FindLsfgVk(), null, "lsfg-vk status", col);
-            if (lsfg == null)
-            {
-            }
-            else if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
-            {
-                col.AddChild(UiTheme.Label(lsfg.Kind == EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.Legacy
-                    ? "Frame generation needs lsfg-vk 2.x. The installed lsfg-vk is an older 1.x version."
-                    : "Frame generation needs lsfg-vk, which isn't installed yet.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-            }
-            else if (Try(() => Host.Eden.LosslessDllPath(), "", "Lossless.dll status", col) == null)
-            {
-                col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-            }
-
+            AddFrameGenRows(col, Add);
             Add(CrtRow("Eden", moving: true));
-            var layer = Host.DefaultLaunchOptions();
-            if (layer.LayerKillSwitch || layer.LayerDirectory == null)
+            AddLayerNote(col);
+    }
+
+    /// <summary>Frame generation (lsfg-vk, 60 fps rule) for any Vulkan emulator, with what's missing for it.</summary>
+    private void AddFrameGenRows(VBoxContainer col, Action<Control> Add)
+    {
+        var p = Profile;
+        var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Lossless (lsfg-vk)")],
+            p.FrameGen == FrameGenMode.Builtin ? nameof(FrameGenMode.Builtin) : nameof(FrameGenMode.Off),
+            "Doubles a 30 fps game to 60 fps with Lossless Scaling frame generation (lsfg-vk). Never goes above 60.")
+        {
+            Expands = true,
+            DetailFor = v => v == nameof(FrameGenMode.Builtin)
+                ? "Smoother motion, with slightly more input lag and occasional artifacts around fast-moving edges."
+                : "The game runs at its own frame rate with no added lag.",
+        };
+        fg.Changed += v =>
+        {
+            SetProfile(x => x with { FrameGen = Enum.Parse<FrameGenMode>(v) });
+            UpdateFrameGenNote();
+        };
+        Add(fg);
+        var fps = new Stepper("Game's own frame rate", [("", "Unknown"), ("20", "20 fps"), ("30", "30 fps"), ("60", "60 fps")],
+            p.NativeFps?.ToString() ?? "",
+            "What the game normally runs at. Games that already run at 60 get no frame generation.")
+        {
+            Expands = true,
+            DetailFor = v => v switch
             {
-                col.AddChild(UiTheme.Label(layer.LayerKillSwitch
-                    ? "The CRT effect is drawn by Scanline's in-game layer, which is switched off in Settings."
-                    : "The CRT effect is drawn by Scanline's in-game layer, which this install doesn't have.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-            }
+                "" => "Frame generation still runs, capped at 60. Set 60 for games that already run at 60.",
+                "60" => "Already 60: frame generation is skipped for this game.",
+                _ => $"Frame generation targets 60 fps from {v}.",
+            },
+        };
+        fps.Changed += v =>
+        {
+            SetProfile(x => x with { NativeFps = v == "" ? null : int.Parse(v) });
+            UpdateFrameGenNote();
+        };
+        Add(fps);
+        _frameGenNote = UiTheme.Label("", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true);
+        col.AddChild(_frameGenNote);
+        UpdateFrameGenNote();
+        var lsfg = Try(() => Host.Eden.FindLsfgVk(), null, "lsfg-vk status", col);
+        if (lsfg == null)
+        {
+        }
+        else if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
+        {
+            col.AddChild(UiTheme.Label(lsfg.Kind == EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.Legacy
+                ? "Frame generation needs lsfg-vk 2.x. The installed lsfg-vk is an older 1.x version."
+                : "Frame generation needs lsfg-vk, which isn't installed yet.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        else if (Try(() => Host.Eden.LosslessDllPath(), "", "Lossless.dll status", col) == null)
+        {
+            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+    }
+
+    /// <summary>Says when the Vulkan layer (CRT effect, quick menu) can't run.</summary>
+    private void AddLayerNote(VBoxContainer col)
+    {
+        var layer = Host.DefaultLaunchOptions();
+        if (layer.LayerKillSwitch || layer.LayerDirectory == null)
+        {
+            col.AddChild(UiTheme.Label(layer.LayerKillSwitch
+                ? "The CRT effect is drawn by Scanline's in-game layer, which is switched off in Settings."
+                : "The CRT effect is drawn by Scanline's in-game layer, which this install doesn't have.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
     }
 
     private Stepper CrtRow(string emulator, bool moving)
@@ -394,6 +429,22 @@ public partial class GamePage : Screen
         };
         crt.Changed += v => SetProfile(x => x with { Crt = int.Parse(v) });
         return crt;
+    }
+
+    /// <summary>RPCS3: frame generation and the CRT layer, as for Switch games (both need the AppImage, not the Flatpak).</summary>
+    private void BuildRpcs3LaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        if (Host.Rpcs3.IsFlatpak)
+        {
+            col.AddChild(UiTheme.Label("You're using the RPCS3 Flatpak, which frame generation and the CRT effect can't reach. Install the RPCS3 AppImage under Emulators → RPCS3 to use them.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        AddFrameGenRows(col, Add);
+        Add(CrtRow("RPCS3", moving: true));
+        AddLayerNote(col);
+        col.AddChild(UiTheme.Label("Controllers are set up once in RPCS3 (Emulators → RPCS3 → Open RPCS3, then Pads). Hold View + Start for 2 seconds to quit.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
     /// <summary>mGBA: the CRT effect (as an mGBA shader) and what the in-game side can and can't do.</summary>

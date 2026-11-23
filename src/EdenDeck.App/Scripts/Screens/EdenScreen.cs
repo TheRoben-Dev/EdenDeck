@@ -1,3 +1,4 @@
+using EdenDeck.Backends.Rpcs3;
 using EdenDeck.Backends.Mgba;
 using EdenDeck.Backends.Eden.SystemFiles;
 using EdenDeck.Backends.Eden;
@@ -32,6 +33,9 @@ public partial class EdenScreen : TwoPaneScreen
                 ("mGBA (Game Boy Advance)", Host.Mgba.Install.Current is { } m
                     ? $"mGBA {m.Version}: Game Boy Advance, Game Boy and Game Boy Color. Install, BIOS and settings."
                     : "mGBA isn't installed yet: install it here to play Game Boy Advance games."),
+                ("RPCS3 (PlayStation 3)", Host.Rpcs3.Install.Current is { } r
+                    ? $"RPCS3 {r.Version}: install, update, your PS3 system software and settings."
+                    : "RPCS3 isn't installed yet: install it here to play PlayStation 3 games."),
                 ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
             ];
         }
@@ -42,6 +46,7 @@ public partial class EdenScreen : TwoPaneScreen
     {
         "Eden (Switch)" when Host.Eden.Install.Current == null || App.EdenUpdate != null => "•",
         "Keys and firmware" when Host.Eden.SystemFilesImpl.Status().Any(s => !s.Present && s.Kind != "title.keys") => "•",
+        "RPCS3 (PlayStation 3)" when Host.Rpcs3.Install.Current != null && !Host.Rpcs3.FirmwareInstalled => "•",
         "Frame generation" when Host.Eden.FindLsfgVk().Kind != LsfgVk.Kind.V2 || !Host.Eden.LosslessDllAvailable() => "•",
         _ => null,
     };
@@ -61,6 +66,9 @@ public partial class EdenScreen : TwoPaneScreen
                 break;
             case "mGBA (Game Boy Advance)":
                 BuildMgba(col, Add);
+                break;
+            case "RPCS3 (PlayStation 3)":
+                BuildRpcs3(col, Add);
                 break;
             case "Keys and firmware":
                 BuildKeys(col, Add);
@@ -212,6 +220,102 @@ public partial class EdenScreen : TwoPaneScreen
                 App.Busy($"Downloading mGBA {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
                 {
                     App.Success($"mGBA {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
+                    Rebuild();
+                }));
+        });
+    }
+
+    private void BuildRpcs3(VBoxContainer col, Action<Control> Add)
+    {
+        var rpcs3 = Host.Rpcs3;
+        var install = rpcs3.Installs;
+        if (install.Current is { } cur)
+        {
+            col.AddChild(UiTheme.Label(rpcs3.IsFlatpak ? "RPCS3 (Flatpak)" : $"RPCS3 {cur.Version}", 24));
+            col.AddChild(Note(rpcs3.IsFlatpak ? "Your Flatpak install · updates come through Discover or flatpak update."
+                : (cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
+            if (rpcs3.IsFlatpak)
+            {
+                col.AddChild(UiTheme.Label("Frame generation and the CRT effect can't reach into the Flatpak's sandbox. Install the AppImage to use them.",
+                    UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("RPCS3 isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install it here (recommended: frame generation and the CRT effect work with it), or install RPCS3 from Discover (Flatpak) and Scanline finds it."));
+        }
+        Add(new ActionButton(install.Current is { ManagedByEdenDeck: true } ? "Update RPCS3" : "Install RPCS3", CheckAndInstallRpcs3,
+            "Downloads the official RPCS3 AppImage (the build RPCS3's own updater offers), checksum-verified."));
+        if (install.Current is { ManagedByEdenDeck: true } && install.FlatpakInstalled())
+        {
+            Add(new ActionButton("Use the Flatpak instead", () => App.Guard(() =>
+            {
+                install.UseExternal(install.DetectExternal().First(e => e.ExecutablePath == Rpcs3InstallManager.FlatpakExe));
+                Rebuild();
+            }), "Switches to the RPCS3 you installed from Discover (no frame generation or CRT effect)."));
+        }
+        if (install.Previous is { } prev)
+        {
+            Add(new ActionButton($"Roll back to {prev.Version}", () => App.Guard(() =>
+            {
+                install.Rollback();
+                Rebuild();
+            }), "Switches back to the RPCS3 you used before."));
+        }
+
+        col.AddChild(Section("PS3 system software"));
+        foreach (var st in rpcs3.Status())
+        {
+            col.AddChild(UiTheme.Label($"{(st.Present ? "✓" : "✗")}  {st.Detail}", UiTheme.SmallSize + 2, st.Present ? UiTheme.Good : UiTheme.Warn, wrap: true));
+        }
+        if (install.Current != null)
+        {
+            Add(new ActionButton(rpcs3.FirmwareInstalled ? "Reinstall system software" : "Install your system software", () =>
+                App.Push(new FilePicker("Choose your PS3UPDAT.PUP", pickFolder: false, path => App.InstallPs3Firmware(path), null, ".pup")),
+                "Pick your own PS3UPDAT.PUP; RPCS3 installs it. Scanline never downloads it."));
+            Add(new ActionButton("Open RPCS3", App.OpenRpcs3,
+                "Opens RPCS3's own window: set up controllers under Pads, or anything else Scanline doesn't cover. Close it to come back."));
+        }
+        col.AddChild(Note("Games: add the folder with your PS3 game folders or .iso files under Settings → Library. Games installed in RPCS3 (PSN) are found by themselves."));
+
+        col.AddChild(Section("Settings for all PS3 games"));
+        col.AddChild(Note("Games can override these on their own card. Saved straight to RPCS3's config."));
+        var settings = rpcs3.Settings;
+        var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "RPCS3's settings", col);
+        foreach (var o in settings.Options)
+        {
+            var opt = o;
+            Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
+                App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
+        }
+    }
+
+    private void CheckAndInstallRpcs3()
+    {
+        var install = Host.Rpcs3.Install;
+        App.Busy("Checking RPCS3…", async (_, ct) =>
+        {
+            try
+            {
+                return await install.CheckForUpdateAsync("stable", ct);
+            }
+            catch (System.Text.Json.JsonException e)
+            {
+                throw new InvalidDataException("RPCS3's update service sent something Scanline can't read: " + e.Message, e);
+            }
+        }, release =>
+        {
+            if (release == null)
+            {
+                App.Toast(install.Current is { ManagedByEdenDeck: true } ? "Already up to date." : "RPCS3 has no Linux build for this computer right now.");
+                return;
+            }
+            var size = release.Size > 0 ? $" ({release.Size / 1048576} MB)" : "";
+            App.Confirm($"Install RPCS3 {release.Version}{size}?", "Install", () =>
+                App.Busy($"Downloading RPCS3 {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
+                {
+                    App.Success($"RPCS3 {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
                     Rebuild();
                 }));
         });

@@ -1004,7 +1004,7 @@ public partial class Main : Control
                     }
                     // The game's own square icon goes on the cartridge label (read off the main thread).
                     var game = host.FindGame(e.Key);
-                    var icon = game == null ? null : await Task.Run(() => host.Eden.GameIcon(game.Base));
+                    var icon = game == null ? null : await Task.Run(() => host.Backend(game.Base.BackendId).IconFor(game.Base));
                     await SteamArt.Render(this, e.Shortcut.AppName, dir, icon);
                     AppLog.Info($"steam: rendered artwork for {e.Key}");
                 }
@@ -1119,6 +1119,67 @@ public partial class Main : Control
             });
     }
 
+    /// <summary>RPCS3's own window, e.g. to set up controllers. Scanline waits until it's closed.</summary>
+    public void OpenRpcs3()
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        LaunchPlan plan;
+        try
+        {
+            plan = Host.Rpcs3.PlanUi();
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            Error(e.Message);
+            return;
+        }
+        RunEden("RPCS3", plan, ["Change anything in RPCS3's window (controllers are under Pads), then close it to come back."], () =>
+        {
+            foreach (var screen in _stack)
+            {
+                screen.Rebuild();
+            }
+            Success("Back from RPCS3.");
+        }, emulator: "RPCS3");
+    }
+
+    /// <summary>RPCS3 installs the player's own PS3UPDAT.PUP; Scanline waits until RPCS3 is closed.</summary>
+    public void InstallPs3Firmware(string pup)
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        LaunchPlan plan;
+        try
+        {
+            plan = Host.Rpcs3.PlanFirmwareInstall(pup);
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            Error(e.Message);
+            return;
+        }
+        RunEden("PS3 system software", plan, ["RPCS3 is installing your system software. When it says it's done, close RPCS3 to come back."], () =>
+        {
+            foreach (var screen in _stack)
+            {
+                screen.Rebuild();
+            }
+            if (Host.Rpcs3.FirmwareInstalled)
+            {
+                Success("PS3 system software installed.");
+            }
+            else
+            {
+                Error("RPCS3 didn't install the system software. Check that the file is a PS3UPDAT.PUP and try again.");
+            }
+        }, emulator: "RPCS3");
+    }
+
     /// <summary>Player 1 gets a controller mapping when Eden still has only the keyboard (Game Mode needs this).</summary>
     private string? EnsureController()
     {
@@ -1144,10 +1205,10 @@ public partial class Main : Control
         }
     }
 
-    private async void RunEden(string title, LaunchPlan plan, IReadOnlyList<string> notes, Action? after, LibraryGame? game = null)
+    private async void RunEden(string title, LaunchPlan plan, IReadOnlyList<string> notes, Action? after, LibraryGame? game = null, string? emulator = null)
     {
         var started = DateTime.UtcNow;
-        var page = new RunningPage(title, notes, EmulatorName(game));
+        var page = new RunningPage(title, notes, emulator ?? EmulatorName(game));
         Push(page);
         GameRunning = true;
         Pad.ReleaseAll();
@@ -1177,7 +1238,7 @@ public partial class Main : Control
             GameRunning = false;
             PopTo(page);
             Pop();
-            Error($"Could not start {EmulatorName(game)}: {e.Message}");
+            Error($"Could not start {emulator ?? EmulatorName(game)}: {e.Message}");
             return;
         }
         _gameCts = null;
@@ -1194,7 +1255,7 @@ public partial class Main : Control
         }
         else if (code != 0)
         {
-            Error($"{EmulatorName(game)} exited with code {code}.");
+            Error($"{emulator ?? EmulatorName(game)} exited with code {code}.");
         }
         after?.Invoke();
     }

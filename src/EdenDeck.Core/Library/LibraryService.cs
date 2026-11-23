@@ -53,6 +53,11 @@ public sealed class LibraryService
                 var backend = _backends.FirstOrDefault(b => b.FileExtensions.Contains(ext));
                 if (backend == null)
                 {
+                    // Inside a PS3 game folder every big file is game data, never a misnamed dump.
+                    if (file.Contains("/USRDIR/", StringComparison.Ordinal) || file.Contains("/PS3_GAME/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
                     if (Sniff(file, cutoff) is { } fix && seen.Add(PathUtil.RealPath(file)))
                     {
                         misnamed.Add(fix);

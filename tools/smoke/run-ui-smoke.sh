@@ -52,11 +52,29 @@ b[0xA0:0xA9] = b"TINYQUEST"; b[0xAC:0xB0] = b"BTQE"; b[0xB0:0xB2] = b"01"; b[0xB
 open(sys.argv[1], "wb").write(b)
 PY
 touch -d '10 minutes ago' "$HOME/Games/GBA/"*.gba  # settled, not a copy in progress
+# A PS3 disc folder for the RPCS3 backend: PS3_GAME/PARAM.SFO, ICON0.PNG and an EBOOT.BIN.
+mkdir -p "$HOME/Games/PS3/Velvet Run/PS3_GAME/USRDIR"
+python3 - "$HOME/Games/PS3/Velvet Run/PS3_GAME/PARAM.SFO" <<'PY'
+import struct, sys
+vals = [("CATEGORY", "DG"), ("TITLE", "Velvet Run"), ("TITLE_ID", "BLUS39001"), ("APP_VER", "01.00")]
+keys, data, index = b"", b"", b""
+for k, v in vals:
+    b = v.encode() + b"\0"; m = (len(b) + 3) // 4 * 4
+    index += struct.pack("<HHIII", len(keys), 0x0204, len(b), m, len(data))
+    keys += k.encode() + b"\0"; data += b + b"\0" * (m - len(b))
+keys += b"\0" * (-len(keys) % 4)
+ks = 20 + len(index)
+open(sys.argv[1], "wb").write(b"\0PSF\1\1\0\0" + struct.pack("<III", ks, ks + len(keys), len(vals)) + index + keys + data)
+PY
+echo "SCE" > "$HOME/Games/PS3/Velvet Run/PS3_GAME/USRDIR/EBOOT.BIN"
+cp "$ROOT/tools/smoke/icon.jpg" "$HOME/Games/PS3/Velvet Run/PS3_GAME/ICON0.PNG"
+touch -d '10 minutes ago' "$HOME/Games/PS3/Velvet Run/PS3_GAME/PARAM.SFO"
 
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
 dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/GBA" >/dev/null
+dotnet "$CLI" folders add "$HOME/Games/PS3" >/dev/null
 dotnet "$CLI" scan
 # One game with an icon already read (normally from the game's control data with the player's
 # keys): its cartridge shows it pixelated on the label.

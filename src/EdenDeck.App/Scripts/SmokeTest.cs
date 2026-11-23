@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Tiny Quest");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Velvet Run");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -113,6 +113,18 @@ public partial class SmokeTest : Node
         Step("gba-mods-back", () => Press(Pad.Back), expect: "Patches & cheats");
         Step("gba-saves", () => FindFocusable(GetTree().Root, "Back up, restore or delete")?.GrabFocus(), expect: "Saves");
         Step("gba-back", () => Press(Pad.Back), expect: "Tiny Quest");
+        // A PS3 game (RPCS3): performance presets, game patches, frame generation and the CRT row.
+        Step("ps3-tile", () => FindFocusable(GetTree().Root, "Velvet Run")?.GrabFocus(), expect: "Velvet Run");
+        Step("ps3-page", () => Press(Pad.Accept), expect: "Play");
+        Step("ps3-preset", () => FindFocusable(GetTree().Root, "Presets set resolution, upscaling and texture filtering")?.GrabFocus(), expect: "Presets set resolution, upscaling and texture filtering");
+        Step("ps3-preset-battery", () => Press("ui_right"), expect: "Longest battery life");
+        Step("ps3-preset-global", () => Press("ui_left"), expect: "Presets set resolution");
+        Step("ps3-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
+        Step("ps3-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
+        Step("ps3-patches", () => FindFocusable(GetTree().Root, "60 fps modes, higher resolutions")?.GrabFocus(), expect: "Game patches");
+        Step("ps3-patches-page", () => Press(Pad.Accept), expect: "Get the patch list");
+        Step("ps3-patches-back", () => Press(Pad.Back), expect: "Game patches");
+        Step("ps3-back", () => Press(Pad.Back), expect: "Velvet Run");
         Step("library-refocus-2", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
@@ -122,6 +134,9 @@ public partial class SmokeTest : Node
         Step("emulators-mgba", () => FindFocusable(GetTree().Root, "mGBA isn't installed yet")?.GrabFocus(), expect: "mGBA (Game Boy Advance)");
         Step("emulators-mgba-pane", () => Press(Pad.Accept), expect: "Install mGBA");
         Step("emulators-mgba-back", () => Press(Pad.Back), expect: "mGBA (Game Boy Advance)");
+        Step("emulators-rpcs3", () => FindFocusable(GetTree().Root, "RPCS3 isn't installed yet")?.GrabFocus(), expect: "RPCS3 (PlayStation 3)");
+        Step("emulators-rpcs3-pane", () => Press(Pad.Accept), expect: "Install RPCS3");
+        Step("emulators-rpcs3-back", () => Press(Pad.Back), expect: "RPCS3 (PlayStation 3)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>

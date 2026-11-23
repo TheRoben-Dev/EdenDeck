@@ -3,6 +3,17 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.7.0
+- New: **PlayStation 3 games**, played in **RPCS3**. Add the folder with your PS3 game folders or .iso files and they show up in the library with a PS3 chip and the game's own icon on the cartridge. Games you installed inside RPCS3 are found by themselves. Under **Emulators → RPCS3** you can install the official RPCS3 AppImage (the same build RPCS3's own updater offers, checksum-verified), use the RPCS3 Flatpak or one you already have, update or roll back, and change RPCS3's settings for every game.
+- **Your own PS3 system software:** pick your PS3UPDAT.PUP and RPCS3 installs it. Scanline never downloads it.
+- Every PS3 game card gets:
+  - **Frame generation** like Switch games: lsfg-vk doubles 30 fps games to 60, never above 60.
+  - **CRT effect** with the same moving old-TV look as Switch games, through Scanline's in-game layer.
+  - **Performance presets** (Battery saver, Balanced, TV quality, Sharp) and RPCS3's settings just for that game, saved as RPCS3's own custom config, so RPCS3 shows them too.
+  - **Game patches:** 60 fps modes, higher resolutions and fixes from RPCS3's community patch list, downloaded only when you ask. Switch each one on or off; RPCS3's patch manager shows the same switches.
+  - **Saves** (backup, restore, delete, and a backup before each play), **Add to Steam** with the game's icon on the cartridge art, favorites and collections, a cache rebuild button, and a PS3 section under Settings → Storage.
+- Frame generation and the CRT effect need the RPCS3 AppImage; they can't reach into the Flatpak's sandbox, and the app says so. Controllers are set up once in RPCS3's own window (Emulators → RPCS3 → Open RPCS3).
+
 ## 0.6.0
 - New: **Game Boy Advance, Game Boy and Game Boy Color games**, played in **mGBA**. Add a folder with your .gba, .gb or .gbc files and they show up in the library next to your Switch games, with a GBA, GBC or GB chip on the cartridge. The Eden tab is now **Emulators**, with a new **mGBA** section: install the official mGBA AppImage (or use the mGBA Flatpak or an mGBA you already have), update or roll back, set your own GBA BIOS (optional, mGBA has a built-in replacement) and change mGBA's settings.
 - Every GBA game card gets the same things as Switch games where they make sense:

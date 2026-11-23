@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EdenDeck.Backends.Rpcs3</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <InternalsVisibleTo Include="EdenDeck.Backends.Rpcs3.Tests" />
+  </ItemGroup>
+</Project>
