@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.8.0
+- New: **handheld frame** for GBA, Game Boy and Game Boy Color games. The black bars beside the picture become a handheld-style shell and screen bezel in your theme's accent colour, with its own look for Game Boy / Color. It's decoration only, so nothing in it is a button, and the game's pixels stay sharp. It works together with the CRT effect. It's on by default: switch it off under **Emulators → mGBA → Handheld frame**, or per game on its card.
+
 ## 0.7.3
 - Fixed: **zipped Game Boy Advance games** (.zip) weren't found. They now show up like any other game and mGBA runs them straight from the .zip. Saves, save states, cheats and patches work the same.
 - **Real game names** for GBA, Game Boy and Game Boy Color games, whatever the files are called: Scanline recognises games from a built-in name list (no internet needed). Unknown files get tidied-up names, with no region tags, underscores or release numbers.
