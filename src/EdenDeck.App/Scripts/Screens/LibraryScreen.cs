@@ -163,6 +163,10 @@ public partial class LibraryScreen : Screen
         {
             extras.Add("★");
         }
+        if (SystemTag(g.Base) is { } tag)
+        {
+            extras.Add(tag);
+        }
         if (g.Updates.Count > 0)
         {
             extras.Add("UPDATE");
@@ -209,6 +213,20 @@ public partial class LibraryScreen : Screen
     }
 
     /// <summary>Up to two initials from the title ("Mountain Climb Deluxe" -> "MC").</summary>
+    /// <summary>"Game Boy Advance", "PlayStation 3"... for a game's card.</summary>
+    public static string SystemName(GameEntry e) =>
+        e.BackendId == EdenDeck.Backends.Mgba.MgbaBackend.BackendId ? EdenDeck.Backends.Mgba.MgbaBackend.SystemOf(e.TitleId) : Host.Backend(e.BackendId).SystemName;
+
+    /// <summary>A short system chip on carts that aren't Switch games ("GBA", "GBC", "GB").</summary>
+    public static string? SystemTag(GameEntry e) => e.BackendId == Host.Eden.Id ? null : SystemName(e) switch
+    {
+        "Game Boy Advance" => "GBA",
+        "Game Boy Color" => "GBC",
+        "Game Boy" => "GB",
+        "PlayStation 3" => "PS3",
+        var other => other,
+    };
+
     public static string Monogram(string title)
     {
         var words = title.Split(' ', StringSplitOptions.RemoveEmptyEntries)

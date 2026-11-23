@@ -8,11 +8,13 @@ public partial class RunningPage : Screen
 {
     private readonly string _title;
     private readonly IReadOnlyList<string> _notes;
+    private readonly string _emulator;
 
-    public RunningPage(string title, IReadOnlyList<string> notes)
+    public RunningPage(string title, IReadOnlyList<string> notes, string emulator = "Eden")
     {
         _title = title;
         _notes = notes;
+        _emulator = emulator;
     }
 
     protected override void Build()
@@ -28,10 +30,10 @@ public partial class RunningPage : Screen
         {
             col.AddChild(UiTheme.Label("• " + n, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
-        col.AddChild(UiTheme.Label("Close Eden to come back here, or hold View + Start (Select + Start) for 2 seconds to close the game from anywhere.",
+        col.AddChild(UiTheme.Label($"Close {_emulator} to come back here, or hold View + Start (Select + Start) for 2 seconds to close the game from anywhere.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         // Reachable by touch or mouse when Eden isn't in front (controller input goes to the game).
-        _close = new ActionButton("Close game", App.CloseGame, "Asks Eden to quit, and force-closes it if it doesn't within a few seconds.");
+        _close = new ActionButton("Close game", App.CloseGame, $"Asks {_emulator} to quit, and force-closes it if it doesn't within a few seconds.");
         col.AddChild(_close);
     }
 

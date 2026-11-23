@@ -1,3 +1,4 @@
+using EdenDeck.Backends.Mgba;
 using EdenDeck.Backends.Eden.SystemFiles;
 using EdenDeck.Backends.Eden;
 using EdenDeck.App.Ui;
@@ -14,7 +15,7 @@ namespace EdenDeck.App.Screens;
 /// </summary>
 public partial class EdenScreen : TwoPaneScreen
 {
-    protected override string Heading => "Eden";
+    protected override string Heading => "Emulators";
 
     protected override IReadOnlyList<(string Name, string Summary)> Categories
     {
@@ -24,10 +25,13 @@ public partial class EdenScreen : TwoPaneScreen
             var sets = Host.Eden.KeySets.List().Count;
             return
             [
-                ("Emulator", cur != null ? $"Eden {Cap(cur.Channel)} {cur.Version}: install, update, roll back or open Eden." : "Eden isn't installed yet: install it here."),
+                ("Eden (Switch)", cur != null ? $"Eden {Cap(cur.Channel)} {cur.Version}: install, update, roll back or open Eden." : "Eden isn't installed yet: install it here."),
                 ("Keys and firmware", "Your own prod.keys and firmware, used by every game."),
                 ("Key sets", sets == 0 ? "Older or newer keys for specific games." : $"{sets} key set{(sets == 1 ? "" : "s")} for specific games."),
                 ("Frame generation", "Lossless Scaling frame generation (lsfg-vk): what's found and what's missing."),
+                ("mGBA (Game Boy Advance)", Host.Mgba.Install.Current is { } m
+                    ? $"mGBA {m.Version}: Game Boy Advance, Game Boy and Game Boy Color. Install, BIOS and settings."
+                    : "mGBA isn't installed yet: install it here to play Game Boy Advance games."),
                 ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
             ];
         }
@@ -36,7 +40,7 @@ public partial class EdenScreen : TwoPaneScreen
     /// <summary>A dot on categories that need attention.</summary>
     protected override string? Badge(string name) => name switch
     {
-        "Emulator" when Host.Eden.Install.Current == null || App.EdenUpdate != null => "•",
+        "Eden (Switch)" when Host.Eden.Install.Current == null || App.EdenUpdate != null => "•",
         "Keys and firmware" when Host.Eden.SystemFilesImpl.Status().Any(s => !s.Present && s.Kind != "title.keys") => "•",
         "Frame generation" when Host.Eden.FindLsfgVk().Kind != LsfgVk.Kind.V2 || !Host.Eden.LosslessDllAvailable() => "•",
         _ => null,
@@ -52,8 +56,11 @@ public partial class EdenScreen : TwoPaneScreen
     {
         switch (name)
         {
-            case "Emulator":
+            case "Eden (Switch)":
                 BuildEmulator(col, Add);
+                break;
+            case "mGBA (Game Boy Advance)":
+                BuildMgba(col, Add);
                 break;
             case "Keys and firmware":
                 BuildKeys(col, Add);
@@ -120,6 +127,94 @@ public partial class EdenScreen : TwoPaneScreen
             Add(new ActionButton("Open Eden", App.OpenEden,
                 "Opens Eden's own window for anything Scanline doesn't cover yet. Close it to come back."));
         }
+    }
+
+    private void BuildMgba(VBoxContainer col, Action<Control> Add)
+    {
+        var mgba = Host.Mgba;
+        var install = mgba.Installs;
+        if (install.Current is { } cur)
+        {
+            var flatpak = cur.ExecutablePath == MgbaInstallManager.FlatpakExe;
+            col.AddChild(UiTheme.Label(flatpak ? "mGBA (Flatpak)" : $"mGBA {cur.Version}", 24));
+            col.AddChild(Note(flatpak ? "Your Flatpak install · updates come through Discover or flatpak update."
+                : (cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("mGBA isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install it here, or install mGBA from Discover (Flatpak) and Scanline finds it."));
+        }
+        Add(new ActionButton(install.Current is { ManagedByEdenDeck: true } ? "Update mGBA" : "Install mGBA", CheckAndInstallMgba,
+            "Downloads the official AppImage from mGBA's GitHub releases, checksum-verified."));
+        if (install.Current is { ManagedByEdenDeck: true } && install.FlatpakInstalled())
+        {
+            Add(new ActionButton("Use the Flatpak instead", () => App.Guard(() =>
+            {
+                install.UseExternal(install.DetectExternal().First(e => e.ExecutablePath == MgbaInstallManager.FlatpakExe));
+                Rebuild();
+            }), "Switches to the mGBA you installed from Discover."));
+        }
+        if (install.Previous is { } prev)
+        {
+            Add(new ActionButton($"Roll back to {prev.Version}", () => App.Guard(() =>
+            {
+                install.Rollback();
+                Rebuild();
+            }), "Switches back to the mGBA you used before."));
+        }
+
+        col.AddChild(Section("BIOS"));
+        foreach (var st in mgba.Status())
+        {
+            col.AddChild(UiTheme.Label($"{(st.Present ? "✓" : "·")}  {st.Detail}", UiTheme.SmallSize + 2, st.Present ? UiTheme.Good : UiTheme.Dim, wrap: true));
+        }
+        Add(new ActionButton(mgba.BiosPath == null ? "Use your own GBA BIOS" : "Choose another BIOS file", () =>
+            App.Push(new FilePicker("Choose your GBA BIOS (gba_bios.bin)", pickFolder: false, path => App.Guard(() =>
+            {
+                mgba.SetBios(path);
+                App.Success("mGBA will use your BIOS.");
+                Rebuild();
+            }), null, ".bin")), "Optional: points mGBA at your own BIOS file. Nothing is copied or downloaded."));
+        if (mgba.BiosPath != null)
+        {
+            Add(new ActionButton("Stop using the BIOS file", () => App.Guard(() =>
+            {
+                mgba.SetBios(null);
+                Rebuild();
+            }), "Back to mGBA's built-in BIOS replacement."));
+        }
+
+        col.AddChild(Section("Settings for all GBA games"));
+        col.AddChild(Note("Games can override these on their own card. Saved straight to mGBA's config."));
+        var settings = mgba.Settings;
+        var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "mGBA's settings", col);
+        foreach (var o in settings.Options)
+        {
+            var opt = o;
+            Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
+                App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
+        }
+    }
+
+    private void CheckAndInstallMgba()
+    {
+        var install = Host.Mgba.Install;
+        App.Busy("Checking mGBA…", (_, ct) => install.CheckForUpdateAsync("stable", ct), release =>
+        {
+            if (release == null)
+            {
+                App.Toast(install.Current is { ManagedByEdenDeck: true } ? "Already up to date." : "No Linux build in mGBA's releases right now.");
+                return;
+            }
+            var size = release.Size > 0 ? $" ({release.Size / 1048576} MB)" : "";
+            App.Confirm($"Install mGBA {release.Version}{size}?", "Install", () =>
+                App.Busy($"Downloading mGBA {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
+                {
+                    App.Success($"mGBA {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
+                    Rebuild();
+                }));
+        });
     }
 
     private void BuildKeys(VBoxContainer col, Action<Control> Add)

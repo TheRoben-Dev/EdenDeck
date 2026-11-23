@@ -73,6 +73,7 @@ public sealed class AppHost
 
     public AppPaths Paths { get; }
     public EdenBackend Eden { get; }
+    public EdenDeck.Backends.Mgba.MgbaBackend Mgba { get; }
     public IReadOnlyList<IEmulatorBackend> Backends { get; }
     public ProfileStore Profiles { get; }
     public LibraryService LibraryService { get; }
@@ -93,7 +94,8 @@ public sealed class AppHost
         Directory.CreateDirectory(Paths.Config);
         Directory.CreateDirectory(Paths.Data);
         Eden = new EdenBackend(Paths, http);
-        Backends = [Eden];
+        Mgba = new EdenDeck.Backends.Mgba.MgbaBackend(Paths, http);
+        Backends = [Eden, Mgba];
         Profiles = new ProfileStore(Paths.ProfilesFile);
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
@@ -179,16 +181,16 @@ public sealed class AppHost
             var updates = profile.LoadAddOns ? game.Updates.Take(1).Select(u => u.Path) : [];
             Eden.CheckKeys(game.Base.Title, [game.Base.Path, .. updates], profile.KeySet);
             Eden.PrepareAddOns(game, profile.LoadAddOns, Settings.LibraryFolders.Select(f => f.Path));
-            if (Settings.BackupSavesOnLaunch && !string.IsNullOrEmpty(game.Base.TitleId))
+        }
+        if (Settings.BackupSavesOnLaunch && !string.IsNullOrEmpty(game.Base.TitleId) && Backend(game.Base.BackendId).SaveData is { } saves)
+        {
+            try
             {
-                try
-                {
-                    Eden.BackupSaves(game.Base.TitleId, automatic: true);
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                {
-                    AppLog.Warn($"saves: automatic backup failed: {e.Message}");  // never blocks playing
-                }
+                saves.Backup(game.Base, automatic: true);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                AppLog.Warn($"saves: automatic backup failed: {e.Message}");  // never blocks playing
             }
         }
         return Backend(game.Base.BackendId).Launch.Plan(game.Base, profile, DefaultLaunchOptions());

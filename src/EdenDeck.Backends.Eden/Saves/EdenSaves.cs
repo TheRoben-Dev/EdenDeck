@@ -1,18 +1,9 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
+using EdenDeck.Core.Saves;
 
 namespace EdenDeck.Backends.Eden.Saves;
-
-/// <summary>One save folder of a game in Eden's NAND (one per profile, plus device saves).</summary>
-/// <param name="Relative">Path under the NAND dir, '/'-separated (what a backup stores).</param>
-public sealed record SaveFolder(string Relative, string Path, long Bytes, DateTime LastWriteUtc);
-
-/// <summary>A backup zip of a game's saves.</summary>
-public sealed record SaveBackup(string Path, DateTime CreatedUtc, long Bytes, bool Automatic)
-{
-    public string Name => System.IO.Path.GetFileNameWithoutExtension(Path);
-}
 
 /// <summary>
 /// Save backups for one game. Eden keeps saves in its NAND (src/core/file_sys/savedata_factory.cpp):
@@ -25,7 +16,7 @@ public sealed record SaveBackup(string Path, DateTime CreatedUtc, long Bytes, bo
 public static class EdenSaves
 {
     /// <summary>Automatic backups (before each play) kept per game; manual ones are never pruned.</summary>
-    public const int KeepAutomatic = 5;
+    public const int KeepAutomatic = SaveZips.KeepAutomatic;
 
     private static readonly Regex Hex16 = new("^[0-9A-Fa-f]{16}$", RegexOptions.Compiled);
 

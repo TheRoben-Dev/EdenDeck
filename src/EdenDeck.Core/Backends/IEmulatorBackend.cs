@@ -24,6 +24,12 @@ public interface IEmulatorBackend
     ILaunchPlanner Launch { get; }
 
     ISystemFiles? SystemFiles { get; }
+
+    /// <summary>Save backups (null when the emulator's saves can't be found).</summary>
+    Saves.ISaveData? SaveData => null;
+
+    /// <summary>One-press per-game presets over some of the settings (null when there are none).</summary>
+    PresetSet? Presets => null;
 }
 
 public sealed record InstalledEmulator(

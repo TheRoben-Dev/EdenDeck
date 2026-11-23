@@ -189,13 +189,13 @@ public static class ScanlineCheats
     /// <summary>Eden's "Enable cheats by default" ([Core] enable_cheats_by_default, on unless the player turned it off).</summary>
     public static bool EnabledByDefault(string configFile)
     {
-        var v = Config.QtIni.Load(configFile).Get("Core", "enable_cheats_by_default");
+        var v = QtIni.Load(configFile).Get("Core", "enable_cheats_by_default");
         return v is null || !v.Equals("false", StringComparison.OrdinalIgnoreCase);
     }
 
     public static void SetEnabledByDefault(string configFile, bool on)
     {
-        var ini = Config.QtIni.Load(configFile);
+        var ini = QtIni.Load(configFile);
         ini.Set("Core", "enable_cheats_by_default\\default", "false");
         ini.Set("Core", "enable_cheats_by_default", on ? "true" : "false");
         ini.Save(configFile);

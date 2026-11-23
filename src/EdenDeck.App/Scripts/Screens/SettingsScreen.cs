@@ -517,6 +517,23 @@ public partial class SettingsScreen : TwoPaneScreen
             Add(new ActionButton($"{game.Base.Title}  ·  {StorageReport.Format(u.Total)}{(u.OlderUpdates > 0 ? "  ·  old updates" : "")}",
                 () => App.Push(new GameStoragePage(game, Rebuild)), "What this game takes up, and tidying it up."));
         }
+
+        var mgba = Host.Mgba;
+        var gba = Try(() => Host.Library.Where(g => g.Base.BackendId == mgba.Id).Select(g => mgba.Usage(g.Base)).OrderByDescending(u => u.Total).ToList(), [], "Game Boy game sizes", col);
+        if (gba.Count > 0)
+        {
+            col.AddChild(Section("Game Boy games"));
+            col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+            {
+                $"Games {StorageReport.Format(gba.Sum(g => g.Rom))}",
+                $"Saves and save states {StorageReport.Format(gba.Sum(g => g.Saves))}",
+                $"Patches {StorageReport.Format(gba.Sum(g => g.Patches))}",
+            }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            foreach (var u in gba.Take(20))
+            {
+                col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            }
+        }
     }
 
     private void Rescan() =>

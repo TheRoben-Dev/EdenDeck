@@ -43,9 +43,20 @@ cp "$HOME/Games/Switch/Sky Racers [0100000000020000][v0].nsp" "$HOME/Games/Switc
 touch -d '10 minutes ago' "$HOME/Games/Switch/"*.nsp "$HOME/Games/Switch/Nameless Quest"
 head -c 512 /dev/urandom > "$HOME/Games/Switch/Copying Now [0100000000090000][v0].nsp"
 
+# A Game Boy Advance game for the mGBA backend: just a cartridge header (title, game code, 0x96).
+mkdir -p "$HOME/Games/GBA"
+python3 - "$HOME/Games/GBA/Tiny Quest (USA).gba" <<'PY'
+import sys
+b = bytearray(0x400)
+b[0xA0:0xA9] = b"TINYQUEST"; b[0xAC:0xB0] = b"BTQE"; b[0xB0:0xB2] = b"01"; b[0xB2] = 0x96; b[0xBD] = 0x42
+open(sys.argv[1], "wb").write(b)
+PY
+touch -d '10 minutes ago' "$HOME/Games/GBA/"*.gba  # settled, not a copy in progress
+
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
 dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
+dotnet "$CLI" folders add "$HOME/Games/GBA" >/dev/null
 dotnet "$CLI" scan
 # One game with an icon already read (normally from the game's control data with the player's
 # keys): its cartridge shows it pixelated on the label.

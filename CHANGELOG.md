@@ -3,6 +3,16 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.6.0
+- New: **Game Boy Advance, Game Boy and Game Boy Color games**, played in **mGBA**. Add a folder with your .gba, .gb or .gbc files and they show up in the library next to your Switch games, with a GBA, GBC or GB chip on the cartridge. The Eden tab is now **Emulators**, with a new **mGBA** section: install the official mGBA AppImage (or use the mGBA Flatpak or an mGBA you already have), update or roll back, set your own GBA BIOS (optional, mGBA has a built-in replacement) and change mGBA's settings.
+- Every GBA game card gets the same things as Switch games where they make sense:
+  - **Looks:** one press for **Pixel perfect**, **Original LCD** (with the handheld's screen ghosting, so flicker effects look solid), **Smooth** or **Full screen**, plus each setting on its own just for that game.
+  - **Patches & cheats:** apply an .ips, .ups or .bps patch (translations, fixes, hacks) without touching your ROM, and get cheats from the libretro cheat database, only when you press it. Switch each cheat on or off. Credit goes to each cheat's author.
+  - **Saves:** back up, restore and delete the save and save states, with a backup before each play like Switch games.
+  - **CRT effect:** the same Subtle, Medium and Strong levels as for Switch games, drawn by mGBA itself (a still effect: no wobble or rolling band).
+  - **Add to Steam**, favorites, collections, and a Game Boy section under Settings → Storage.
+- Not in mGBA: frame generation (GBA games already run at 60), and Scanline's in-game menu and performance overlay, which only reach Vulkan emulators. Hold View + Start for 2 seconds to quit a game. Buttons use mGBA's own mapping; the game card says so.
+
 ## 0.5.5
 - New: **performance presets** on every game card, under Eden settings for this game. One press sets resolution, upscaling, anti-aliasing, GPU accuracy and async shaders: **Battery saver**, **Balanced** (the Steam Deck sweet spot), **TV quality** or **Sharp** (desktop GPUs). Change any setting by hand and the row says so; pick Eden's settings to go back to your global ones.
 - New: **console mode follows the screen.** Games start docked when a TV or monitor is connected and handheld on the Deck's own screen, picked each time a game starts. Your Eden setting is put back when the game closes. A console mode set on a game's card still wins, and you can turn this off under Settings → System.

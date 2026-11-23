@@ -1,3 +1,4 @@
+using EdenDeck.Core.Backends;
 using EdenDeck.Core.Settings;
 using EdenDeck.Backends.Eden.Config;
 using EdenDeck.App.Ui;
@@ -111,9 +112,11 @@ public partial class GamePage : Screen
         ShowIcon(cart);
         info.AddChild(UiTheme.Label(_game.Base.Title, UiTheme.TitleSize - 8, wrap: true));
         var b = _game.Base;
+        var isEden = b.BackendId == Host.Eden.Id;
+        var backend = Host.Backend(b.BackendId);
         var facts = new List<string>
         {
-            string.IsNullOrEmpty(b.TitleId) ? "Title ID unknown" : $"Title ID {b.TitleId}",
+            isEden ? (string.IsNullOrEmpty(b.TitleId) ? "Title ID unknown" : $"Title ID {b.TitleId}") : LibraryScreen.SystemName(b),
             Path.GetFileName(b.Path),
         };
         foreach (var f in facts)
@@ -123,7 +126,7 @@ public partial class GamePage : Screen
             info.AddChild(l);
         }
         // Whether Eden will actually load the update / DLC that was found (its own add-on switches included).
-        foreach (var a in Try(() => Host.Eden.AddOnStatus(_game, Profile.LoadAddOns).ToList(), [], "update/DLC status", info))
+        foreach (var a in isEden ? Try(() => Host.Eden.AddOnStatus(_game, Profile.LoadAddOns).ToList(), [], "update/DLC status", info) : [])
         {
             var (mark, text, color) = a.State switch
             {
@@ -165,8 +168,11 @@ public partial class GamePage : Screen
         }
         Add(_play);
 
-        Add(new ActionButton("Open Eden", App.OpenEden,
-            "Opens Eden's own window (controller mapping, anything not here yet). Close it to come back."));
+        if (isEden)
+        {
+            Add(new ActionButton("Open Eden", App.OpenEden,
+                "Opens Eden's own window (controller mapping, anything not here yet). Close it to come back."));
+        }
         var inSteam = Try(() => Host.Steam.Has(_game.GameId), false, "Steam shortcuts", col);
         Add(new ActionButton(inSteam ? "Update Steam shortcut" : "Add to Steam", () =>
         {
@@ -176,8 +182,8 @@ public partial class GamePage : Screen
                 return;
             }
             App.AddToSteam(_game.GameId, Host.Steam.ForGame(_game));
-        }, "Puts this game in your Steam library. Starting it there opens it straight in Eden with everything on this page applied."));
-        if (!string.IsNullOrEmpty(_game.Base.TitleId))
+        }, $"Puts this game in your Steam library. Starting it there opens it straight in {backend.DisplayName} with everything on this page applied."));
+        if (isEden && !string.IsNullOrEmpty(_game.Base.TitleId))
         {
             var mods = Try(() => Host.Eden.Mods(_game.Base.TitleId), [], "mods", col);
             var modCount = mods.Count(m => m.Name != EdenDeck.Backends.Eden.Mods.ScanlineCheats.ModName);
@@ -190,16 +196,30 @@ public partial class GamePage : Screen
             }.Where(x => x != null));
             Add(new ActionButton("Mods & cheats" + summary, () => App.Push(new ModsPage(_game, Rebuild)),
                 "Install and switch mods, and get cheats for the version you play."));
+        }
+        if (backend is EdenDeck.Backends.Mgba.MgbaBackend mgba && !string.IsNullOrEmpty(_game.Base.TitleId))
+        {
             var tid = _game.Base.TitleId;
-            var lastBackup = Try(() => Host.Eden.SaveBackups(tid).FirstOrDefault(), null, "save backups", col);
-            var hasSave = Try(() => Host.Eden.Saves(tid).Count > 0, false, "saves", col);
+            var patch = Try(() => mgba.Mods.ActivePatch(tid), null, "patches", col);
+            var cheatsOn = Try(() => mgba.Mods.Cheats(tid).Count(c => c.Enabled), 0, "cheats", col);
+            var summary = string.Join(", ", new[] { patch == null ? null : "patched", cheatsOn == 0 ? null : $"{cheatsOn} cheat{(cheatsOn == 1 ? "" : "s")} on" }.Where(x => x != null));
+            Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new MgbaModsPage(_game, Rebuild)),
+                "Apply a ROM patch such as a translation, and get cheats for this game."));
+        }
+        if (backend.SaveData is { } saveData && !string.IsNullOrEmpty(b.TitleId))
+        {
+            var lastBackup = Try(() => saveData.Backups(b).FirstOrDefault(), null, "save backups", col);
+            var hasSave = Try(() => saveData.Saves(b).Count > 0, false, "saves", col);
             Add(new ActionButton("Saves" + (!hasSave ? "" : lastBackup == null ? "  ·  not backed up" : $"  ·  backed up {lastBackup.CreatedUtc.ToLocalTime():d MMM}"),
                 () => App.Push(new SavesPage(_game, Rebuild)), "Back up, restore or delete this game's save."));
         }
 
-        var usage = Try(() => Host.Eden.Usage(_game), null, "sizes", col);
-        Add(new ActionButton("Storage" + (usage == null ? "" : "  ·  " + EdenDeck.Backends.Eden.Storage.StorageReport.Format(usage.Total)),
-            () => App.Push(new GameStoragePage(_game, Rebuild)), "What this game takes up, and rebuilding its shader cache."));
+        if (isEden)
+        {
+            var usage = Try(() => Host.Eden.Usage(_game), null, "sizes", col);
+            Add(new ActionButton("Storage" + (usage == null ? "" : "  ·  " + EdenDeck.Backends.Eden.Storage.StorageReport.Format(usage.Total)),
+                () => App.Push(new GameStoragePage(_game, Rebuild)), "What this game takes up, and rebuilding its shader cache."));
+        }
         var fav = Profile.Favorite;
         Add(Toggle.Create("★ Favorite", fav, on =>
             {
@@ -215,131 +235,29 @@ public partial class GamePage : Screen
                 Rebuild();
             })), "Put this game on shelves like Playing now or Up next."));
 
-        col.AddChild(Section("Launch setup"));
-        var p = Profile;
-        var keySets = new List<(string, string)> { ("", "Default keys") };
-        keySets.AddRange(Try(() => Host.Eden.KeySets.List().Select(k => (k.Id, k.Label + (k.HasFirmware ? " + firmware" : ""))).ToList(), [], "key sets", col));
-        var keys = new Stepper("Keys", keySets, p.KeySet ?? "",
-            "Use one of your own key sets (and its firmware) just for this game. Add sets on the Eden tab.")
+        if (isEden)
         {
-            Expands = true,
-            DetailFor = v => v == "" ? "Uses the keys and firmware you imported on the Eden tab." : "Swapped in when this game starts and put back when it closes.",
-        };
-        keys.Changed += v => SetProfile(x => x with { KeySet = v == "" ? null : v });
-        Add(keys);
-        if (!string.IsNullOrEmpty(_game.Base.TitleId))
-        {
-            var profiles = new List<(string, string)> { ("", "Global setup") };
-            profiles.AddRange(Try(() => Host.Eden.InputProfiles().Select(n => (n, n)).ToList(), [], "controller profiles", col));
-            var tid = _game.Base.TitleId;
-            var current = Try(() => Host.Eden.GameInputProfile(tid), null, "this game's controller profile", col) ?? "";
-            if (profiles.All(x => x.Item1 != current))
-            {
-                current = "";
-            }
-            var ctl = new Stepper("Controller", profiles, current,
-                "Which controller setup player 1 uses in this game. Save setups as profiles in Settings → Controller.")
-            {
-                Expands = true,
-                DetailFor = v => v == "" ? "Same mapping and controller style as everywhere else." : $"Uses your \"{v}\" profile (its mapping and controller style) only in this game.",
-            };
-            ctl.Changed += v => App.Guard(() => Host.Eden.SetGameInputProfile(tid, v == "" ? null : v));
-            Add(ctl);
+            BuildEdenLaunchSetup(col, Add);
         }
-        if (_game.Updates.Count > 0 || _game.Dlc.Count > 0)
+        else if (backend.Id == EdenDeck.Backends.Mgba.MgbaBackend.BackendId)
         {
-            Add(Toggle.Create("Update and DLC", p.LoadAddOns, on =>
-            {
-                SetProfile(x => x with { LoadAddOns = on });
-                Rebuild();
-            }, "Loads this game's update and DLC files straight from your library. Nothing is installed or copied."));
+            BuildMgbaLaunchSetup(col, Add);
         }
 
-        var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Lossless (lsfg-vk)")],
-            p.FrameGen == FrameGenMode.Builtin ? nameof(FrameGenMode.Builtin) : nameof(FrameGenMode.Off),
-            "Doubles a 30 fps game to 60 fps with Lossless Scaling frame generation (lsfg-vk). Never goes above 60.")
-        {
-            Expands = true,
-            DetailFor = v => v == nameof(FrameGenMode.Builtin)
-                ? "Smoother motion, with slightly more input lag and occasional artifacts around fast-moving edges."
-                : "The game runs at its own frame rate with no added lag.",
-        };
-        fg.Changed += v =>
-        {
-            SetProfile(x => x with { FrameGen = Enum.Parse<FrameGenMode>(v) });
-            UpdateFrameGenNote();
-        };
-        Add(fg);
-        var fps = new Stepper("Game's own frame rate", [("", "Unknown"), ("20", "20 fps"), ("30", "30 fps"), ("60", "60 fps")],
-            p.NativeFps?.ToString() ?? "",
-            "What the game normally runs at. Games that already run at 60 get no frame generation.")
-        {
-            Expands = true,
-            DetailFor = v => v switch
-            {
-                "" => "Frame generation still runs, capped at 60. Set 60 for games that already run at 60.",
-                "60" => "Already 60: frame generation is skipped for this game.",
-                _ => $"Frame generation targets 60 fps from {v}.",
-            },
-        };
-        fps.Changed += v =>
-        {
-            SetProfile(x => x with { NativeFps = v == "" ? null : int.Parse(v) });
-            UpdateFrameGenNote();
-        };
-        Add(fps);
-        _frameGenNote = UiTheme.Label("", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true);
-        col.AddChild(_frameGenNote);
-        UpdateFrameGenNote();
-        var lsfg = Try(() => Host.Eden.FindLsfgVk(), null, "lsfg-vk status", col);
-        if (lsfg == null)
-        {
-        }
-        else if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
-        {
-            col.AddChild(UiTheme.Label(lsfg.Kind == EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.Legacy
-                ? "Frame generation needs lsfg-vk 2.x. The installed lsfg-vk is an older 1.x version."
-                : "Frame generation needs lsfg-vk, which isn't installed yet.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-        }
-        else if (Try(() => Host.Eden.LosslessDllPath(), "", "Lossless.dll status", col) == null)
-        {
-            col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-        }
-
-        var crt = new Stepper("CRT effect", [("0", "Off"), ("1", "Subtle"), ("2", "Medium"), ("3", "Strong")],
-            Math.Clamp(p.Crt, 0, 3).ToString(),
-            "Makes the game look like an old TV, the same as the app's CRT effect.")
-        {
-            Expands = true,
-            DetailFor = v => v switch
-            {
-                "0" => "No effect. The game looks the way Eden draws it.",
-                "1" => "Faint scanlines, a slight wobble and a gentle tube curve.",
-                "2" => "Scanlines, a wobbling picture, a rolling band, colour fringes and dark edges.",
-                _ => "The full old-TV look. Fine detail gets a little softer.",
-            },
-        };
-        crt.Changed += v => SetProfile(x => x with { Crt = int.Parse(v) });
-        Add(crt);
-        var layer = Host.DefaultLaunchOptions();
-        if (layer.LayerKillSwitch || layer.LayerDirectory == null)
-        {
-            col.AddChild(UiTheme.Label(layer.LayerKillSwitch
-                ? "The CRT effect is drawn by Scanline's in-game layer, which is switched off in Settings."
-                : "The CRT effect is drawn by Scanline's in-game layer, which this install doesn't have.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
-        }
-
-        col.AddChild(Section("Eden settings for this game"));
+        col.AddChild(Section($"{backend.DisplayName} settings for this game"));
         if (string.IsNullOrEmpty(b.TitleId))
         {
             col.AddChild(UiTheme.Label("Per-game settings need a title ID, which this file doesn't have.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
         else
         {
-            var settings = Host.Eden.Settings;
-            var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "Eden's settings", col);
-            var overrides = Try(() => settings.ReadPerGame(b.TitleId), new Dictionary<string, string>(), "this game's Eden settings", col);
-            Add(PresetRow(b.TitleId, overrides, settings.Options));
+            var settings = backend.Settings;
+            var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), $"{backend.DisplayName}'s settings", col);
+            var overrides = Try(() => settings.ReadPerGame(b.TitleId), new Dictionary<string, string>(), $"this game's {backend.DisplayName} settings", col);
+            if (backend.Presets is { } presets)
+            {
+                Add(PresetRow(presets, settings, backend.DisplayName, b.TitleId, overrides));
+            }
             foreach (var o in settings.Options.Where(o => o.PerGame))
             {
                 var row = OptionRows.PerGame(o, overrides.GetValueOrDefault(o.Id), global.GetValueOrDefault(o.Id), v =>
@@ -353,29 +271,163 @@ public partial class GamePage : Screen
         Anim.Stagger(info.GetChildren().OfType<Control>().ToList(), 0.04);
     }
 
-    /// <summary>One press for a whole set of the settings below; shows which set the game is on.</summary>
-    private Control PresetRow(string titleId, IReadOnlyDictionary<string, string> overrides, IReadOnlyList<OptionDefinition> options)
+    /// <summary>Eden only: key set, controller profile, update/DLC, frame generation and the CRT layer.</summary>
+    private void BuildEdenLaunchSetup(VBoxContainer col, Action<Control> Add)
     {
-        var current = PerformancePresets.Current(overrides, options);
-        var choices = new List<(string, string)>();
-        if (current == PerformancePresets.Custom)
+            col.AddChild(Section("Launch setup"));
+            var p = Profile;
+            var keySets = new List<(string, string)> { ("", "Default keys") };
+            keySets.AddRange(Try(() => Host.Eden.KeySets.List().Select(k => (k.Id, k.Label + (k.HasFirmware ? " + firmware" : ""))).ToList(), [], "key sets", col));
+            var keys = new Stepper("Keys", keySets, p.KeySet ?? "",
+                "Use one of your own key sets (and its firmware) just for this game. Add sets on Emulators → Eden.")
+            {
+                Expands = true,
+                DetailFor = v => v == "" ? "Uses the keys and firmware you imported on Emulators → Eden." : "Swapped in when this game starts and put back when it closes.",
+            };
+            keys.Changed += v => SetProfile(x => x with { KeySet = v == "" ? null : v });
+            Add(keys);
+            if (!string.IsNullOrEmpty(_game.Base.TitleId))
+            {
+                var profiles = new List<(string, string)> { ("", "Global setup") };
+                profiles.AddRange(Try(() => Host.Eden.InputProfiles().Select(n => (n, n)).ToList(), [], "controller profiles", col));
+                var tid = _game.Base.TitleId;
+                var current = Try(() => Host.Eden.GameInputProfile(tid), null, "this game's controller profile", col) ?? "";
+                if (profiles.All(x => x.Item1 != current))
+                {
+                    current = "";
+                }
+                var ctl = new Stepper("Controller", profiles, current,
+                    "Which controller setup player 1 uses in this game. Save setups as profiles in Settings → Controller.")
+                {
+                    Expands = true,
+                    DetailFor = v => v == "" ? "Same mapping and controller style as everywhere else." : $"Uses your \"{v}\" profile (its mapping and controller style) only in this game.",
+                };
+                ctl.Changed += v => App.Guard(() => Host.Eden.SetGameInputProfile(tid, v == "" ? null : v));
+                Add(ctl);
+            }
+            if (_game.Updates.Count > 0 || _game.Dlc.Count > 0)
+            {
+                Add(Toggle.Create("Update and DLC", p.LoadAddOns, on =>
+                {
+                    SetProfile(x => x with { LoadAddOns = on });
+                    Rebuild();
+                }, "Loads this game's update and DLC files straight from your library. Nothing is installed or copied."));
+            }
+
+            var fg = new Stepper("Frame generation", [(nameof(FrameGenMode.Off), "Off"), (nameof(FrameGenMode.Builtin), "Lossless (lsfg-vk)")],
+                p.FrameGen == FrameGenMode.Builtin ? nameof(FrameGenMode.Builtin) : nameof(FrameGenMode.Off),
+                "Doubles a 30 fps game to 60 fps with Lossless Scaling frame generation (lsfg-vk). Never goes above 60.")
+            {
+                Expands = true,
+                DetailFor = v => v == nameof(FrameGenMode.Builtin)
+                    ? "Smoother motion, with slightly more input lag and occasional artifacts around fast-moving edges."
+                    : "The game runs at its own frame rate with no added lag.",
+            };
+            fg.Changed += v =>
+            {
+                SetProfile(x => x with { FrameGen = Enum.Parse<FrameGenMode>(v) });
+                UpdateFrameGenNote();
+            };
+            Add(fg);
+            var fps = new Stepper("Game's own frame rate", [("", "Unknown"), ("20", "20 fps"), ("30", "30 fps"), ("60", "60 fps")],
+                p.NativeFps?.ToString() ?? "",
+                "What the game normally runs at. Games that already run at 60 get no frame generation.")
+            {
+                Expands = true,
+                DetailFor = v => v switch
+                {
+                    "" => "Frame generation still runs, capped at 60. Set 60 for games that already run at 60.",
+                    "60" => "Already 60: frame generation is skipped for this game.",
+                    _ => $"Frame generation targets 60 fps from {v}.",
+                },
+            };
+            fps.Changed += v =>
+            {
+                SetProfile(x => x with { NativeFps = v == "" ? null : int.Parse(v) });
+                UpdateFrameGenNote();
+            };
+            Add(fps);
+            _frameGenNote = UiTheme.Label("", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true);
+            col.AddChild(_frameGenNote);
+            UpdateFrameGenNote();
+            var lsfg = Try(() => Host.Eden.FindLsfgVk(), null, "lsfg-vk status", col);
+            if (lsfg == null)
+            {
+            }
+            else if (lsfg.Kind != EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.V2)
+            {
+                col.AddChild(UiTheme.Label(lsfg.Kind == EdenDeck.Backends.Eden.SystemFiles.LsfgVk.Kind.Legacy
+                    ? "Frame generation needs lsfg-vk 2.x. The installed lsfg-vk is an older 1.x version."
+                    : "Frame generation needs lsfg-vk, which isn't installed yet.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+            else if (Try(() => Host.Eden.LosslessDllPath(), "", "Lossless.dll status", col) == null)
+            {
+                col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+
+            Add(CrtRow("Eden", moving: true));
+            var layer = Host.DefaultLaunchOptions();
+            if (layer.LayerKillSwitch || layer.LayerDirectory == null)
+            {
+                col.AddChild(UiTheme.Label(layer.LayerKillSwitch
+                    ? "The CRT effect is drawn by Scanline's in-game layer, which is switched off in Settings."
+                    : "The CRT effect is drawn by Scanline's in-game layer, which this install doesn't have.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+    }
+
+    private Stepper CrtRow(string emulator, bool moving)
+    {
+        var crt = new Stepper("CRT effect", [("0", "Off"), ("1", "Subtle"), ("2", "Medium"), ("3", "Strong")],
+            Math.Clamp(Profile.Crt, 0, 3).ToString(),
+            "Makes the game look like an old TV, the same as the app's CRT effect.")
         {
-            choices.Add((PerformancePresets.Custom, "Your own mix"));
+            Expands = true,
+            DetailFor = v => (v, moving) switch
+            {
+                ("0", _) => $"No effect. The game looks the way {emulator} draws it.",
+                ("1", true) => "Faint scanlines, a slight wobble and a gentle tube curve.",
+                ("2", true) => "Scanlines, a wobbling picture, a rolling band, colour fringes and dark edges.",
+                ("1", false) => "Faint scanlines on every pixel row and a gentle tube curve.",
+                ("2", false) => "Scanlines, colour fringes, a tube curve and dark edges.",
+                _ => "The full old-TV look. Fine detail gets a little softer.",
+            },
+        };
+        crt.Changed += v => SetProfile(x => x with { Crt = int.Parse(v) });
+        return crt;
+    }
+
+    /// <summary>mGBA: the CRT effect (as an mGBA shader) and what the in-game side can and can't do.</summary>
+    private void BuildMgbaLaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        Add(CrtRow("mGBA", moving: false));
+        col.AddChild(UiTheme.Label("In mGBA the CRT effect is a still picture effect: no wobble or rolling band, since mGBA's shaders have no clock.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Buttons use mGBA's own mapping, by name (A is A, B is B); change it in mGBA's Settings → Controllers. Hold View + Start for 2 seconds to quit. Scanline's in-game menu and performance overlay only reach Vulkan emulators, so they aren't available in mGBA.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    }
+
+    /// <summary>One press for a whole set of the settings below; shows which set the game is on.</summary>
+    private Control PresetRow(PresetSet set, ISettingsProvider settings, string emulator, string titleId, IReadOnlyDictionary<string, string> overrides)
+    {
+        var current = set.Current(overrides, settings.Options);
+        var choices = new List<(string, string)>();
+        if (current == PresetSet.Custom)
+        {
+            choices.Add((PresetSet.Custom, "Your own mix"));
         }
-        choices.Add((PerformancePresets.Global, "Eden's settings"));
-        choices.AddRange(PerformancePresets.All.Select(p => (p.Id, p.Label)));
-        var row = new Stepper("Performance preset", choices, current,
-            PerformancePresets.All.FirstOrDefault(p => p.Id == current)?.Detail
-            ?? (current == PerformancePresets.Global
-                ? "Presets set resolution, upscaling, anti-aliasing and GPU accuracy for this game in one go."
-                : "You've changed the settings below by hand. Pick a preset to replace them."));
+        choices.Add((PresetSet.Global, $"{emulator}'s settings"));
+        choices.AddRange(set.All.Select(p => (p.Id, p.Label)));
+        var row = new Stepper(set.Caption, choices, current,
+            set.All.FirstOrDefault(p => p.Id == current)?.Detail
+            ?? (current == PresetSet.Global ? set.Intro : "You've changed the settings below by hand. Pick a preset to replace them."));
         row.Changed += v =>
         {
-            if (v == PerformancePresets.Custom)
+            if (v == PresetSet.Custom)
             {
                 return;
             }
-            if (App.Guard(() => PerformancePresets.Apply(Host.Eden.Settings, titleId, v)))
+            if (App.Guard(() => set.Apply(settings, titleId, v)))
             {
                 Rebuild();
             }
