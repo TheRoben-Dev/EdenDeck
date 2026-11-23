@@ -17,25 +17,100 @@ public static partial class MgbaRom
         Gbc,
     }
 
-    public sealed record Header(Kind System, string Title, string? GameCode, string Id);
+    public sealed record Header(Kind System, string Title, string? GameCode, string Id)
+    {
+        /// <summary>CRC32 of the whole ROM, when it was cheap to get (from a .zip, or a small ROM).</summary>
+        public uint? Crc { get; init; }
+    }
 
     // First bytes of the Nintendo logo every GB/GBC cartridge carries at 0x104.
     private static readonly byte[] GbLogo = [0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B];
 
+    /// <summary>ROM file extensions mGBA runs straight from a .zip.</summary>
+    public static readonly string[] RomExtensions = [".gba", ".gb", ".gbc"];
+
     public static Header? Read(string path)
     {
-        byte[] head;
         try
         {
-            using var f = File.OpenRead(path);
-            head = new byte[0x150];
-            var n = f.Read(head, 0, head.Length);
-            if (n < 0xC0)
+            if (Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
             {
-                return null;
+                return ReadZip(path);
+            }
+            using var f = File.OpenRead(path);
+            var header = Read(f, path);
+            // The name list knows GBA games by game code; others (and GBA homebrew) need the CRC,
+            // which is quick for Game Boy sized ROMs.
+            if (header != null && (header.GameCode == null || header.System != Kind.Gba) && f.Length <= MaxCrcBytes)
+            {
+                f.Position = 0;
+                header = header with { Crc = Crc32(f) };
+            }
+            return header;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The ROM inside a .zip: the first .gba/.gb/.gbc entry that is a cartridge (mGBA also takes the
+    /// first cartridge it finds). mGBA opens the archive itself and names saves after the .zip, so
+    /// nothing is extracted.
+    /// </summary>
+    private static Header? ReadZip(string path)
+    {
+        using var zip = System.IO.Compression.ZipFile.OpenRead(path);
+        var entries = zip.Entries.Where(e => e.Length >= 0xC0 && RomExtensions.Contains(Path.GetExtension(e.Name).ToLowerInvariant()));
+        foreach (var entry in entries)
+        {
+            using var s = entry.Open();
+            if (Read(s, entry.Name) is { } header)
+            {
+                return header with { Crc = entry.Crc32 };
             }
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        return null;
+    }
+
+    private const long MaxCrcBytes = 32L << 20;
+
+    private static readonly uint[] CrcTable = Enumerable.Range(0, 256).Select(n =>
+    {
+        var c = (uint)n;
+        for (var k = 0; k < 8; k++)
+        {
+            c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1;
+        }
+        return c;
+    }).ToArray();
+
+    internal static uint Crc32(Stream s)
+    {
+        var crc = 0xFFFFFFFFu;
+        var buf = new byte[1 << 16];
+        int n;
+        while ((n = s.Read(buf, 0, buf.Length)) > 0)
+        {
+            for (var i = 0; i < n; i++)
+            {
+                crc = CrcTable[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
+            }
+        }
+        return ~crc;
+    }
+
+    private static Header? Read(Stream stream, string path)
+    {
+        var head = new byte[0x150];
+        var n = 0;
+        int got;
+        while (n < head.Length && (got = stream.Read(head, n, head.Length - n)) > 0)
+        {
+            n += got;
+        }
+        if (n < 0xC0)
         {
             return null;
         }
@@ -59,19 +134,37 @@ public static partial class MgbaRom
         return null;
     }
 
-    /// <summary>"Pokemon - Emerald Version (USA, Europe) [!].gba" -> "Pokemon - Emerald Version".</summary>
+    /// <summary>
+    /// A readable title from a No-Intro name or a file name, offline:
+    /// "Pokemon - Emerald Version (USA, Europe) [!].gba" -> "Pokemon - Emerald Version",
+    /// "1986_-_pokemon_emerald_(U)(TrashMan).gba" -> "Pokemon Emerald".
+    /// </summary>
     public static string CleanTitle(string fileName)
     {
-        var name = Path.GetFileNameWithoutExtension(fileName);
-        name = Tags().Replace(name, " ");
+        var raw = Path.GetFileNameWithoutExtension(fileName);
+        var name = Tags().Replace(raw, " ");
+        name = name.Replace('_', ' ');
+        // "Golden.Sun.2" style names: dots stand in for spaces.
+        if (!name.Contains(' ') && name.Count(c => c == '.') >= 1)
+        {
+            name = name.Replace('.', ' ');
+        }
         name = Regex.Replace(name, @"\s+", " ").Trim();
+        // Release-list numbering: "1986 - Pokemon Emerald" -> "Pokemon Emerald".
+        name = Regex.Replace(name, @"^\d{3,4}\s*-\s+(?=\D)", "");
+        name = name.Trim(' ', '-');
         // "Legend of Zelda, The - ..." -> "The Legend of Zelda - ..."
         var m = Regex.Match(name, @"^(.+?), (The|A|An)( - .*)?$");
         if (m.Success)
         {
             name = $"{m.Groups[2].Value} {m.Groups[1].Value}{m.Groups[3].Value}";
         }
-        return name.Length > 0 ? name : Path.GetFileNameWithoutExtension(fileName);
+        // All lower or all upper case: "pokemon emerald" -> "Pokemon Emerald".
+        if (name.Any(char.IsLetter) && (!name.Any(char.IsUpper) || !name.Any(char.IsLower)))
+        {
+            name = System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
+        }
+        return name.Length > 0 ? name : raw;
     }
 
     private static string Ascii(byte[] b, int start, int length)

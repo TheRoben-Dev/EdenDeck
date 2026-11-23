@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.7.3
+- Fixed: **zipped Game Boy Advance games** (.zip) weren't found. They now show up like any other game and mGBA runs them straight from the .zip. Saves, save states, cheats and patches work the same.
+- **Real game names** for GBA, Game Boy and Game Boy Color games, whatever the files are called: Scanline recognises games from a built-in name list (no internet needed). Unknown files get tidied-up names, with no region tags, underscores or release numbers.
+- Fixed: **the controller didn't work in mGBA** on the Steam Deck. Scanline now sets up your controller in mGBA before each game: A on the right face button, B on the bottom, L/R on the bumpers, Select/Start on View/Menu, d-pad and left stick to move. If you've changed buttons in mGBA yourself, yours are kept.
+
 ## 0.7.2
 - Fixed: **Install RPCS3** failed with "RPCS3's update service answered with an error (-3)". Scanline now asks RPCS3's update service in a way it accepts, so installing and updating RPCS3 works.
 

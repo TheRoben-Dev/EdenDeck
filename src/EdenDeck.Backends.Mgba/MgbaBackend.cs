@@ -40,7 +40,7 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
     public string Id => BackendId;
     public string DisplayName => "mGBA";
     public string SystemName => "Game Boy Advance";
-    public IReadOnlyCollection<string> FileExtensions { get; } = [".gba", ".gb", ".gbc"];
+    public IReadOnlyCollection<string> FileExtensions { get; } = [".gba", ".gb", ".gbc", ".zip"];
 
     public MgbaInstallManager Installs { get; }
     public MgbaSettings SettingsImpl { get; }
@@ -79,7 +79,7 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
         {
             BackendId = Id,
             TitleId = header.Id,
-            Title = MgbaRom.CleanTitle(path),
+            Title = MgbaRom.CleanTitle(MgbaNames.Find(header.Crc, header.GameCode) is { } known ? known + ".gba" : Path.GetFileName(path)),
             Path = path,
             Kind = ContentKind.Base,
             TitleIdSource = header.GameCode != null ? "gba-header" : "header-title",
@@ -92,6 +92,9 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
         : titleId.StartsWith("GB_", StringComparison.Ordinal) ? "Game Boy" : "Game Boy Advance";
 
     // ---- launch ----
+
+    /// <summary>What Scanline last wrote to mGBA's gamepad section (see <see cref="MgbaPad"/>).</summary>
+    public string PadStampFile => Path.Combine(DataDir, "mgba", "pad-written.txt");
 
     public LaunchPlan Plan(GameEntry game, GameProfile profile, LaunchOptions options)
     {
@@ -123,7 +126,8 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
             args.AddRange(["-p", patch]);
             notes.Add($"patch: {Path.GetFileName(patch)}");
         }
-        var prepare = new List<Action>();
+        var configFile = ConfigFile;
+        var prepare = new List<Action> { () => MgbaPad.Ensure(configFile, PadStampFile) };
         if (Mods.LaunchCheatFile(game.TitleId) is { } cheats)
         {
             args.AddRange(["-c", cheats]);
