@@ -201,7 +201,7 @@ public sealed class MgbaTests : IDisposable
         Assert.Equal("0.10.5", b.Install.Current!.Version);
         var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
         b.Settings.WritePerGame(rom.TitleId, new Dictionary<string, string?> { ["interframeBlending"] = "true", ["resampleVideo"] = "false" });
-        var plan = b.Launch.Plan(rom, new GameProfile(), new LaunchOptions());
+        var plan = b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { HandheldFrame = false });
         Assert.Equal(exe, plan.Executable);
         Assert.Equal(["-f", "-C", "interframeBlending=1", "-C", "resampleVideo=0", rom.Path], plan.Arguments);
         // Overrides survive a restart and go away one by one.
@@ -209,7 +209,7 @@ public sealed class MgbaTests : IDisposable
         Assert.Equal("true", again.Settings.ReadPerGame(rom.TitleId)["interframeBlending"]);
         again.Settings.WritePerGame(rom.TitleId, new Dictionary<string, string?> { ["interframeBlending"] = null, ["resampleVideo"] = null });
         Assert.Empty(again.Settings.ReadPerGame(rom.TitleId));
-        Assert.Equal(["-f", rom.Path], again.Launch.Plan(rom, new GameProfile(), new LaunchOptions()).Arguments);
+        Assert.Equal(["-f", rom.Path], again.Launch.Plan(rom, new GameProfile(), new LaunchOptions { HandheldFrame = false }).Arguments);
     }
 
     [Fact]
@@ -218,7 +218,7 @@ public sealed class MgbaTests : IDisposable
         var b = Backend();
         Assert.Null(b.Install.Current);
         var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
-        var e = Assert.Throws<InvalidOperationException>(() => b.Launch.Plan(rom, new GameProfile(), new LaunchOptions()));
+        var e = Assert.Throws<InvalidOperationException>(() => b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { HandheldFrame = false }));
         Assert.Contains("isn't installed", e.Message);
     }
 
@@ -296,9 +296,9 @@ public sealed class MgbaTests : IDisposable
         Assert.Throws<InvalidDataException>(() => b.Mods.InstallPatch(rom.TitleId, Rom("readme.txt", [1, 2, 3])));
         var patch = b.Mods.InstallPatch(rom.TitleId, Rom("Translation.ips", Encoding.ASCII.GetBytes("PATCHxxxEOF")));
         Assert.Equal(patch, b.Mods.ActivePatch(rom.TitleId));
-        Assert.Equal(["-f", "-p", patch, rom.Path], b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { Fullscreen = true }).Arguments);
+        Assert.Equal(["-f", "-p", patch, rom.Path], b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { Fullscreen = true, HandheldFrame = false }).Arguments);
         b.Mods.SetActivePatch(rom.TitleId, null);
-        Assert.DoesNotContain("-p", b.Launch.Plan(rom, new GameProfile(), new LaunchOptions()).Arguments);
+        Assert.DoesNotContain("-p", b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { HandheldFrame = false }).Arguments);
         b.Mods.RemovePatch(rom.TitleId, patch);
         Assert.Empty(b.Mods.Patches(rom.TitleId));
     }
@@ -324,10 +324,10 @@ public sealed class MgbaTests : IDisposable
             """);
         Assert.Equal(["Infinite Health", "Max \"Gold\""], cheats.Select(c => c.Name).ToArray());
         b.Mods.SaveCheats(rom.TitleId, cheats);
-        Assert.DoesNotContain("-c", b.Launch.Plan(rom, new GameProfile(), new LaunchOptions()).Arguments);
+        Assert.DoesNotContain("-c", b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { HandheldFrame = false }).Arguments);
 
         b.Mods.SaveCheats(rom.TitleId, cheats.Select((c, i) => c with { Enabled = i == 1 }).ToList());
-        var plan = b.Launch.Plan(rom, new GameProfile(), new LaunchOptions());
+        var plan = b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { HandheldFrame = false });
         var file = plan.Arguments[plan.Arguments.ToList().IndexOf("-c") + 1];
         foreach (var p in plan.Prepare)
         {
@@ -363,8 +363,8 @@ public sealed class MgbaTests : IDisposable
         File.WriteAllText(Path.Combine(apps, "mGBA-0.10.5-appimage-x64.appimage"), "#!/bin/sh\n");
         var b = Backend();
         var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
-        Assert.DoesNotContain("-C", b.Launch.Plan(rom, new GameProfile { Crt = 0 }, new LaunchOptions()).Arguments);
-        var plan = b.Launch.Plan(rom, new GameProfile { Crt = 2 }, new LaunchOptions());
+        Assert.DoesNotContain("-C", b.Launch.Plan(rom, new GameProfile { Crt = 0 }, new LaunchOptions { HandheldFrame = false }).Arguments);
+        var plan = b.Launch.Plan(rom, new GameProfile { Crt = 2 }, new LaunchOptions { HandheldFrame = false });
         var arg = plan.Arguments[plan.Arguments.ToList().IndexOf("-C") + 1];
         Assert.StartsWith("shader=", arg);
         foreach (var p in plan.Prepare)
@@ -374,9 +374,40 @@ public sealed class MgbaTests : IDisposable
         var dir = arg["shader=".Length..];
         var manifest = File.ReadAllText(Path.Combine(dir, "manifest.ini"));
         Assert.Contains("passes=1", manifest);
-        Assert.Contains("fragmentShader=crt.fs", manifest);
+        Assert.Contains("fragmentShader=scanline.fs", manifest);
         Assert.Contains("[pass.0.uniform.strength]\ntype=float\ndefault=1\n", manifest);
-        Assert.Contains("gl_FragColor", File.ReadAllText(Path.Combine(dir, "crt.fs")));
+        Assert.Contains("[pass.0.uniform.frame]\ntype=float\ndefault=0\n", manifest);
+        Assert.Contains("gl_FragColor", File.ReadAllText(Path.Combine(dir, "scanline.fs")));
+        Assert.DoesNotContain("lockAspectRatio=0", plan.Arguments);
+    }
+
+    [Fact]
+    public void HandheldFrameIsOnByDefaultAndPerGame()
+    {
+        var apps = Path.Combine(_home, "Applications");
+        Directory.CreateDirectory(apps);
+        File.WriteAllText(Path.Combine(apps, "mGBA-0.10.5-appimage-x64.appimage"), "#!/bin/sh\n");
+        var b = Backend();
+        var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
+        var plan = b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { Accent = "#3DFF8F" });
+        Assert.Contains("lockAspectRatio=0", plan.Arguments);   // the shader places the picture itself
+        foreach (var p in plan.Prepare)
+        {
+            p();
+        }
+        var dir = plan.Arguments.First(a => a.StartsWith("shader=", StringComparison.Ordinal))["shader=".Length..];
+        Assert.EndsWith("scanline-c0-f3dff8f", dir);
+        var manifest = File.ReadAllText(Path.Combine(dir, "manifest.ini"));
+        Assert.Contains("[pass.0.uniform.frame]\ntype=float\ndefault=1\n", manifest);
+        Assert.Contains("[pass.0.uniform.accent]\ntype=float3\ndefault[0]=0.239\ndefault[1]=1\ndefault[2]=0.561\n", manifest);
+        Assert.Contains("[pass.0.uniform.strength]\ntype=float\ndefault=0\n", manifest);
+
+        // Off for this game, or globally with no per-game choice.
+        Assert.DoesNotContain("-C", b.Launch.Plan(rom, new GameProfile { Frame = false }, new LaunchOptions()).Arguments);
+        Assert.Contains("lockAspectRatio=0", b.Launch.Plan(rom, new GameProfile { Frame = true }, new LaunchOptions { HandheldFrame = false }).Arguments);
+        // Frame and CRT share one shader.
+        Assert.EndsWith("scanline-c3-f6c5ce7", MgbaShader.DirFor("/x", new(3, true)));
+        Assert.Null(MgbaShader.DirFor("/x", new(0, false)));
     }
 
     [Fact]

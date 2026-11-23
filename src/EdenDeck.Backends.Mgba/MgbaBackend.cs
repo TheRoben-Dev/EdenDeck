@@ -134,11 +134,21 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
             prepare.Add(() => Mods.WriteLaunchCheats(game.TitleId));
             notes.Add($"cheats: {Mods.Cheats(game.TitleId).Count(c => c.Enabled)} on");
         }
-        if (MgbaCrt.DirFor(DataDir, profile.Crt) is { } shader)
+        var look = new MgbaShader.Look(profile.Crt, profile.Frame ?? options.HandheldFrame, options.Accent);
+        if (MgbaShader.DirFor(DataDir, look) is { } shader)
         {
             args.AddRange(["-C", "shader=" + shader]);
-            prepare.Add(() => MgbaCrt.Write(DataDir, profile.Crt));
-            notes.Add("CRT effect");
+            prepare.Add(() => MgbaShader.Write(DataDir, look));
+            if (look.Frame)
+            {
+                // The shader places the picture itself, so mGBA mustn't letterbox it.
+                args.AddRange(["-C", "lockAspectRatio=0", "-C", "lockIntegerScaling=0"]);
+                notes.Add("handheld frame");
+            }
+            if (MgbaShader.CrtLook(profile.Crt) != null)
+            {
+                notes.Add("CRT effect");
+            }
         }
         args.Add(game.Path);
         return new LaunchPlan

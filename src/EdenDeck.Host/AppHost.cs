@@ -39,6 +39,9 @@ public sealed record AppSettings
     /// <summary>The theme's slow animated background behind the menus.</summary>
     public bool AnimatedBackground { get; init; } = true;
 
+    /// <summary>Handheld games (GBA, GB, GBC): a decorative frame fills the side bars.</summary>
+    public bool HandheldFrame { get; init; } = true;
+
     /// <summary>Menu sounds, 0 (off) to 100.</summary>
     public int SoundVolume { get; init; } = 50;
 
@@ -174,7 +177,12 @@ public sealed class AppHost
         CrtMotion = !Settings.ReduceMotion,
         Docked = Settings.ConsoleModeFollowsScreen ? ScreenDetect.External() : null,
         Vulkan = new EdenDeck.Backends.Eden.EdenVulkanExtras(Eden, Paths.Runtime),
+        HandheldFrame = Settings.HandheldFrame,
+        Accent = Accent,
     };
+
+    /// <summary>The app's current accent colour (#rrggbb), set by the app; used for in-game decoration.</summary>
+    public string? Accent { get; set; }
 
     public LaunchPlan PlanLaunch(LibraryGame game)
     {

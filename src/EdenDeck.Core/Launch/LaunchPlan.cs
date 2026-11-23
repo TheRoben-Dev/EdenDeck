@@ -22,6 +22,12 @@ public sealed record LaunchOptions
     /// </summary>
     public bool? Docked { get; init; }
 
+    /// <summary>Handheld games: draw Scanline's decorative frame in the side bars (a game can override it).</summary>
+    public bool HandheldFrame { get; init; } = true;
+
+    /// <summary>The app's accent colour as #rrggbb, for things drawn in-game (null: a default).</summary>
+    public string? Accent { get; init; }
+
     /// <summary>Frame generation and Scanline's Vulkan layer, for any Vulkan emulator (null: none).</summary>
     public ILaunchExtras? Vulkan { get; init; }
 }
