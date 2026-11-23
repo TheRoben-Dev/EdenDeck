@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Starlight Saga");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Tiny Quest");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -101,11 +101,27 @@ public partial class SmokeTest : Node
         Step("library-show-all", () => FindFocusable(GetTree().Root, "Favorites and your collections")?.GrabFocus() , expect: "Favorites and your collections");
         Step("library-show-all-left", () => Press("ui_left"), expect: "Favorites and your collections");
         Step("library-refocus", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
+        // A Game Boy Advance game (mGBA): its system chip, looks presets, patches & cheats and CRT row.
+        Step("gba-tile", () => FindFocusable(GetTree().Root, "Tiny Quest")?.GrabFocus(), expect: "Tiny Quest");
+        Step("gba-page", () => Press(Pad.Accept), expect: "Play");
+        Step("gba-look", () => FindFocusable(GetTree().Root, "Looks set scaling")?.GrabFocus(), expect: "Looks set scaling");
+        Step("gba-look-pixel", () => Press("ui_right"), expect: "Whole-number scaling");
+        Step("gba-look-global", () => Press("ui_left"), expect: "Looks set scaling");
+        Step("gba-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
+        Step("gba-mods", () => FindFocusable(GetTree().Root, "Apply a ROM patch")?.GrabFocus(), expect: "Patches & cheats");
+        Step("gba-mods-page", () => Press(Pad.Accept), expect: "Install a patch");
+        Step("gba-mods-back", () => Press(Pad.Back), expect: "Patches & cheats");
+        Step("gba-saves", () => FindFocusable(GetTree().Root, "Back up, restore or delete")?.GrabFocus(), expect: "Saves");
+        Step("gba-back", () => Press(Pad.Back), expect: "Tiny Quest");
+        Step("library-refocus-2", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
         Step("returned", () => { }, wait: 3.0, expect: "OK");
         Step("early-exit-ok", () => Press(Pad.Accept), expect: "Castle Defenders");
         Step("eden", () => Press(Pad.TabNext));
+        Step("emulators-mgba", () => FindFocusable(GetTree().Root, "mGBA isn't installed yet")?.GrabFocus(), expect: "mGBA (Game Boy Advance)");
+        Step("emulators-mgba-pane", () => Press(Pad.Accept), expect: "Install mGBA");
+        Step("emulators-mgba-back", () => Press(Pad.Back), expect: "mGBA (Game Boy Advance)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>
