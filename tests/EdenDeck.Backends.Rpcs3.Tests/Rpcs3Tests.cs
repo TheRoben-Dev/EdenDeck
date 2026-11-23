@@ -265,6 +265,22 @@ public sealed class Rpcs3Tests : IDisposable
     }
 
     [Fact]
+    public void UpdateRequestPassesTheServicesChecks()
+    {
+        // update.rpcs3.net answers -3 ("illegal search") for a build hash ("c") that isn't 7+
+        // alphanumeric characters, and for a v3 request without os_type and os_arch.
+        var url = new Uri(string.Format(System.Globalization.CultureInfo.InvariantCulture, Rpcs3InstallManager.ReleaseFeed, "x64"));
+        var q = url.Query.TrimStart('?').Split('&').Select(p => p.Split('=', 2)).ToDictionary(p => p[0], p => p.Length > 1 ? p[1] : "");
+        Assert.Equal("v3", q["api"]);
+        Assert.Equal("linux", q["os_type"]);
+        Assert.Equal("x64", q["os_arch"]);
+        if (q.TryGetValue("c", out var c))
+        {
+            Assert.True(c.Length >= 7 && c.All(char.IsAsciiLetterOrDigit), $"c={c} would be rejected");
+        }
+    }
+
+    [Fact]
     public void FirmwareIsTheUsersOwnPup()
     {
         InstallFakeRpcs3(firmware: false);
