@@ -35,6 +35,9 @@ public sealed record GameProfile
     /// <summary>In-game CRT filter drawn by Scanline's Vulkan layer: 0 off, 1 subtle, 2 medium, 3 strong.</summary>
     public int Crt { get; init; }
 
+    /// <summary>Handheld games: the decorative frame in the side bars. Null follows the global setting.</summary>
+    public bool? Frame { get; init; }
+
     public DateTimeOffset? LastPlayed { get; init; }
 
     /// <summary>Starred: listed first in the library.</summary>

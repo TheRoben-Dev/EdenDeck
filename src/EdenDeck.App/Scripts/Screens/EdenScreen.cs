@@ -208,6 +208,12 @@ public partial class EdenScreen : TwoPaneScreen
                 App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
         }
 
+        col.AddChild(Section("Handheld frame"));
+        Add(Toggle.Create("Frame around the picture", Host.Settings.HandheldFrame, on => Host.SaveSettings(Host.Settings with { HandheldFrame = on }),
+            "Fills the black bars beside GBA, Game Boy and Game Boy Color games.",
+            "A handheld-style shell and screen bezel in your accent colour, drawn by mGBA. It's decoration only: nothing in it is a button. Games can turn it off on their own card.",
+            "Plain black bars, the way mGBA draws them."));
+
         col.AddChild(Section("Controls"));
         col.AddChild(Note("Scanline sets up your controller in mGBA before each game: A on the right face button, B on the bottom, L/R on the bumpers, Select/Start on View/Menu. If you change buttons in mGBA's own settings, Scanline keeps yours."));
         col.AddChild(Note(MgbaNames.Credit));

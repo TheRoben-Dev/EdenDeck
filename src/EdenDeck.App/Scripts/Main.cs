@@ -183,6 +183,10 @@ public partial class Main : Control
         };
 
         Host = host;
+        if (host != null)
+        {
+            host.Accent = "#" + UiTheme.Accent.ToHtml(false);
+        }
         _feedback = new Feedback(UiTheme.Name)
         {
             Volume = host?.Settings.SoundVolume ?? 50,
@@ -360,6 +364,10 @@ public partial class Main : Control
             snap.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         }
         UiTheme.Use(name, Host?.Settings.Accents.GetValueOrDefault(name));
+        if (Host != null)
+        {
+            Host.Accent = "#" + UiTheme.Accent.ToHtml(false);
+        }
         Theme = UiTheme.Build();
         BuildBackground();
         var header = NewHeader();

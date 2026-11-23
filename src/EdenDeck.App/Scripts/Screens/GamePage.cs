@@ -452,6 +452,20 @@ public partial class GamePage : Screen
     {
         col.AddChild(Section("Launch setup"));
         Add(CrtRow("mGBA", moving: false));
+        var frame = new Stepper("Handheld frame", [("default", Host.Settings.HandheldFrame ? "Default (on)" : "Default (off)"), ("on", "On"), ("off", "Off")],
+            Profile.Frame switch { true => "on", false => "off", _ => "default" },
+            "A handheld-style shell and screen bezel in the side bars, in your accent colour. Decoration only.")
+        {
+            Expands = true,
+            DetailFor = v => v switch
+            {
+                "on" => "Always framed for this game.",
+                "off" => "Plain black bars for this game.",
+                _ => "Follows Emulators → mGBA → Handheld frame.",
+            },
+        };
+        frame.Changed += v => SetProfile(x => x with { Frame = v switch { "on" => true, "off" => false, _ => null } });
+        Add(frame);
         col.AddChild(UiTheme.Label("In mGBA the CRT effect is a still picture effect: no wobble or rolling band, since mGBA's shaders have no clock.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         col.AddChild(UiTheme.Label("Buttons are set up like a GBA: A on the right face button, B on the bottom, L/R on the bumpers. Change them in mGBA's Settings → Controllers and Scanline keeps yours. Hold View + Start for 2 seconds to quit. Scanline's in-game menu and performance overlay only reach Vulkan emulators, so they aren't available in mGBA.",
