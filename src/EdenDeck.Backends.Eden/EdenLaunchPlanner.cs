@@ -113,7 +113,7 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
         // override older EdenDeck versions wrote).
         if (!string.IsNullOrEmpty(game.TitleId) && _backend.Schema.Find("frame_gen") != null)
         {
-            var current = Config.QtIni.Load(_backend.Paths.PerGameConfigFile(game.TitleId));
+            var current = QtIni.Load(_backend.Paths.PerGameConfigFile(game.TitleId));
             if (current.Get("Renderer", "frame_gen\\use_global") == "false")
             {
                 prepare.Add(() => _backend.EdenSettings.WritePerGameRaw(game.TitleId, new Dictionary<string, string?>

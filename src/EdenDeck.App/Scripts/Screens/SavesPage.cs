@@ -1,6 +1,6 @@
 using System.Globalization;
 using EdenDeck.App.Ui;
-using EdenDeck.Backends.Eden.Saves;
+using EdenDeck.Core.Saves;
 using EdenDeck.Core.Library;
 using Godot;
 
@@ -18,7 +18,7 @@ public partial class SavesPage : Screen
 
     public SavesPage(LibraryGame game, Action? closed = null) => (_game, _closed) = (game, closed);
 
-    private string Tid => _game.Base.TitleId!;
+    private ISaveData Data => Host.Backend(_game.Base.BackendId).SaveData!;
 
     public override bool OnBack()
     {
@@ -40,7 +40,7 @@ public partial class SavesPage : Screen
             items.Add(c);
         }
 
-        var saves = Try(() => Host.Eden.Saves(Tid), [], "saves", col);
+        var saves = Try(() => Data.Saves(_game.Base), [], "saves", col);
         col.AddChild(UiTheme.Label(saves.Count == 0
                 ? "No save yet. It appears after you play and save in the game."
                 : $"Save: {FormatSize(saves.Sum(s => s.Bytes))}, last changed {When(saves.Max(s => s.LastWriteUtc))}{(saves.Count > 1 ? $" ({saves.Count} profiles)" : "")}.",
@@ -49,7 +49,7 @@ public partial class SavesPage : Screen
         {
             Add(new ActionButton("Back up now", () =>
             {
-                if (App.Guard(() => Host.Eden.BackupSaves(Tid)))
+                if (App.Guard(() => Data.Backup(_game.Base)))
                 {
                     App.Success("Save backed up");
                     Rebuild();
@@ -58,10 +58,10 @@ public partial class SavesPage : Screen
         }
         Add(Toggle.Create("Back up before each play", Host.Settings.BackupSavesOnLaunch, on =>
                 Host.SaveSettings(Host.Settings with { BackupSavesOnLaunch = on }),
-            $"For every game: a copy right before it starts. The last {EdenSaves.KeepAutomatic} per game are kept.",
+            $"For every game: a copy right before it starts. The last {SaveZips.KeepAutomatic} per game are kept.",
             "Your saves are copied each time a game starts.", "Only the backups you make yourself."));
 
-        var backups = Try(() => Host.Eden.SaveBackups(Tid), [], "backups", col);
+        var backups = Try(() => Data.Backups(_game.Base), [], "backups", col);
         col.AddChild(Section(backups.Count == 0 ? "No backups yet" : $"Backups ({backups.Count})"));
         foreach (var b in backups)
         {
@@ -75,14 +75,14 @@ public partial class SavesPage : Screen
             Add(new ActionButton("Delete save", () => App.Confirm(
                 $"Delete the save for {_game.Base.Title}? A backup is made first, so you can restore it from this page.", "Delete", () =>
                 {
-                    if (App.Guard(() => Host.Eden.DeleteSaves(Tid)))
+                    if (App.Guard(() => Data.Delete(_game.Base)))
                     {
                         App.Success("Save deleted (a backup was kept)");
                         Rebuild();
                     }
                 }), "Starts the game fresh. A backup is kept."));
         }
-        col.AddChild(UiTheme.Label("Backups are kept in " + Host.Eden.SaveBackupDir(Tid), UiTheme.SmallSize, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Backups are kept in " + Data.BackupDir(_game.Base), UiTheme.SmallSize, UiTheme.Dim, wrap: true));
         Add(new ActionButton("Back", () => OnBack()));
         Focus.Column(items);
         Anim.Stagger(items, 0.02);
@@ -94,7 +94,7 @@ public partial class SavesPage : Screen
     private void Choose(SaveBackup b) => App.Push(new ChoicePage($"Backup from {When(b.CreatedUtc)} ({FormatSize(b.Bytes)}).",
         ("Restore", () => App.Confirm("Replace the current save with this backup? The current save is backed up first.", "Restore", () =>
         {
-            if (App.Guard(() => Host.Eden.RestoreSaves(Tid, b.Path)))
+            if (App.Guard(() => Data.Restore(_game.Base, b.Path)))
             {
                 App.Success("Backup restored");
                 Rebuild();

@@ -16,7 +16,8 @@ public static class GameIcons
     /// <summary>The icon for <paramref name="game"/>, or null when there isn't a readable one (no keys, compressed file, …).</summary>
     public static Task<Image?> Load(GameEntry game)
     {
-        if (Main.Instance.Host == null || string.IsNullOrEmpty(game.TitleId))
+        // Only Switch games carry an icon; other systems keep their generated cartridge label.
+        if (Main.Instance.Host is not { } host || string.IsNullOrEmpty(game.TitleId) || game.BackendId != host.Eden.Id)
         {
             return Task.FromResult<Image?>(null);
         }

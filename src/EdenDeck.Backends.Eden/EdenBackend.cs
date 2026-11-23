@@ -47,6 +47,19 @@ public sealed class EdenBackend : IEmulatorBackend
     public string SaveBackupDir(string titleId) => EdenSaves.BackupDir(_app.Data, titleId);
 
     /// <summary>All of Scanline's save backups, every game.</summary>
+    public ISaveData? SaveData => new EdenSaveData(this);
+    public Core.Settings.PresetSet? Presets => PerformancePresets.Set;
+
+    private sealed class EdenSaveData(EdenBackend eden) : ISaveData
+    {
+        public IReadOnlyList<SaveFolder> Saves(Core.Library.GameEntry game) => eden.Saves(game.TitleId);
+        public IReadOnlyList<SaveBackup> Backups(Core.Library.GameEntry game) => eden.SaveBackups(game.TitleId);
+        public string BackupDir(Core.Library.GameEntry game) => eden.SaveBackupDir(game.TitleId);
+        public SaveBackup? Backup(Core.Library.GameEntry game, bool automatic = false) => eden.BackupSaves(game.TitleId, automatic);
+        public SaveBackup? Restore(Core.Library.GameEntry game, string backupZip) => eden.RestoreSaves(game.TitleId, backupZip);
+        public SaveBackup? Delete(Core.Library.GameEntry game) => eden.DeleteSaves(game.TitleId);
+    }
+
     public long SaveBackupBytes() => Storage.ShaderCache.DirBytes(System.IO.Path.Combine(_app.Data, "saves"));
 
     public SaveBackup? BackupSaves(string titleId, bool automatic = false) => EdenSaves.Backup(Paths, _app.Data, titleId, automatic);
@@ -260,7 +273,7 @@ public sealed class EdenBackend : IEmulatorBackend
     /// </summary>
     public string? GameIcon(Core.Library.GameEntry game)
     {
-        if (string.IsNullOrEmpty(game.TitleId) || !File.Exists(game.Path))
+        if (game.BackendId != Id || string.IsNullOrEmpty(game.TitleId) || !File.Exists(game.Path))
         {
             return null;
         }

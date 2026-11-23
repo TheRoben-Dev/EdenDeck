@@ -17,7 +17,7 @@ namespace EdenDeck.App;
 /// </summary>
 public partial class Main : Control
 {
-    private static readonly string[] TabNames = ["Library", "Eden", "Settings"];
+    private static readonly string[] TabNames = ["Library", "Emulators", "Settings"];
     private static readonly Func<Screen>[] TabFactories = [() => new LibraryScreen(), () => new EdenScreen(), () => new SettingsScreen()];
 
     private readonly List<Screen> _stack = new();
@@ -363,7 +363,7 @@ public partial class Main : Control
         Theme = UiTheme.Build();
         BuildBackground();
         var header = NewHeader();
-        header.SetBadge(Array.IndexOf(TabNames, "Eden"), EdenUpdate != null);
+        header.SetBadge(Array.IndexOf(TabNames, "Emulators"), EdenUpdate != null);
         _root.AddChild(header);
         _root.MoveChild(header, _header.GetIndex());
         _header.QueueFree();
@@ -410,7 +410,7 @@ public partial class Main : Control
     /// <summary>
     /// Quietly asks Eden's official feed whether the installed channel has a newer build (only for
     /// copies Scanline installed; a user's own AppImage has no comparable version). Shows a badge
-    /// on the Eden tab and a banner on the Eden page. Throttled to once every 15 minutes.
+    /// on Emulators → Eden and a banner on the Eden page. Throttled to once every 15 minutes.
     /// </summary>
     public async void CheckForEdenUpdate(bool force = false)
     {
@@ -443,7 +443,7 @@ public partial class Main : Control
     {
         var changed = release?.Version != EdenUpdate?.Version;
         EdenUpdate = release;
-        _header.SetBadge(Array.IndexOf(TabNames, "Eden"), release != null);
+        _header.SetBadge(Array.IndexOf(TabNames, "Emulators"), release != null);
         if (changed)
         {
             foreach (var s in _stack.OfType<EdenScreen>())
@@ -1067,7 +1067,7 @@ public partial class Main : Control
         {
             return;
         }
-        var controllerNote = EnsureController();
+        var controllerNote = game.Base.BackendId == Host.Eden.Id ? EnsureController() : null;
         LaunchPlan plan;
         try
         {
@@ -1147,7 +1147,7 @@ public partial class Main : Control
     private async void RunEden(string title, LaunchPlan plan, IReadOnlyList<string> notes, Action? after, LibraryGame? game = null)
     {
         var started = DateTime.UtcNow;
-        var page = new RunningPage(title, notes);
+        var page = new RunningPage(title, notes, EmulatorName(game));
         Push(page);
         GameRunning = true;
         Pad.ReleaseAll();
@@ -1177,7 +1177,7 @@ public partial class Main : Control
             GameRunning = false;
             PopTo(page);
             Pop();
-            Error($"Could not start Eden: {e.Message}");
+            Error($"Could not start {EmulatorName(game)}: {e.Message}");
             return;
         }
         _gameCts = null;
@@ -1194,19 +1194,25 @@ public partial class Main : Control
         }
         else if (code != 0)
         {
-            Error($"Eden exited with code {code}.");
+            Error($"{EmulatorName(game)} exited with code {code}.");
         }
         after?.Invoke();
     }
 
+    /// <summary>"Eden", "mGBA"... for messages about a game's emulator.</summary>
+    private string EmulatorName(LibraryGame? game) =>
+        game == null ? "Eden" : Host?.Backends.FirstOrDefault(b => b.Id == game.Base.BackendId)?.DisplayName ?? "The emulator";
+
     private void ShowEdenExit(LibraryGame game, int code, double seconds, List<string> output)
     {
-        var tail = EdenLogTail(output);
+        var eden = game.Base.BackendId == Host!.Eden.Id;
+        var name = EmulatorName(game);
+        var tail = EdenLogTail(output, fileLog: eden);
         var how = code == 0 ? "closed" : code > 128 ? $"crashed (signal {code - 128})" : $"exited with code {code}";
-        var msg = $"Eden {how} after {seconds:0} s.\n\n" + (tail.Length > 0 ? "Last lines of Eden's log:\n" + tail : "Eden wrote nothing to its log.");
+        var msg = $"{name} {how} after {seconds:0} s.\n\n" + (tail.Length > 0 ? $"Last lines of {name}'s log:\n" + tail : $"{name} wrote nothing to its log.");
         var options = new List<(string, Action)> { ("OK", () => { }) };
         var profile = Host!.Profiles.Get(game.GameId);
-        if (profile.LoadAddOns && (game.Updates.Count > 0 || game.Dlc.Count > 0))
+        if (eden && profile.LoadAddOns && (game.Updates.Count > 0 || game.Dlc.Count > 0))
         {
             options.Add(("Try without update and DLC", () =>
             {
@@ -1222,11 +1228,15 @@ public partial class Main : Control
     }
 
     /// <summary>The interesting end of Eden's log: errors first, else the last lines (file log, then stdout).</summary>
-    private string EdenLogTail(List<string> output)
+    private string EdenLogTail(List<string> output, bool fileLog = true)
     {
         IEnumerable<string> lines = [];
         try
         {
+            if (!fileLog)
+            {
+                throw new IOException("no file log");
+            }
             var dir = Path.Combine(Host!.Eden.Paths.DataDir, "log");
             var file = Directory.Exists(dir)
                 ? new DirectoryInfo(dir).GetFiles("*.txt").OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault()

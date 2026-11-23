@@ -104,7 +104,7 @@ public static class KeyRequirements
             throw new KeysTooOldException(
                 $"{title} needs keys from firmware {FirmwareFor(needed)} or newer (master key {needed:x2}). " +
                 $"{keysLabel} only go up to firmware {FirmwareFor(have)} (master key {Math.Max(have, 0):x2}).\n\n" +
-                "Dump prod.keys from a console on a newer firmware, add them as a key set on the Eden tab, " +
+                "Dump prod.keys from a console on a newer firmware, add them as a key set on Emulators → Eden, " +
                 "then choose that set under Keys on this game's page.",
                 needed, have);
         }

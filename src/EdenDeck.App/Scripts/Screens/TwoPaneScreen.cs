@@ -7,7 +7,7 @@ namespace EdenDeck.App.Screens;
 /// Two panes, console style: categories on the left, the selected category on the right.
 /// Focusing a category shows its contents; A or right moves into them, and only B goes back to the
 /// category (left inside the pane never leaves it). While the pane has focus the category list
-/// narrows a little and dims every category but the selected one. Used by Settings and the Eden tab.
+/// narrows a little and dims every category but the selected one. Used by Settings and Emulators → Eden.
 /// </summary>
 public abstract partial class TwoPaneScreen : Screen
 {

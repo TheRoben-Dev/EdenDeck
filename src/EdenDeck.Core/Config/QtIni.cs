@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace EdenDeck.Backends.Eden.Config;
+namespace EdenDeck.Core.Config;
 
 /// <summary>
 /// Minimal, order-preserving INI document compatible with what Eden writes (SimpleIni with
@@ -22,9 +22,12 @@ public sealed class QtIni
 
     private readonly List<Line> _lines = new();
 
-    public static QtIni Parse(string text)
+    /// <summary>False for plain INI files (mGBA, RPCS3...) that keep quotes as part of the value.</summary>
+    private bool _quoting = true;
+
+    public static QtIni Parse(string text, bool quoting = true)
     {
-        var ini = new QtIni();
+        var ini = new QtIni { _quoting = quoting };
         string? section = null;
         foreach (var raw in text.Replace("\r\n", "\n").Split('\n'))
         {
@@ -56,7 +59,7 @@ public sealed class QtIni
         return ini;
     }
 
-    public static QtIni Load(string path) => File.Exists(path) ? Parse(File.ReadAllText(path)) : new QtIni();
+    public static QtIni Load(string path, bool quoting = true) => File.Exists(path) ? Parse(File.ReadAllText(path), quoting) : new QtIni { _quoting = quoting };
 
     public IEnumerable<string> Sections => _lines.Where(l => l.Key == null && l.Section != null).Select(l => l.Section!);
 
@@ -66,15 +69,15 @@ public sealed class QtIni
     public string? Get(string section, string key)
     {
         var l = Find(section, key);
-        return l?.Value is { } v ? Unquote(v) : null;
+        return l?.Value is { } v ? (_quoting ? Unquote(v) : v) : null;
     }
 
     public IEnumerable<KeyValuePair<string, string>> Entries(string section) =>
-        _lines.Where(l => l.Key != null && l.Section == section).Select(l => new KeyValuePair<string, string>(l.Key!, Unquote(l.Value!)));
+        _lines.Where(l => l.Key != null && l.Section == section).Select(l => new KeyValuePair<string, string>(l.Key!, _quoting ? Unquote(l.Value!) : l.Value!));
 
     public void Set(string section, string key, string value)
     {
-        var encoded = Quote(value);
+        var encoded = _quoting ? Quote(value) : value;
         var existing = Find(section, key);
         if (existing != null)
         {
