@@ -21,6 +21,7 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
     public MgbaBackend(AppPaths app, HttpClient? http = null, Func<string, string?>? env = null)
     {
         _env = env ?? Environment.GetEnvironmentVariable;
+        DataDir = app.Data;
         Installs = new MgbaInstallManager(app.EmulatorsDir, http, _env);
         SettingsImpl = new MgbaSettings(() => ConfigFile, Path.Combine(app.Data, "mgba", "overrides.json"));
         Saves = new MgbaSaves(this, app.Data);
@@ -28,6 +29,7 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
         CheatDatabase = new MgbaCheatDatabase(http ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
     }
 
+    public string DataDir { get; }
     public MgbaMods Mods { get; }
     public MgbaCheatDatabase CheatDatabase { get; }
 
@@ -128,6 +130,12 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
             prepare.Add(() => Mods.WriteLaunchCheats(game.TitleId));
             notes.Add($"cheats: {Mods.Cheats(game.TitleId).Count(c => c.Enabled)} on");
         }
+        if (MgbaCrt.DirFor(DataDir, profile.Crt) is { } shader)
+        {
+            args.AddRange(["-C", "shader=" + shader]);
+            prepare.Add(() => MgbaCrt.Write(DataDir, profile.Crt));
+            notes.Add("CRT effect");
+        }
         args.Add(game.Path);
         return new LaunchPlan
         {
@@ -166,5 +174,22 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
             }
         }
         SettingsImpl.SetRaw("gba.bios", path);
+    }
+
+    // ---- storage ----
+
+    public sealed record GameUsage(GameEntry Game, long Rom, long Saves, long Patches)
+    {
+        public long Total => Rom + Saves + Patches;
+    }
+
+    /// <summary>What one game takes up: the ROM, its save and save states, and its patches.</summary>
+    public GameUsage Usage(GameEntry game)
+    {
+        static long Size(string f) => File.Exists(f) ? new FileInfo(f).Length : 0;
+        var tid = game.TitleId ?? "";
+        return new GameUsage(game, Size(game.Path),
+            tid == "" ? 0 : Saves.Saves(game).Sum(s => s.Bytes),
+            tid == "" ? 0 : Mods.Patches(tid).Sum(Size));
     }
 }

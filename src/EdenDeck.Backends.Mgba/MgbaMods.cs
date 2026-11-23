@@ -144,7 +144,12 @@ public sealed partial class MgbaMods(string dataDir)
             var eq = line.IndexOf('=');
             if (eq > 0)
             {
-                values[line[..eq].Trim()] = line[(eq + 1)..].Trim().Trim('"');
+                var v = line[(eq + 1)..].Trim();
+                if (v.Length >= 2 && v[0] == '"' && v[^1] == '"')
+                {
+                    v = v[1..^1].Replace("\\\"", "\"");
+                }
+                values[line[..eq].Trim()] = v;
             }
         }
         var count = values.TryGetValue("cheats", out var n) && int.TryParse(n, out var c) ? c : 0;

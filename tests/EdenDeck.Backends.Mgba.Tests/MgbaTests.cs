@@ -169,4 +169,143 @@ public sealed class MgbaTests : IDisposable
         b.SetBios(null);
         Assert.Null(b.BiosPath);
     }
+
+    [Fact]
+    public void SavesAndStatesBackUpAndRestore()
+    {
+        var b = Backend();
+        var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
+        Assert.Null(b.Saves.Backup(rom));  // nothing to keep yet
+        var dir = Path.GetDirectoryName(rom.Path)!;
+        File.WriteAllText(Path.Combine(dir, "Tiny Quest.sav"), "save-1");
+        File.WriteAllText(Path.Combine(dir, "Tiny Quest.ss1"), "state-1");
+        File.WriteAllText(Path.Combine(dir, "Tiny Quest 2.sav"), "other game");
+        Assert.Equal(["Tiny Quest.sav", "Tiny Quest.ss1"], b.Saves.Saves(rom).Select(s => s.Relative).Order().ToArray());
+        var first = b.Saves.Backup(rom, false, new DateTime(2026, 11, 23, 10, 0, 0, DateTimeKind.Utc))!;
+
+        File.WriteAllText(Path.Combine(dir, "Tiny Quest.sav"), "save-2");
+        File.Delete(Path.Combine(dir, "Tiny Quest.ss1"));
+        File.WriteAllText(Path.Combine(dir, "Tiny Quest.ss2"), "state-2");
+        var safety = b.Saves.Restore(rom, first.Path);
+        Assert.NotNull(safety);
+        Assert.Equal("save-1", File.ReadAllText(Path.Combine(dir, "Tiny Quest.sav")));
+        Assert.True(File.Exists(Path.Combine(dir, "Tiny Quest.ss1")));
+        Assert.False(File.Exists(Path.Combine(dir, "Tiny Quest.ss2")));  // the restored set, not a mix
+        Assert.Equal("other game", File.ReadAllText(Path.Combine(dir, "Tiny Quest 2.sav")));
+        Assert.Equal(2, b.Saves.Backups(rom).Count);
+
+        b.Saves.Delete(rom);
+        Assert.Empty(b.Saves.Saves(rom));
+        Assert.True(File.Exists(Path.Combine(dir, "Tiny Quest 2.sav")));
+    }
+
+    [Fact]
+    public void PatchesAreCheckedAndPassedAtLaunch()
+    {
+        var apps = Path.Combine(_home, "Applications");
+        Directory.CreateDirectory(apps);
+        File.WriteAllText(Path.Combine(apps, "mGBA-0.10.5-appimage-x64.appimage"), "#!/bin/sh\n");
+        var b = Backend();
+        var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
+        var fake = Rom("fake.ips", Encoding.ASCII.GetBytes("NOPE!"));
+        Assert.Throws<InvalidDataException>(() => b.Mods.InstallPatch(rom.TitleId, fake));
+        Assert.Throws<InvalidDataException>(() => b.Mods.InstallPatch(rom.TitleId, Rom("readme.txt", [1, 2, 3])));
+        var patch = b.Mods.InstallPatch(rom.TitleId, Rom("Translation.ips", Encoding.ASCII.GetBytes("PATCHxxxEOF")));
+        Assert.Equal(patch, b.Mods.ActivePatch(rom.TitleId));
+        Assert.Equal(["-f", "-p", patch, rom.Path], b.Launch.Plan(rom, new GameProfile(), new LaunchOptions { Fullscreen = true }).Arguments);
+        b.Mods.SetActivePatch(rom.TitleId, null);
+        Assert.DoesNotContain("-p", b.Launch.Plan(rom, new GameProfile(), new LaunchOptions()).Arguments);
+        b.Mods.RemovePatch(rom.TitleId, patch);
+        Assert.Empty(b.Mods.Patches(rom.TitleId));
+    }
+
+    [Fact]
+    public void OnlyCheatsThatAreOnGoToMgba()
+    {
+        var apps = Path.Combine(_home, "Applications");
+        Directory.CreateDirectory(apps);
+        File.WriteAllText(Path.Combine(apps, "mGBA-0.10.5-appimage-x64.appimage"), "#!/bin/sh\n");
+        var b = Backend();
+        var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
+        var cheats = MgbaMods.ParseCht("""
+            cheats = 2
+
+            cheat0_desc = "Infinite Health"
+            cheat0_code = "82000000+0063"
+            cheat0_enable = false
+
+            cheat1_desc = "Max \"Gold\""
+            cheat1_code = "82000010+FFFF"
+            cheat1_enable = false
+            """);
+        Assert.Equal(["Infinite Health", "Max \"Gold\""], cheats.Select(c => c.Name).ToArray());
+        b.Mods.SaveCheats(rom.TitleId, cheats);
+        Assert.DoesNotContain("-c", b.Launch.Plan(rom, new GameProfile(), new LaunchOptions()).Arguments);
+
+        b.Mods.SaveCheats(rom.TitleId, cheats.Select((c, i) => c with { Enabled = i == 1 }).ToList());
+        var plan = b.Launch.Plan(rom, new GameProfile(), new LaunchOptions());
+        var file = plan.Arguments[plan.Arguments.ToList().IndexOf("-c") + 1];
+        foreach (var p in plan.Prepare)
+        {
+            p();
+        }
+        var on = MgbaMods.ParseCht(File.ReadAllText(file));
+        Assert.Equal("82000010+FFFF", Assert.Single(on).Code);
+        Assert.True(on[0].Enabled);
+    }
+
+    [Fact]
+    public void CheatFilesMatchTheRomName()
+    {
+        string[] files =
+        [
+            "Tiny Quest (USA, Europe) (Code Breaker).cht",
+            "Tiny Quest (USA, Europe) (GameShark).cht",
+            "Tiny Quest (Japan) (Code Breaker).cht",
+            "Tiny Quest 2 (USA).cht",
+        ];
+        Assert.Equal(2, MgbaCheatDatabase.Match(files, "Tiny Quest (USA, Europe)", "Tiny Quest").Count());
+        // A renamed ROM falls back to its clean title.
+        Assert.Equal(3, MgbaCheatDatabase.Match(files, "tinyquest_final", "Tiny Quest").Count());
+        Assert.Empty(MgbaCheatDatabase.Match(files, "Other", "Other"));
+    }
+
+    [Fact]
+    public void CrtIsAnMgbaShaderPerLevel()
+    {
+        var apps = Path.Combine(_home, "Applications");
+        Directory.CreateDirectory(apps);
+        File.WriteAllText(Path.Combine(apps, "mGBA-0.10.5-appimage-x64.appimage"), "#!/bin/sh\n");
+        var b = Backend();
+        var rom = b.TryRead(Rom("Tiny Quest.gba", Gba("TINYQUEST", "BTQE")))!;
+        Assert.DoesNotContain("-C", b.Launch.Plan(rom, new GameProfile { Crt = 0 }, new LaunchOptions()).Arguments);
+        var plan = b.Launch.Plan(rom, new GameProfile { Crt = 2 }, new LaunchOptions());
+        var arg = plan.Arguments[plan.Arguments.ToList().IndexOf("-C") + 1];
+        Assert.StartsWith("shader=", arg);
+        foreach (var p in plan.Prepare)
+        {
+            p();
+        }
+        var dir = arg["shader=".Length..];
+        var manifest = File.ReadAllText(Path.Combine(dir, "manifest.ini"));
+        Assert.Contains("passes=1", manifest);
+        Assert.Contains("fragmentShader=crt.fs", manifest);
+        Assert.Contains("[pass.0.uniform.strength]\ntype=float\ndefault=1\n", manifest);
+        Assert.Contains("gl_FragColor", File.ReadAllText(Path.Combine(dir, "crt.fs")));
+    }
+
+    [Fact]
+    public void LooksAreOneTapPresets()
+    {
+        var b = Backend();
+        var set = b.Presets!;
+        Assert.Equal(EdenDeck.Core.Settings.PresetSet.Global, set.Current(b.Settings.ReadPerGame("X-1"), b.Settings.Options));
+        set.Apply(b.Settings, "X-1", "lcd");
+        Assert.Equal("true", b.Settings.ReadPerGame("X-1")["interframeBlending"]);
+        Assert.Equal("lcd", set.Current(b.Settings.ReadPerGame("X-1"), b.Settings.Options));
+        b.Settings.WritePerGame("X-1", new Dictionary<string, string?> { ["resampleVideo"] = "true" });
+        Assert.Equal(EdenDeck.Core.Settings.PresetSet.Custom, set.Current(b.Settings.ReadPerGame("X-1"), b.Settings.Options));
+        set.Apply(b.Settings, "X-1", EdenDeck.Core.Settings.PresetSet.Global);
+        Assert.Empty(b.Settings.ReadPerGame("X-1"));
+    }
 }

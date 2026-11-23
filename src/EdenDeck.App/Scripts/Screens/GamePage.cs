@@ -197,6 +197,15 @@ public partial class GamePage : Screen
             Add(new ActionButton("Mods & cheats" + summary, () => App.Push(new ModsPage(_game, Rebuild)),
                 "Install and switch mods, and get cheats for the version you play."));
         }
+        if (backend is EdenDeck.Backends.Mgba.MgbaBackend mgba && !string.IsNullOrEmpty(_game.Base.TitleId))
+        {
+            var tid = _game.Base.TitleId;
+            var patch = Try(() => mgba.Mods.ActivePatch(tid), null, "patches", col);
+            var cheatsOn = Try(() => mgba.Mods.Cheats(tid).Count(c => c.Enabled), 0, "cheats", col);
+            var summary = string.Join(", ", new[] { patch == null ? null : "patched", cheatsOn == 0 ? null : $"{cheatsOn} cheat{(cheatsOn == 1 ? "" : "s")} on" }.Where(x => x != null));
+            Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new MgbaModsPage(_game, Rebuild)),
+                "Apply a ROM patch such as a translation, and get cheats for this game."));
+        }
         if (backend.SaveData is { } saveData && !string.IsNullOrEmpty(b.TitleId))
         {
             var lastBackup = Try(() => saveData.Backups(b).FirstOrDefault(), null, "save backups", col);
@@ -229,6 +238,10 @@ public partial class GamePage : Screen
         if (isEden)
         {
             BuildEdenLaunchSetup(col, Add);
+        }
+        else if (backend.Id == EdenDeck.Backends.Mgba.MgbaBackend.BackendId)
+        {
+            BuildMgbaLaunchSetup(col, Add);
         }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));
@@ -352,21 +365,7 @@ public partial class GamePage : Screen
                 col.AddChild(UiTheme.Label("Frame generation needs Lossless.dll from your own Lossless Scaling. Install Lossless Scaling in Steam and Scanline finds it.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
             }
 
-            var crt = new Stepper("CRT effect", [("0", "Off"), ("1", "Subtle"), ("2", "Medium"), ("3", "Strong")],
-                Math.Clamp(p.Crt, 0, 3).ToString(),
-                "Makes the game look like an old TV, the same as the app's CRT effect.")
-            {
-                Expands = true,
-                DetailFor = v => v switch
-                {
-                    "0" => "No effect. The game looks the way Eden draws it.",
-                    "1" => "Faint scanlines, a slight wobble and a gentle tube curve.",
-                    "2" => "Scanlines, a wobbling picture, a rolling band, colour fringes and dark edges.",
-                    _ => "The full old-TV look. Fine detail gets a little softer.",
-                },
-            };
-            crt.Changed += v => SetProfile(x => x with { Crt = int.Parse(v) });
-            Add(crt);
+            Add(CrtRow("Eden", moving: true));
             var layer = Host.DefaultLaunchOptions();
             if (layer.LayerKillSwitch || layer.LayerDirectory == null)
             {
@@ -374,6 +373,38 @@ public partial class GamePage : Screen
                     ? "The CRT effect is drawn by Scanline's in-game layer, which is switched off in Settings."
                     : "The CRT effect is drawn by Scanline's in-game layer, which this install doesn't have.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
             }
+    }
+
+    private Stepper CrtRow(string emulator, bool moving)
+    {
+        var crt = new Stepper("CRT effect", [("0", "Off"), ("1", "Subtle"), ("2", "Medium"), ("3", "Strong")],
+            Math.Clamp(Profile.Crt, 0, 3).ToString(),
+            "Makes the game look like an old TV, the same as the app's CRT effect.")
+        {
+            Expands = true,
+            DetailFor = v => (v, moving) switch
+            {
+                ("0", _) => $"No effect. The game looks the way {emulator} draws it.",
+                ("1", true) => "Faint scanlines, a slight wobble and a gentle tube curve.",
+                ("2", true) => "Scanlines, a wobbling picture, a rolling band, colour fringes and dark edges.",
+                ("1", false) => "Faint scanlines on every pixel row and a gentle tube curve.",
+                ("2", false) => "Scanlines, colour fringes, a tube curve and dark edges.",
+                _ => "The full old-TV look. Fine detail gets a little softer.",
+            },
+        };
+        crt.Changed += v => SetProfile(x => x with { Crt = int.Parse(v) });
+        return crt;
+    }
+
+    /// <summary>mGBA: the CRT effect (as an mGBA shader) and what the in-game side can and can't do.</summary>
+    private void BuildMgbaLaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        Add(CrtRow("mGBA", moving: false));
+        col.AddChild(UiTheme.Label("In mGBA the CRT effect is a still picture effect: no wobble or rolling band, since mGBA's shaders have no clock.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Buttons use mGBA's own mapping, by name (A is A, B is B); change it in mGBA's Settings → Controllers. Hold View + Start for 2 seconds to quit. Scanline's in-game menu and performance overlay only reach Vulkan emulators, so they aren't available in mGBA.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
     /// <summary>One press for a whole set of the settings below; shows which set the game is on.</summary>
