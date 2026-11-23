@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.7.1
+- Fixed: on the **Emulators** tab, long names like "mGBA (Game Boy Advance)" made the category list run into the right side in themes with wider lettering (like 32-bit 3D). The list now widens to fit and keeps its gap.
+- Fixed: when an Eden update is available, the installed version line no longer sits right on top of the Update button.
+
 ## 0.7.0
 - New: **PlayStation 3 games**, played in **RPCS3**. Add the folder with your PS3 game folders or .iso files and they show up in the library with a PS3 chip and the game's own icon on the cartridge. Games you installed inside RPCS3 are found by themselves. Under **Emulators → RPCS3** you can install the official RPCS3 AppImage (the same build RPCS3's own updater offers, checksum-verified), use the RPCS3 Flatpak or one you already have, update or roll back, and change RPCS3's settings for every game.
 - **Your own PS3 system software:** pick your PS3UPDAT.PUP and RPCS3 installs it. Scanline never downloads it.

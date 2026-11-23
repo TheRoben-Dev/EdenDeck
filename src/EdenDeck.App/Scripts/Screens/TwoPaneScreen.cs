@@ -72,6 +72,10 @@ public abstract partial class TwoPaneScreen : Screen
             left.Size = holder.Size;
             ApplyAway(_away);
         };
+        // The holder doesn't size itself from the list, so widen it when a theme's font makes a
+        // category name longer than ListWidth; otherwise the list runs into the pane.
+        void FitList() => holder.CustomMinimumSize = new Vector2(Mathf.Max(ListWidth, Mathf.Ceil(left.GetCombinedMinimumSize().X)), 0);
+        left.MinimumSizeChanged += FitList;
         _left = left;
         left.AddChild(Section(Heading));
         for (var i = 0; i < _list.Count; i++)
@@ -88,6 +92,8 @@ public abstract partial class TwoPaneScreen : Screen
             left.AddChild(b);
             _cats.Add(b);
         }
+
+        FitList();
 
         _pane = Column(8);
         _paneScroll = Scroller(_pane);
