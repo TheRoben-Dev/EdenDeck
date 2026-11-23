@@ -534,6 +534,23 @@ public partial class SettingsScreen : TwoPaneScreen
                 col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
             }
         }
+
+        var rpcs3 = Host.Rpcs3;
+        var ps3 = Try(() => Host.Library.Where(g => g.Base.BackendId == rpcs3.Id).Select(g => rpcs3.Usage(g.Base)).OrderByDescending(u => u.Total).ToList(), [], "PS3 game sizes", col);
+        if (ps3.Count > 0)
+        {
+            col.AddChild(Section("PS3 games"));
+            col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+            {
+                $"Games {StorageReport.Format(ps3.Sum(g => g.Files))}",
+                $"Saves {StorageReport.Format(ps3.Sum(g => g.Saves))}",
+                $"RPCS3 caches {StorageReport.Format(ps3.Sum(g => g.Cache))}",
+            }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            foreach (var u in ps3.Take(20))
+            {
+                col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            }
+        }
     }
 
     private void Rescan() =>

@@ -16,15 +16,15 @@ public static class GameIcons
     /// <summary>The icon for <paramref name="game"/>, or null when there isn't a readable one (no keys, compressed file, …).</summary>
     public static Task<Image?> Load(GameEntry game)
     {
-        // Only Switch games carry an icon; other systems keep their generated cartridge label.
-        if (Main.Instance.Host is not { } host || string.IsNullOrEmpty(game.TitleId) || game.BackendId != host.Eden.Id)
+        // Switch and PS3 games carry an icon; other systems keep their generated cartridge label.
+        if (Main.Instance.Host is not { } host || string.IsNullOrEmpty(game.TitleId) || host.Backends.All(b => b.Id != game.BackendId))
         {
             return Task.FromResult<Image?>(null);
         }
         // One read per game, shared by the library and the game card (they may ask at the same time).
-        if (!Cache.TryGetValue(game.TitleId, out var task))
+        if (!Cache.TryGetValue(game.GameId, out var task))
         {
-            Cache[game.TitleId] = task = Read(game);
+            Cache[game.GameId] = task = Read(game);
         }
         return task;
     }
@@ -36,7 +36,7 @@ public static class GameIcons
         {
             try
             {
-                return host.Eden.GameIcon(game) is { } path ? File.ReadAllBytes(path) : null;
+                return host.Backend(game.BackendId).IconFor(game) is { } path ? File.ReadAllBytes(path) : null;
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
@@ -53,12 +53,18 @@ public static class GameIcons
             }
             else
             {
+                // Wide icons (PS3's ICON0 is 320x176): keep the middle square instead of squashing.
+                if (img.GetWidth() != img.GetHeight())
+                {
+                    var side = Math.Min(img.GetWidth(), img.GetHeight());
+                    img = img.GetRegion(new Rect2I((img.GetWidth() - side) / 2, (img.GetHeight() - side) / 2, side, side));
+                }
                 img.Resize(Pixels, Pixels, Image.Interpolation.Bilinear);
             }
         }
         if (img == null)
         {
-            Cache.Remove(game.TitleId!);  // ask again later (keys may be added)
+            Cache.Remove(game.GameId);  // ask again later (keys may be added)
         }
         return img;
     }

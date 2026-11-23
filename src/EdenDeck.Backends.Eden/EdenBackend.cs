@@ -271,6 +271,8 @@ public sealed class EdenBackend : IEmulatorBackend
     /// The game's own square icon (JPEG), read from its control data with the user's keys and cached
     /// under &lt;data&gt;/icons. Null when the keys can't open it (tried again after new keys are imported).
     /// </summary>
+    public string? IconFor(Core.Library.GameEntry game) => GameIcon(game);
+
     public string? GameIcon(Core.Library.GameEntry game)
     {
         if (game.BackendId != Id || string.IsNullOrEmpty(game.TitleId) || !File.Exists(game.Path))

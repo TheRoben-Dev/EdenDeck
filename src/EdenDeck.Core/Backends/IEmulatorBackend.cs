@@ -28,6 +28,9 @@ public interface IEmulatorBackend
     /// <summary>Save backups (null when the emulator's saves can't be found).</summary>
     Saves.ISaveData? SaveData => null;
 
+    /// <summary>The game's own square-ish icon as an image file (read offline from the game), or null.</summary>
+    string? IconFor(Library.GameEntry game) => null;
+
     /// <summary>One-press per-game presets over some of the settings (null when there are none).</summary>
     PresetSet? Presets => null;
 }
@@ -77,6 +80,9 @@ public interface ILibraryScanner
     /// should have (e.g. ".xci"), from magic bytes. Null when it isn't this backend's format.
     /// </summary>
     string? DetectExtension(string path) => null;
+
+    /// <summary>Folders the emulator keeps games in itself (scanned along with the player's own).</summary>
+    IEnumerable<string> OwnFolders => [];
 }
 
 public interface ISettingsProvider

@@ -21,6 +21,15 @@ public sealed record LaunchOptions
     /// leave Eden's own setting. A per-game console mode set by hand still wins.
     /// </summary>
     public bool? Docked { get; init; }
+
+    /// <summary>Frame generation and Scanline's Vulkan layer, for any Vulkan emulator (null: none).</summary>
+    public ILaunchExtras? Vulkan { get; init; }
+}
+
+/// <summary>Adds environment, preparation and notes to a launch (frame gen, overlay layer).</summary>
+public interface ILaunchExtras
+{
+    void Apply(Profiles.GameProfile profile, LaunchOptions options, Dictionary<string, string> env, List<Action> prepare, List<string> notes);
 }
 
 /// <summary>

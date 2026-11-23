@@ -74,6 +74,7 @@ public sealed class AppHost
     public AppPaths Paths { get; }
     public EdenBackend Eden { get; }
     public EdenDeck.Backends.Mgba.MgbaBackend Mgba { get; }
+    public EdenDeck.Backends.Rpcs3.Rpcs3Backend Rpcs3 { get; }
     public IReadOnlyList<IEmulatorBackend> Backends { get; }
     public ProfileStore Profiles { get; }
     public LibraryService LibraryService { get; }
@@ -95,7 +96,8 @@ public sealed class AppHost
         Directory.CreateDirectory(Paths.Data);
         Eden = new EdenBackend(Paths, http);
         Mgba = new EdenDeck.Backends.Mgba.MgbaBackend(Paths, http);
-        Backends = [Eden, Mgba];
+        Rpcs3 = new EdenDeck.Backends.Rpcs3.Rpcs3Backend(Paths, http);
+        Backends = [Eden, Mgba, Rpcs3];
         Profiles = new ProfileStore(Paths.ProfilesFile);
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
@@ -122,7 +124,8 @@ public sealed class AppHost
 
     public IReadOnlyList<LibraryGame> Rescan(CancellationToken ct = default)
     {
-        Library = LibraryService.Scan(Settings.LibraryFolders, ct);
+        var own = Backends.SelectMany(b => b.Library.OwnFolders).Where(Directory.Exists).Select(f => new LibraryFolder(f));
+        Library = LibraryService.Scan(Settings.LibraryFolders.Concat(own), ct);
         SaveJson(Paths.LibraryCacheFile, Library);
         _misnamed = LibraryService.LastMisnamed.ToList();
         SaveJson(MisnamedCacheFile, _misnamed);
@@ -170,6 +173,7 @@ public sealed class AppHost
         Fullscreen = true,
         CrtMotion = !Settings.ReduceMotion,
         Docked = Settings.ConsoleModeFollowsScreen ? ScreenDetect.External() : null,
+        Vulkan = new EdenDeck.Backends.Eden.EdenVulkanExtras(Eden, Paths.Runtime),
     };
 
     public LaunchPlan PlanLaunch(LibraryGame game)

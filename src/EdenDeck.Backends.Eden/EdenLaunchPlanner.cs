@@ -55,59 +55,10 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             notes.Add($"key set: {set.Label}{(set.HasFirmware ? " (with firmware)" : "")}");
         }
 
-        // Frame generation, under the 60 fps rule. Eden only compiles its own Lossless frame gen
-        // for Android (ENABLE_LSFG defaults OFF on desktop, CMakeLists.txt), so on Linux the
-        // frame_gen keys do nothing and lsfg-vk (Vulkan layer, same Lossless shaders) does the work.
-        var decision = FrameGenPolicy.Decide(profile.FrameGen, profile.NativeFps);
-        var lsfg = _backend.FindLsfgVk();
-        // Explicit layers for this launch, closest to the game first. The bundled lsfg-vk goes above
-        // Scanline's layer so its generated frames pass through ours (CRT filter, stats).
-        var layers = new List<string>();
-        var layerPaths = new List<string>();
-        if (decision.Enabled)
-        {
-            var dll = _backend.EnsureLosslessDll();
-            var dllPath = _backend.LosslessDllPath();
-            if (lsfg.Kind == LsfgVk.Kind.V2 && dllPath != null)
-            {
-                foreach (var (k, v) in LsfgVk.EnableEnv(dllPath, decision.Multiplier))
-                {
-                    env[k] = v;
-                }
-                if (lsfg.Bundled)
-                {
-                    layers.Add(LsfgVk.LayerName);
-                    layerPaths.Add(Path.GetDirectoryName(lsfg.Manifest!)!);
-                }
-                notes.Add($"frame gen: lsfg-vk{(lsfg.Bundled ? " (bundled)" : "")}, {decision.Reason}");
-            }
-            else if (dllPath == null)
-            {
-                notes.Add($"warning: frame gen ({decision.Reason}) won't run. {dll.Message}");
-            }
-            else if (lsfg.Kind == LsfgVk.Kind.Legacy)
-            {
-                notes.Add($"warning: frame gen ({decision.Reason}) won't run: your lsfg-vk is a 1.x version. Update it to 2.x.");
-            }
-            else
-            {
-                notes.Add($"warning: frame gen ({decision.Reason}) won't run: lsfg-vk isn't installed.");
-            }
-        }
-        else
-        {
-            if (lsfg.Kind != LsfgVk.Kind.None)
-            {
-                foreach (var (k, v) in LsfgVk.DisableEnv())
-                {
-                    env[k] = v;
-                }
-            }
-            if (profile.FrameGen == FrameGenMode.Builtin)
-            {
-                notes.Add($"frame gen: {decision.Reason}");
-            }
-        }
+        // Frame generation (lsfg-vk under the 60 fps rule) and Scanline's Vulkan layer (CRT, overlay).
+        // Eden only compiles its own Lossless frame gen for Android (ENABLE_LSFG defaults OFF on
+        // desktop, CMakeLists.txt), so on Linux its frame_gen keys do nothing.
+        VulkanExtras.Apply(_backend, _runtimeDir, profile, options, env, prepare, notes);
 
         // Never let Eden's built-in frame gen stack on top of lsfg-vk (and clean up the per-game
         // override older EdenDeck versions wrote).
@@ -146,55 +97,6 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             }
         }
 
-        if (options.LayerDirectory is { } layerDir && File.Exists(Path.Combine(layerDir, "VkLayer_SCANLINE_overlay.json")))
-        {
-            layers.Add("VK_LAYER_SCANLINE_overlay");
-            layerPaths.Add(layerDir);
-            if (options.LayerStatsPath != null)
-            {
-                env["SCANLINE_LAYER_STATS"] = options.LayerStatsPath;
-            }
-            if (options.LayerKillSwitch)
-            {
-                env["DISABLE_SCANLINE_LAYER"] = "1";
-            }
-            notes.Add(options.LayerKillSwitch ? "layer: loaded but disabled (kill switch)" : "layer: VK_LAYER_SCANLINE_overlay");
-            if (!options.LayerKillSwitch)
-            {
-                // The CRT filter always gets a control file so it can be switched while the game
-                // runs (quick menu); the layer reads it twice a second and costs nothing while off.
-                var level = Math.Clamp(profile.Crt, 0, 3);
-                var control = CrtControlFile(_runtimeDir);
-                var text = CrtControlText(level, options.CrtMotion);
-                prepare.Add(() =>
-                {
-                    Directory.CreateDirectory(_runtimeDir);
-                    File.WriteAllText(control, text);
-                });
-                env["SCANLINE_CRT"] = level.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                env["SCANLINE_CRT_MOTION"] = options.CrtMotion ? "1" : "0";
-                env["SCANLINE_CRT_CONTROL"] = control;
-                if (level > 0)
-                {
-                    notes.Add($"CRT effect: {CrtLevelName(level)}");
-                }
-            }
-            else if (profile.Crt > 0)
-            {
-                notes.Add("warning: CRT effect is off because the Scanline layer is switched off (kill switch).");
-            }
-        }
-        else if (profile.Crt > 0)
-        {
-            notes.Add("warning: CRT effect needs Scanline's Vulkan layer, which wasn't found. The game runs without it.");
-        }
-
-        if (layers.Count > 0)
-        {
-            env["VK_ADD_LAYER_PATH"] = Append(string.Join(':', layerPaths.Distinct()), Environment.GetEnvironmentVariable("VK_ADD_LAYER_PATH"));
-            env["VK_INSTANCE_LAYERS"] = Append(string.Join(':', layers), Environment.GetEnvironmentVariable("VK_INSTANCE_LAYERS"));
-        }
-
         var args = new List<string>();
         if (options.Fullscreen)
         {
@@ -222,5 +124,5 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
 
     public static string CrtLevelName(int level) => level switch { 1 => "Subtle", 2 => "Medium", 3 => "Strong", _ => "Off" };
 
-    private static string Append(string value, string? existing) => string.IsNullOrEmpty(existing) ? value : $"{value}:{existing}";
+    internal static string Append(string value, string? existing) => string.IsNullOrEmpty(existing) ? value : $"{value}:{existing}";
 }
