@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.7.2
+- Fixed: **Install RPCS3** failed with "RPCS3's update service answered with an error (-3)". Scanline now asks RPCS3's update service in a way it accepts, so installing and updating RPCS3 works.
+
 ## 0.7.1
 - Fixed: on the **Emulators** tab, long names like "mGBA (Game Boy Advance)" made the category list run into the right side in themes with wider lettering (like 32-bit 3D). The list now widens to fit and keeps its gap.
 - Fixed: when an Eden update is available, the installed version line no longer sits right on top of the Update button.

@@ -18,7 +18,9 @@ public sealed partial class Rpcs3InstallManager : IInstallManager
 {
     public const string FlatpakId = "net.rpcs3.RPCS3";
     public const string FlatpakExe = "flatpak:" + FlatpakId;
-    public const string ReleaseFeed = "https://update.rpcs3.net/?api=v3&c=0&os_type=linux&os_arch={0}&os_version=0.0.0";
+    // No "c" (current build hash): the service rejects anything shorter than 7 characters as an
+    // illegal search (-3), and without it the answer is simply the latest build.
+    public const string ReleaseFeed = "https://update.rpcs3.net/?api=v3&os_type=linux&os_arch={0}";
 
     private readonly string _root;
     private readonly HttpClient _http;
@@ -101,8 +103,8 @@ public sealed partial class Rpcs3InstallManager : IInstallManager
 
     /// <summary>
     /// Reads RPCS3's update answer: <c>{"return_code":0|-1, "latest_build":{"version", "datetime",
-    /// "linux":{"download","size","checksum"}}}</c> (-1 only means "your build isn't known", which is
-    /// the case for Scanline's request, and still carries the latest build).
+    /// "linux":{"download","size","checksum"}}}</c> (-1 only means "your build isn't known" and still
+    /// carries the latest build).
     /// </summary>
     public static AvailableRelease? ToAvailable(string json)
     {
