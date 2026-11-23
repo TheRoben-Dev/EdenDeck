@@ -90,6 +90,90 @@ public sealed class MgbaTests : IDisposable
         Assert.NotEqual(gba.TitleId, b.TryRead(Rom("rev1.gba", Gba("TINYQUEST", "BTQE", 0x43)))!.TitleId);
     }
 
+    private string Zip(string name, params (string Entry, byte[] Data)[] files)
+    {
+        var f = Path.Combine(_home, "roms", name);
+        Directory.CreateDirectory(Path.GetDirectoryName(f)!);
+        using var zip = System.IO.Compression.ZipFile.Open(f, System.IO.Compression.ZipArchiveMode.Create);
+        foreach (var (entry, data) in files)
+        {
+            using var s = zip.CreateEntry(entry).Open();
+            s.Write(data);
+        }
+        return f;
+    }
+
+    [Theory]
+    [InlineData("Pokemon - Emerald Version (USA, Europe) [!].gba", "Pokemon - Emerald Version")]
+    [InlineData("1986 - Pokemon Emerald (U)(TrashMan).gba", "Pokemon Emerald")]
+    [InlineData("pokemon_emerald.gba", "Pokemon Emerald")]
+    [InlineData("Golden.Sun.gba", "Golden Sun")]
+    [InlineData("MARIO KART SUPER CIRCUIT.gba", "Mario Kart Super Circuit")]
+    [InlineData("Legend of Zelda, The - The Minish Cap (Europe) (En,Fr,De,Es,It).gba", "The Legend of Zelda - The Minish Cap")]
+    [InlineData("Mr. Driller 2 (Japan).gba", "Mr. Driller 2")]
+    [InlineData("F-Zero - Maximum Velocity (Rev 1).gba", "F-Zero - Maximum Velocity")]
+    public void CleansFileNamesIntoTitles(string file, string title) => Assert.Equal(title, MgbaRom.CleanTitle(file));
+
+    [Fact]
+    public void NamesComeFromTheOfflineList()
+    {
+        Assert.Equal("Pokemon - Emerald Version (USA, Europe)", MgbaNames.Find(null, "BPEE"));
+        Assert.Equal("Pokemon - Emerald Version (USA, Europe)", MgbaNames.Find(0x1F1C08FB, null));
+        Assert.Null(MgbaNames.Find(0x12345678, "ZZZZ"));
+        Assert.Equal(0xCBF43926u, MgbaRom.Crc32(new MemoryStream("123456789"u8.ToArray())));
+        // A badly named file still gets the real name through its game code.
+        var b = Backend();
+        Assert.Equal("Pokemon - Emerald Version", b.TryRead(Rom("pkmn_em_1986.gba", Gba("POKEMON EMER", "BPEE")))!.Title);
+        Assert.Equal("Pokemon - Emerald Version", b.TryRead(Zip("1986.zip", ("1986.gba", Gba("POKEMON EMER", "BPEE"))))!.Title);
+    }
+
+    [Fact]
+    public void WritesGamepadButtonsUnlessThePlayerHasTheirOwn()
+    {
+        var b = Backend();
+        var cfg = b.ConfigFile;
+        Directory.CreateDirectory(Path.GetDirectoryName(cfg)!);
+        File.WriteAllText(cfg, "[ports.qt]\nfullscreen=1\n");
+        Assert.True(MgbaPad.Ensure(cfg, b.PadStampFile));
+        var ini = EdenDeck.Core.Config.QtIni.Load(cfg, quoting: false);
+        Assert.Equal("1", ini.Get(MgbaPad.Section, "keyA"));   // right face button
+        Assert.Equal("0", ini.Get(MgbaPad.Section, "keyB"));   // bottom face button
+        Assert.Equal("6", ini.Get(MgbaPad.Section, "hat0Up"));
+        Assert.Equal("1", ini.Get("ports.qt", "fullscreen"));
+        Assert.False(MgbaPad.Ensure(cfg, b.PadStampFile));     // already there
+
+        // The player remaps in mGBA: left alone from then on.
+        ini.Set(MgbaPad.Section, "keyA", "2");
+        ini.Save(cfg);
+        Assert.False(MgbaPad.Ensure(cfg, b.PadStampFile));
+        Assert.Equal("2", EdenDeck.Core.Config.QtIni.Load(cfg, quoting: false).Get(MgbaPad.Section, "keyA"));
+
+        // A mapping that was there before Scanline ever wrote one is the player's too.
+        var other = Path.Combine(_home, "other.ini");
+        File.WriteAllText(other, "[gba.input.SDLB]\nkeyA=3\n");
+        Assert.False(MgbaPad.Ensure(other, Path.Combine(_home, "stamp2")));
+    }
+
+    [Fact]
+    public void ReadsGamesInsideZips()
+    {
+        var b = Backend();
+        Assert.Contains(".zip", b.FileExtensions);
+        var zipped = b.TryRead(Zip("Tiny Quest (USA).zip", ("readme.txt", new byte[0x400]), ("Tiny Quest (USA).GBA", Gba("TINYQUEST", "BTQE"))))!;
+        Assert.Equal("BTQE-42", zipped.TitleId);
+        Assert.Equal("Tiny Quest", zipped.Title);
+        Assert.EndsWith(".zip", zipped.Path);
+        var gbc = b.TryRead(Zip("Bloop.zip", ("Bloop.gbc", Gb("BLOOP", color: true))))!;
+        Assert.Equal("GBC_BLOOP-11", gbc.TitleId);
+
+        Assert.Null(b.TryRead(Zip("photos.zip", ("cat.jpg", new byte[0x400]))));
+        Assert.Null(b.TryRead(Rom("broken.zip", new byte[0x400])));
+        // mGBA names saves after the .zip: "Tiny Quest (USA).sav".
+        var dir = Path.GetDirectoryName(zipped.Path)!;
+        File.WriteAllText(Path.Combine(dir, "Tiny Quest (USA).sav"), "save");
+        Assert.Equal(["Tiny Quest (USA).sav"], b.Saves.Saves(zipped).Select(s => s.Relative).ToArray());
+    }
+
     [Fact]
     public void GlobalSettingsUseMgbasOwnFormat()
     {
@@ -249,6 +333,7 @@ public sealed class MgbaTests : IDisposable
         {
             p();
         }
+        Assert.Equal("1", EdenDeck.Core.Config.QtIni.Load(b.ConfigFile, quoting: false).Get(MgbaPad.Section, "keyA"));  // gamepad written at launch
         var on = MgbaMods.ParseCht(File.ReadAllText(file));
         Assert.Equal("82000010+FFFF", Assert.Single(on).Code);
         Assert.True(on[0].Enabled);

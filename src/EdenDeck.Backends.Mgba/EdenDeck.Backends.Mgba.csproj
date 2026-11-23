@@ -4,6 +4,9 @@
     <RootNamespace>EdenDeck.Backends.Mgba</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Data/gb-names.tsv.gz" LogicalName="gb-names.tsv.gz" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
     <InternalsVisibleTo Include="EdenDeck.Backends.Mgba.Tests" />
   </ItemGroup>

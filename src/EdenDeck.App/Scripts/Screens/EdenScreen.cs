@@ -207,6 +207,10 @@ public partial class EdenScreen : TwoPaneScreen
             Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
                 App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
         }
+
+        col.AddChild(Section("Controls"));
+        col.AddChild(Note("Scanline sets up your controller in mGBA before each game: A on the right face button, B on the bottom, L/R on the bumpers, Select/Start on View/Menu. If you change buttons in mGBA's own settings, Scanline keeps yours."));
+        col.AddChild(Note(MgbaNames.Credit));
     }
 
     private void CheckAndInstallMgba()
