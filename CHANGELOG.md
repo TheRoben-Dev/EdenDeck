@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.8.1
+- Fixed: **the controller didn't work in PS3 games**. With no pad setup, RPCS3 falls back to the keyboard. Scanline now sets up your controller in RPCS3 before each game, like a PS3 pad: Cross on the bottom face button, Circle on the right, L1/R1 on the bumpers, L2/R2 on the triggers, Select/Start on View/Menu, and PS on the guide button or View + Menu. If you've set up pads in RPCS3 yourself, yours are kept.
+
 ## 0.8.0
 - New: **handheld frame** for GBA, Game Boy and Game Boy Color games. The black bars beside the picture become a handheld-style shell and screen bezel in your theme's accent colour, with its own look for Game Boy / Color. It's decoration only, so nothing in it is a button, and the game's pixels stay sharp. It works together with the CRT effect. It's on by default: switch it off under **Emulators → mGBA → Handheld frame**, or per game on its card.
 

@@ -25,6 +25,9 @@ public sealed record LaunchOptions
     /// <summary>Handheld games: draw Scanline's decorative frame in the side bars (a game can override it).</summary>
     public bool HandheldFrame { get; init; } = true;
 
+    /// <summary>Names of the connected controllers as SDL reports them, first = the one in use (empty: none / unknown).</summary>
+    public IReadOnlyList<string> Gamepads { get; init; } = [];
+
     /// <summary>The app's accent colour as #rrggbb, for things drawn in-game (null: a default).</summary>
     public string? Accent { get; init; }
 

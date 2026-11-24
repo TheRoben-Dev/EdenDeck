@@ -143,6 +143,9 @@ public sealed class Rpcs3Backend : IEmulatorBackend, ILibraryScanner, ILaunchPla
 
     // ---- launch ----
 
+    /// <summary>What Scanline last wrote as player 1's pad (see <see cref="Rpcs3Pads"/>).</summary>
+    public string PadStampFile => Path.Combine(DataDir, "rpcs3", "pad-written.txt");
+
     public LaunchPlan Plan(GameEntry game, GameProfile profile, LaunchOptions options)
     {
         var cur = Installs.Current ?? throw new InvalidOperationException("RPCS3 isn't installed yet. Install it under Emulators → PlayStation 3.");
@@ -173,6 +176,13 @@ public sealed class Rpcs3Backend : IEmulatorBackend, ILibraryScanner, ILaunchPla
         {
             exe = cur.ExecutablePath;
             options.Vulkan?.Apply(profile, options, env, prepare, notes);
+        }
+        var pads = options.Gamepads;
+        var paths = Paths;
+        if (Rpcs3Pads.DeviceFor(pads) is { } pad)
+        {
+            prepare.Add(() => Rpcs3Pads.Ensure(paths, pads, PadStampFile));
+            notes.Add($"controller: {pad}");
         }
         args.Add("--no-gui");
         if (options.Fullscreen)

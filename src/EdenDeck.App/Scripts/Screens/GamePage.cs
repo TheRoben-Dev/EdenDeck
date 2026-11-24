@@ -443,7 +443,7 @@ public partial class GamePage : Screen
         AddFrameGenRows(col, Add);
         Add(CrtRow("RPCS3", moving: true));
         AddLayerNote(col);
-        col.AddChild(UiTheme.Label("Controllers are set up once in RPCS3 (Emulators → RPCS3 → Open RPCS3, then Pads). Hold View + Start for 2 seconds to quit.",
+        col.AddChild(UiTheme.Label("Scanline sets up your controller in RPCS3 before each game, like a PS3 pad: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, PS on View + Menu. If you set up pads in RPCS3 yourself (Open RPCS3, then Pads), yours are kept. Hold View + Start for 2 seconds to quit.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
