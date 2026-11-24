@@ -186,6 +186,7 @@ public partial class Main : Control
         if (host != null)
         {
             host.Accent = "#" + UiTheme.Accent.ToHtml(false);
+            host.Gamepads = () => Input.GetConnectedJoypads().Select(id => Input.GetJoyName(id)).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
         }
         _feedback = new Feedback(UiTheme.Name)
         {

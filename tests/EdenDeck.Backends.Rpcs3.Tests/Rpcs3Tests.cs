@@ -123,6 +123,44 @@ public sealed class Rpcs3Tests : IDisposable
     }
 
     [Fact]
+    public void Player1GetsTheControllerUnlessThePlayerSetOneUp()
+    {
+        var b = Backend();
+        var paths = b.Paths;
+        var file = Rpcs3Pads.ProfileFile(paths);
+        Assert.EndsWith("input_configs/global/Default.yml", file);
+        string[] pads = ["Steam Virtual Gamepad"];
+
+        // No setup yet (RPCS3 would fall back to the keyboard): SDL with the pad the app sees.
+        Assert.True(Rpcs3Pads.Ensure(paths, pads, b.PadStampFile));
+        Assert.Equal(("SDL", "Steam Virtual Gamepad 1"), Rpcs3Pads.Player1(File.ReadAllText(file)));
+        Assert.False(Rpcs3Pads.Ensure(paths, pads, b.PadStampFile));
+
+        // Another pad later: Scanline's own setup follows it.
+        Assert.True(Rpcs3Pads.Ensure(paths, ["Xbox Series X Controller"], b.PadStampFile));
+        Assert.Equal("Xbox Series X Controller 1", Rpcs3Pads.Player1(File.ReadAllText(file)).Device);
+
+        // RPCS3's keyboard default is replaced, its key mapping dropped, other players kept.
+        File.WriteAllText(file, "Player 1 Input:\n  Handler: Keyboard\n  Device: Keyboard\n  Config:\n    Cross: Z\n    Circle: X\nPlayer 2 Input:\n  Handler: Null\n  Device: Null\n");
+        File.Delete(b.PadStampFile);
+        Assert.True(Rpcs3Pads.Ensure(paths, pads, b.PadStampFile));
+        var text = File.ReadAllText(file);
+        Assert.DoesNotContain("Cross: Z", text);
+        Assert.Contains("Player 2 Input:\n  Handler: Null", text);
+
+        // A pad the player set up in RPCS3 stays.
+        File.WriteAllText(file, "Player 1 Input:\n  Handler: DualSense\n  Device: DualSense Wireless Controller 1\n");
+        Assert.False(Rpcs3Pads.Ensure(paths, pads, b.PadStampFile));
+        Assert.Equal("DualSense", Rpcs3Pads.Player1(File.ReadAllText(file)).Handler);
+
+        // The active global profile is the one written.
+        Directory.CreateDirectory(Path.Combine(paths.ConfigDir, "input_configs"));
+        File.WriteAllText(Path.Combine(paths.ConfigDir, "input_configs", "active_input_configurations.yml"), "Active Configurations:\n  global: Couch\n");
+        Assert.EndsWith("global/Couch.yml", Rpcs3Pads.ProfileFile(paths));
+        Assert.False(Rpcs3Pads.Ensure(paths, [], b.PadStampFile));  // no pad, nothing to do
+    }
+
+    [Fact]
     public void FindsDiscFoldersInstalledGamesAndIsos()
     {
         var b = Backend();

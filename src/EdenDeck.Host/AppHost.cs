@@ -179,7 +179,11 @@ public sealed class AppHost
         Vulkan = new EdenDeck.Backends.Eden.EdenVulkanExtras(Eden, Paths.Runtime),
         HandheldFrame = Settings.HandheldFrame,
         Accent = Accent,
+        Gamepads = Gamepads?.Invoke() ?? [],
     };
+
+    /// <summary>The connected controllers' SDL names (first = in use), supplied by the app.</summary>
+    public Func<IReadOnlyList<string>>? Gamepads { get; set; }
 
     /// <summary>The app's current accent colour (#rrggbb), set by the app; used for in-game decoration.</summary>
     public string? Accent { get; set; }
