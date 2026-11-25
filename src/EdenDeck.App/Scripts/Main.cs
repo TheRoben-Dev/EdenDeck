@@ -1027,8 +1027,14 @@ public partial class Main : Control
                     AppLog.Warn($"steam: artwork for {e.Key}: {ex.Message}");
                 }
             }
+            // Shortcuts written before their art was drawn still show Scanline's icon: give them the
+            // game's own now if Steam is closed (otherwise the next write, when Steam restarts, does).
+            if (!host.Steam.SteamRunning)
+            {
+                host.Steam.Apply();
+            }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             AppLog.Warn($"steam: artwork: {ex.Message}");
         }

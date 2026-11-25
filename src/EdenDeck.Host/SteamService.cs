@@ -58,13 +58,20 @@ public sealed class SteamService
     public SteamShortcut ForGame(LibraryGame game)
     {
         var launcher = Launcher ?? throw new InvalidOperationException(Unavailable);
+        // Steam tells shortcuts apart by program and name only, so two games with the same title
+        // (a GBA and a Game Boy "Tetris", two regions of one game) would overwrite each other.
+        var name = game.Base.Title;
+        if (Wanted().Any(e => e.Key != game.GameId && !e.Remove && e.Shortcut.AppName == name))
+        {
+            name = $"{name} ({game.GameId[(game.GameId.IndexOf(':') + 1)..]})";
+        }
         return new SteamShortcut
         {
-            AppName = game.Base.Title,
+            AppName = name,
             Exe = launcher,
             StartDir = Path.GetDirectoryName(launcher)!,
             LaunchOptions = $"launch \"{game.GameId}\"",
-            Icon = IconIn(Path.GetDirectoryName(launcher)!),
+            Icon = GameIcon(game.GameId) ?? IconIn(Path.GetDirectoryName(launcher)!),
             Tags = [Tag],
         };
     }
@@ -81,6 +88,17 @@ public sealed class SteamService
             Tags = [Tag],
         };
     }
+
+    /// <summary>
+    /// The game's own icon (its cartridge, rendered with the rest of its Steam art), once that's
+    /// drawn. Until then the shortcut shows Scanline's icon.
+    /// </summary>
+    private string? GameIcon(string key) =>
+        key != AppKey && ArtDirFor(key) is { } d && File.Exists(Path.Combine(d, "icon.png")) ? Path.Combine(d, "icon.png") : null;
+
+    /// <summary>A game's shortcut with its own icon, when that's been drawn since it was added.</summary>
+    private SteamShortcut WithIcon(Entry e) =>
+        GameIcon(e.Key) is { } icon && e.Shortcut.Icon != icon ? e.Shortcut with { Icon = icon } : e.Shortcut;
 
     /// <summary>Steam shows PNG icons, not SVG; older packages only had the SVG.</summary>
     private static string IconIn(string dir) =>
@@ -227,7 +245,7 @@ public sealed class SteamService
                 }
                 else
                 {
-                    file.AddOrUpdate(e.Shortcut);
+                    file.AddOrUpdate(WithIcon(e));
                 }
             }
             var after = file.ToBytes();

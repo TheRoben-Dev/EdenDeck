@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.8.3
+- Fixed: **games added to Steam showed Scanline's icon** instead of their own cartridge icon. Each game's shortcut now uses the icon drawn with its Steam art (existing shortcuts switch over the next time Scanline writes to Steam).
+- Fixed: two games with the same name (say a Game Boy and a GBA "Tetris", or two regions of one game) **overwrote each other's Steam shortcut**. The second one now gets its game code after its name.
+- Fixed: one damaged or unusual file in a library folder could stop the whole library scan. It's now skipped.
+
 ## 0.8.2
 - Fixed: **PS3 games' Steam artwork** squashed the game's wide icon onto the cartridge label. It's now cropped to the middle like in the library, and existing artwork is redrawn.
 - Fixed: one game's Steam artwork failing no longer stops the rest from being drawn.
