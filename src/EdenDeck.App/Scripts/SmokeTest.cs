@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Velvet Run");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zephyr Line");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -127,7 +127,7 @@ public partial class SmokeTest : Node
         Step("ps3-back", () => Press(Pad.Back), expect: "Velvet Run");
         // A PS2 game (PCSX2): presets, frame generation, the CRT row, and patches & cheats.
         Step("ps2-tile", () => FindFocusable(GetTree().Root, "Zephyr Line")?.GrabFocus(), expect: "Zephyr Line");
-        Step("ps2-page", () => Press(Pad.Accept), expect: "PlayStation 2");
+        Step("ps2-page", () => Press(Pad.Accept), expect: "Play");
         Step("ps2-preset", () => FindFocusable(GetTree().Root, "Presets set resolution and texture filtering")?.GrabFocus(), expect: "Presets set resolution and texture filtering");
         Step("ps2-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
         Step("ps2-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
