@@ -1272,7 +1272,9 @@ public partial class Main : Control
         var seconds = (DateTime.UtcNow - started).TotalSeconds;
         // A game that closes within a minute, or any non-zero exit, is almost always a failed start:
         // say so and show why, instead of silently dropping back to the card.
-        if (game != null && (code != 0 || seconds < 60))
+        // mGBA starts instantly and a quick look at a GBA game is normal, so only a near-instant exit counts there.
+        var failedStart = game?.Base.BackendId == Host?.Mgba.Id ? 5 : 60;
+        if (game != null && (code != 0 || seconds < failedStart))
         {
             ShowEdenExit(game, code, seconds, log);
         }

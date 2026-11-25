@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.8.4
+- Fixed: **PS3 games started from their Steam shortcut didn't get the controller set up**, and GBA games started there drew the handheld frame in the default colour instead of your accent. Steam shortcuts run without the app, so Scanline now remembers the controller and accent the app last saw and uses them there too.
+- Fixed: closing a GBA game after a short play no longer shows the "closed after N seconds" error page. That page is for games that fail to start.
+
 ## 0.8.3
 - Fixed: **games added to Steam showed Scanline's icon** instead of their own cartridge icon. Each game's shortcut now uses the icon drawn with its Steam art (existing shortcuts switch over the next time Scanline writes to Steam).
 - Fixed: two games with the same name (say a Game Boy and a GBA "Tetris", or two regions of one game) **overwrote each other's Steam shortcut**. The second one now gets its game code after its name.
