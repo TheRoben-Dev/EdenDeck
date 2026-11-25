@@ -274,6 +274,12 @@ public partial class CartStage : PolyStage
         public void SetIcon(int index, Image icon)
         {
             var small = (Image)icon.Duplicate();
+            // Wide icons (PS3's ICON0 is 320x176): keep the middle square instead of squashing it.
+            if (small.GetWidth() != small.GetHeight())
+            {
+                var side = Math.Min(small.GetWidth(), small.GetHeight());
+                small = small.GetRegion(new Rect2I((small.GetWidth() - side) / 2, (small.GetHeight() - side) / 2, side, side));
+            }
             if (small.GetWidth() != 32 || small.GetHeight() != 32)
             {
                 small.Resize(32, 32, Image.Interpolation.Bilinear);
