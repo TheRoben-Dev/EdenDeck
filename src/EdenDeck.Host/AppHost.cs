@@ -42,6 +42,14 @@ public sealed record AppSettings
     /// <summary>Handheld games (GBA, GB, GBC): a decorative frame fills the side bars.</summary>
     public bool HandheldFrame { get; init; } = true;
 
+    /// <summary>
+    /// The accent colour and controller names the app last saw. Games started from a Steam shortcut
+    /// run without the app (no theme, no controller list), so they use these instead.
+    /// </summary>
+    public string? LastAccent { get; init; }
+
+    public List<string> LastGamepads { get; init; } = new();
+
     /// <summary>Menu sounds, 0 (off) to 100.</summary>
     public int SoundVolume { get; init; } = 50;
 
@@ -178,9 +186,38 @@ public sealed class AppHost
         Docked = Settings.ConsoleModeFollowsScreen ? ScreenDetect.External() : null,
         Vulkan = new EdenDeck.Backends.Eden.EdenVulkanExtras(Eden, Paths.Runtime),
         HandheldFrame = Settings.HandheldFrame,
-        Accent = Accent,
-        Gamepads = Gamepads?.Invoke() ?? [],
+        Accent = RememberedAccent(),
+        Gamepads = RememberedGamepads(),
     };
+
+    /// <summary>The app's accent, remembered for launches without the app (Steam shortcuts).</summary>
+    private string? RememberedAccent()
+    {
+        if (Accent is not { } accent)
+        {
+            return Settings.LastAccent;
+        }
+        if (accent != Settings.LastAccent)
+        {
+            SaveSettings(Settings with { LastAccent = accent });
+        }
+        return accent;
+    }
+
+    /// <summary>The connected controllers, or the ones the app saw last when it isn't running.</summary>
+    private IReadOnlyList<string> RememberedGamepads()
+    {
+        if (Gamepads == null)
+        {
+            return Settings.LastGamepads;  // no app: a Steam shortcut, where Steam Input's pad is the one the app saw
+        }
+        var pads = Gamepads();
+        if (pads.Count > 0 && !pads.SequenceEqual(Settings.LastGamepads))
+        {
+            SaveSettings(Settings with { LastGamepads = pads.ToList() });
+        }
+        return pads;
+    }
 
     /// <summary>The connected controllers' SDL names (first = in use), supplied by the app.</summary>
     public Func<IReadOnlyList<string>>? Gamepads { get; set; }

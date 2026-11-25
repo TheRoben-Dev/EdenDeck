@@ -57,4 +57,21 @@ public class SteamServiceTests
         Assert.Equal("Tetris", steam.ForGame(gb).AppName);  // updating the first keeps its name
         Assert.Equal(2, steam.Wanted().Select(e => e.Shortcut.AppId).Distinct().Count());
     }
+
+    [Fact]
+    public void SteamShortcutLaunchesUseTheControllerAndAccentTheAppSawLast()
+    {
+        using var env = new TestEnv();
+        var app = new AppHost(env.AppPaths()) { Accent = "#3dff8f", Gamepads = () => ["Steam Virtual Gamepad"] };
+        var inApp = app.DefaultLaunchOptions();
+        Assert.Equal(["Steam Virtual Gamepad"], inApp.Gamepads);
+
+        // `scanline launch` from a Steam shortcut: no app, so nothing supplies these.
+        var shortcut = new AppHost(env.AppPaths()).DefaultLaunchOptions();
+        Assert.Equal("#3dff8f", shortcut.Accent);
+        Assert.Equal(["Steam Virtual Gamepad"], shortcut.Gamepads);
+
+        // The app with no controller connected doesn't invent one.
+        Assert.Empty(new AppHost(env.AppPaths()) { Gamepads = () => [] }.DefaultLaunchOptions().Gamepads);
+    }
 }
