@@ -227,7 +227,7 @@ internal static class Cli
                     written = steam.Add(key, shortcut);
                     Console.WriteLine($"{shortcut.AppName}: {shortcut.Exe} {shortcut.LaunchOptions}".TrimEnd());
                 }
-                Console.WriteLine(written ? "Added to Steam. Start Steam to see it." : "Saved. Steam is running: close Steam, then run `scanline steam apply` (or add it from the app, which restarts Steam for you).");
+                Console.WriteLine(written ? "Added to Steam. Start Steam to see it." : "Saved. Steam is running: close Steam, then run `scanline steam apply`.");
                 return 0;
             }
             case "remove" when a.Length >= 2:

@@ -1005,19 +1005,27 @@ public partial class Main : Control
         {
             foreach (var e in host.Steam.Wanted().Where(e => !e.Remove && e.Key != EdenDeck.Host.SteamService.AppKey).ToList())
             {
-                if (host.Steam.ArtDirFor(e.Key) is { } dir && !SteamArt.IsCurrent(dir))
+                // One game's art failing (an odd icon, an unreadable disc) never stops the others.
+                try
                 {
-                    while (GameRunning)
+                    if (host.Steam.ArtDirFor(e.Key) is { } dir && !SteamArt.IsCurrent(dir))
                     {
-                        await ToSignal(GetTree().CreateTimer(5), SceneTreeTimer.SignalName.Timeout);
+                        while (GameRunning)
+                        {
+                            await ToSignal(GetTree().CreateTimer(5), SceneTreeTimer.SignalName.Timeout);
+                        }
+                        // The game's own icon goes on the cartridge label (read off the main thread).
+                        var game = host.FindGame(e.Key);
+                        var icon = game == null ? null : await Task.Run(() => host.Backend(game.Base.BackendId).IconFor(game.Base));
+                        await SteamArt.Render(this, e.Shortcut.AppName, dir, icon);
+                        AppLog.Info($"steam: rendered artwork for {e.Key}");
                     }
-                    // The game's own square icon goes on the cartridge label (read off the main thread).
-                    var game = host.FindGame(e.Key);
-                    var icon = game == null ? null : await Task.Run(() => host.Backend(game.Base.BackendId).IconFor(game.Base));
-                    await SteamArt.Render(this, e.Shortcut.AppName, dir, icon);
-                    AppLog.Info($"steam: rendered artwork for {e.Key}");
+                    host.Steam.InstallArt(e.Key);
                 }
-                host.Steam.InstallArt(e.Key);
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    AppLog.Warn($"steam: artwork for {e.Key}: {ex.Message}");
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

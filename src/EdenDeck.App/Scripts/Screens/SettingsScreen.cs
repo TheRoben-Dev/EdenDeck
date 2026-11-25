@@ -386,7 +386,7 @@ public partial class SettingsScreen : TwoPaneScreen
     private void BuildSteam(VBoxContainer col, Action<Control> Add)
     {
         var steam = Host.Steam;
-        col.AddChild(UiTheme.Label("Games you add show up in Steam's library and Game Mode. Starting one there opens it straight in Eden with its settings from Scanline. Use Add to Steam on a game's page for one game.",
+        col.AddChild(UiTheme.Label("Games you add show up in Steam's library and Game Mode. Starting one there opens it straight in its emulator with its settings from Scanline. Use Add to Steam on a game's page for one game.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         if (steam.Unavailable is { } why)
         {

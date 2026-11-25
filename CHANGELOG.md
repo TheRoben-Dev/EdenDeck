@@ -3,6 +3,11 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.8.2
+- Fixed: **PS3 games' Steam artwork** squashed the game's wide icon onto the cartridge label. It's now cropped to the middle like in the library, and existing artwork is redrawn.
+- Fixed: one game's Steam artwork failing no longer stops the rest from being drawn.
+- Fixed: the Steam settings text said every game opens in Eden. Each game opens in its own emulator.
+
 ## 0.8.1
 - Fixed: **the controller didn't work in PS3 games**. With no pad setup, RPCS3 falls back to the keyboard. Scanline now sets up your controller in RPCS3 before each game, like a PS3 pad: Cross on the bottom face button, Circle on the right, L1/R1 on the bumpers, L2/R2 on the triggers, Select/Start on View/Menu, and PS on the guide button or View + Menu. If you've set up pads in RPCS3 yourself, yours are kept.
 
