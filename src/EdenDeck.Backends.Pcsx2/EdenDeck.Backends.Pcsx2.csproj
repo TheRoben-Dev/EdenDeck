@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EdenDeck.Backends.Pcsx2</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data/ps2-names.tsv.gz" LogicalName="ps2-names.tsv.gz" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <InternalsVisibleTo Include="EdenDeck.Backends.Pcsx2.Tests" />
+  </ItemGroup>
+</Project>

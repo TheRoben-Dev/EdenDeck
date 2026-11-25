@@ -86,6 +86,7 @@ public sealed class AppHost
     public EdenBackend Eden { get; }
     public EdenDeck.Backends.Mgba.MgbaBackend Mgba { get; }
     public EdenDeck.Backends.Rpcs3.Rpcs3Backend Rpcs3 { get; }
+    public EdenDeck.Backends.Pcsx2.Pcsx2Backend Pcsx2 { get; }
     public IReadOnlyList<IEmulatorBackend> Backends { get; }
     public ProfileStore Profiles { get; }
     public LibraryService LibraryService { get; }
@@ -108,7 +109,8 @@ public sealed class AppHost
         Eden = new EdenBackend(Paths, http);
         Mgba = new EdenDeck.Backends.Mgba.MgbaBackend(Paths, http);
         Rpcs3 = new EdenDeck.Backends.Rpcs3.Rpcs3Backend(Paths, http);
-        Backends = [Eden, Mgba, Rpcs3];
+        Pcsx2 = new EdenDeck.Backends.Pcsx2.Pcsx2Backend(Paths, http);
+        Backends = [Eden, Mgba, Rpcs3, Pcsx2];
         Profiles = new ProfileStore(Paths.ProfilesFile);
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
@@ -137,10 +139,27 @@ public sealed class AppHost
     {
         var own = Backends.SelectMany(b => b.Library.OwnFolders).Where(Directory.Exists).Select(f => new LibraryFolder(f));
         Library = LibraryService.Scan(Settings.LibraryFolders.Concat(own), ct);
+        CarryOverProfiles();
         SaveJson(Paths.LibraryCacheFile, Library);
         _misnamed = LibraryService.LastMisnamed.ToList();
         SaveJson(MisnamedCacheFile, _misnamed);
         return Library;
+    }
+
+    /// <summary>
+    /// A game first seen without a title id (named by its file) and identified later, such as a PS2
+    /// .chd once PCSX2 has run it, gets a new id; its card settings move along with it.
+    /// </summary>
+    private void CarryOverProfiles()
+    {
+        foreach (var g in Library.Where(g => !string.IsNullOrEmpty(g.Base.TitleId)))
+        {
+            var byFile = GameIds.Make(g.Base.BackendId, Path.GetFileName(g.Base.Path));
+            if (byFile != g.GameId && Profiles.All.TryGetValue(byFile, out var old) && !Profiles.All.ContainsKey(g.GameId))
+            {
+                Profiles.Set(g.GameId, old);
+            }
+        }
     }
 
     private List<MisnamedFile> _misnamed;
@@ -156,6 +175,12 @@ public sealed class AppHost
         if (byId != null)
         {
             return byId;
+        }
+        // An id from before the game's title id was known ("pcsx2:Game.chd"), e.g. in a Steam shortcut.
+        if (GameIds.TryParse(idOrPath, out var backendId, out var fileName) &&
+            Library.FirstOrDefault(g => g.Base.BackendId == backendId && Path.GetFileName(g.Base.Path) == fileName) is { } byFile)
+        {
+            return byFile;
         }
         if (File.Exists(idOrPath))
         {

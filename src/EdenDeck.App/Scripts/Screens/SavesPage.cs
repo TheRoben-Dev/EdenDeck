@@ -45,6 +45,11 @@ public partial class SavesPage : Screen
                 ? "No save yet. It appears after you play and save in the game."
                 : $"Save: {FormatSize(saves.Sum(s => s.Bytes))}, last changed {When(saves.Max(s => s.LastWriteUtc))}{(saves.Count > 1 ? $" ({saves.Count} profiles)" : "")}.",
             UiTheme.SmallSize + 2, saves.Count == 0 ? UiTheme.Dim : UiTheme.Text, wrap: true));
+        if (_game.Base.BackendId == EdenDeck.Backends.Pcsx2.Pcsx2Backend.BackendId)
+        {
+            col.AddChild(UiTheme.Label("PS2 games save to memory cards that every PS2 game shares, as on a real PS2. A backup holds the whole card plus this game's save states, so restoring one puts back the whole card. Deleting removes only this game's save states.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
         if (saves.Count > 0)
         {
             Add(new ActionButton("Back up now", () =>
