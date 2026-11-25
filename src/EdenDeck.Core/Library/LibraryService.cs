@@ -153,6 +153,12 @@ public sealed class LibraryService
         {
             return null;
         }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // A damaged or odd file must never stop the whole scan.
+            System.Diagnostics.Trace.TraceWarning($"library: skipped {file}: {e.GetType().Name}: {e.Message}");
+            return null;
+        }
     }
 
     internal static IReadOnlyList<LibraryGame> Group(IEnumerable<GameEntry> entries)
