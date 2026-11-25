@@ -193,7 +193,7 @@ Planned after the phases above, unless one fits naturally earlier:
 
 ### Future backends
 
-Scanline's core uses a generic emulator-backend interface ([`docs/backends.md`](docs/backends.md)), and Eden is the first implementation. More are planned later, each as its own module: **PS3** (RPCS3), **PS2** (PCSX2), **PS1** (DuckStation), **Xbox** (xemu), **NDS** (melonDS) and **GBA** (mGBA). The same rules apply: upstream emulators stay unmodified, and you use only your own BIOS and firmware.
+Scanline's core uses a generic emulator-backend interface ([`docs/backends.md`](docs/backends.md)), and Eden is the first implementation. **GBA** (mGBA), **PS3** (RPCS3) and **PS2** (PCSX2) followed, each as its own module; **PS1** (DuckStation), **Xbox** (xemu) and **NDS** (melonDS) are planned. The same rules apply: upstream emulators stay unmodified, and you use only your own BIOS and firmware.
 
 ## Repository layout
 

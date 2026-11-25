@@ -1169,6 +1169,33 @@ public partial class Main : Control
         }, emulator: "RPCS3");
     }
 
+    /// <summary>PCSX2's own window (its settings, controller mapping). Scanline waits until it's closed.</summary>
+    public void OpenPcsx2()
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        LaunchPlan plan;
+        try
+        {
+            plan = Host.Pcsx2.PlanUi();
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            Error(e.Message);
+            return;
+        }
+        RunEden("PCSX2", plan, ["Change anything in PCSX2's window (controllers are under Settings → Controllers), then close it to come back."], () =>
+        {
+            foreach (var screen in _stack)
+            {
+                screen.Rebuild();
+            }
+            Success("Back from PCSX2.");
+        }, emulator: "PCSX2");
+    }
+
     /// <summary>RPCS3 installs the player's own PS3UPDAT.PUP; Scanline waits until RPCS3 is closed.</summary>
     public void InstallPs3Firmware(string pup)
     {

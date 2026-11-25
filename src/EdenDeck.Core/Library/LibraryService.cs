@@ -50,8 +50,9 @@ public sealed class LibraryService
                     skipped++;
                     continue;
                 }
-                var backend = _backends.FirstOrDefault(b => b.FileExtensions.Contains(ext));
-                if (backend == null)
+                // Every backend that takes the extension gets a look (.iso is both PS2 and PS3).
+                var candidates = _backends.Where(b => b.FileExtensions.Contains(ext)).ToList();
+                if (candidates.Count == 0)
                 {
                     // Inside a PS3 game folder every big file is game data, never a misnamed dump.
                     if (file.Contains("/USRDIR/", StringComparison.Ordinal) || file.Contains("/PS3_GAME/", StringComparison.Ordinal))
@@ -80,7 +81,7 @@ public sealed class LibraryService
                 {
                     continue;
                 }
-                var entry = SafeRead(backend, file);
+                var entry = candidates.Select(b => SafeRead(b, file)).FirstOrDefault(e => e != null);
                 if (entry != null)
                 {
                     entries.Add(entry);

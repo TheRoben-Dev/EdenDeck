@@ -225,6 +225,17 @@ public partial class GamePage : Screen
                     }), "Fixes glitches after an RPCS3 or graphics driver update."));
             }
         }
+        if (backend is EdenDeck.Backends.Pcsx2.Pcsx2Backend pcsx2 && !string.IsNullOrEmpty(_game.Base.TitleId))
+        {
+            var on = Try(() => pcsx2.CrcOf(_game.Base) is { } crc ? pcsx2.Patches.EnabledCount(_game.Base.TitleId, crc) : (Patches: 0, Cheats: 0), (Patches: 0, Cheats: 0), "patches", col);
+            var summary = string.Join(", ", new[]
+            {
+                on.Patches == 0 ? null : $"{on.Patches} patch{(on.Patches == 1 ? "" : "es")} on",
+                on.Cheats == 0 ? null : $"{on.Cheats} cheat{(on.Cheats == 1 ? "" : "s")} on",
+            }.Where(x => x != null));
+            Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new Pcsx2PatchesPage(_game, Rebuild)),
+                "Widescreen, no-interlacing and 60 fps patches from PCSX2's community, and your own cheat files."));
+        }
         if (backend.SaveData is { } saveData && !string.IsNullOrEmpty(b.TitleId))
         {
             var lastBackup = Try(() => saveData.Backups(b).FirstOrDefault(), null, "save backups", col);
@@ -266,11 +277,22 @@ public partial class GamePage : Screen
         {
             BuildRpcs3LaunchSetup(col, Add);
         }
+        else if (backend.Id == EdenDeck.Backends.Pcsx2.Pcsx2Backend.BackendId)
+        {
+            BuildPcsx2LaunchSetup(col, Add);
+        }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));
         if (string.IsNullOrEmpty(b.TitleId))
         {
-            col.AddChild(UiTheme.Label("Per-game settings need a title ID, which this file doesn't have.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            col.AddChild(UiTheme.Label(backend.Id == EdenDeck.Backends.Pcsx2.Pcsx2Backend.BackendId
+                ? "Start this game once first. Scanline learns which disc it is from PCSX2, and then its own settings work here."
+                : "Per-game settings need a title ID, which this file doesn't have.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
+        else if (backend is EdenDeck.Backends.Pcsx2.Pcsx2Backend ps2 && ps2.CrcOf(b) == null)
+        {
+            col.AddChild(UiTheme.Label("Start this game once first. PCSX2 keeps a game's own settings under the disc's checksum, which Scanline can only read from this kind of file after PCSX2 has run it. Until then it uses the settings for all PS2 games (Emulators → PlayStation 2).",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
         else
         {
@@ -444,6 +466,24 @@ public partial class GamePage : Screen
         Add(CrtRow("RPCS3", moving: true));
         AddLayerNote(col);
         col.AddChild(UiTheme.Label("Scanline sets up your controller in RPCS3 before each game, like a PS3 pad: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, PS on View + Menu. If you set up pads in RPCS3 yourself (Open RPCS3, then Pads), yours are kept. Hold View + Start for 2 seconds to quit.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    }
+
+    /// <summary>PCSX2: frame generation and the CRT layer, as for Switch games (both need the AppImage and PCSX2's Vulkan renderer).</summary>
+    private void BuildPcsx2LaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        if (Host.Pcsx2.IsFlatpak)
+        {
+            col.AddChild(UiTheme.Label("You're using the PCSX2 Flatpak, which frame generation and the CRT effect can't reach. Install the PCSX2 AppImage under Emulators → PlayStation 2 to use them.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        AddFrameGenRows(col, Add);
+        Add(CrtRow("PCSX2", moving: true));
+        AddLayerNote(col);
+        col.AddChild(UiTheme.Label("Frame generation and the CRT effect need PCSX2's Vulkan renderer, which it picks by itself on a Steam Deck (Renderer: Automatic or Vulkan below).",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Scanline sets up your controller in PCSX2 before each game, like a PS2 pad: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, with rumble. If you map buttons in PCSX2 yourself (Open PCSX2, then Settings → Controllers), yours are kept. Hold View + Start for 2 seconds to quit.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 

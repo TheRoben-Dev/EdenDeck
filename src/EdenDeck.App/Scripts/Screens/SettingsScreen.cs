@@ -551,6 +551,22 @@ public partial class SettingsScreen : TwoPaneScreen
                 col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
             }
         }
+
+        var pcsx2 = Host.Pcsx2;
+        var ps2 = Try(() => Host.Library.Where(g => g.Base.BackendId == pcsx2.Id).Select(g => pcsx2.Usage(g.Base)).OrderByDescending(u => u.Total).ToList(), [], "PS2 game sizes", col);
+        if (ps2.Count > 0)
+        {
+            col.AddChild(Section("PS2 games"));
+            col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+            {
+                $"Games {StorageReport.Format(ps2.Sum(g => g.Files))}",
+                $"Save states {StorageReport.Format(ps2.Sum(g => g.States))}",
+            }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            foreach (var u in ps2.Take(20))
+            {
+                col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            }
+        }
     }
 
     private void Rescan() =>

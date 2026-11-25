@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Velvet Run");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zephyr Line");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -125,6 +125,16 @@ public partial class SmokeTest : Node
         Step("ps3-patches-page", () => Press(Pad.Accept), expect: "Get the patch list");
         Step("ps3-patches-back", () => Press(Pad.Back), expect: "Game patches");
         Step("ps3-back", () => Press(Pad.Back), expect: "Velvet Run");
+        // A PS2 game (PCSX2): presets, frame generation, the CRT row, and patches & cheats.
+        Step("ps2-tile", () => FindFocusable(GetTree().Root, "Zephyr Line")?.GrabFocus(), expect: "Zephyr Line");
+        Step("ps2-page", () => Press(Pad.Accept), expect: "Play");
+        Step("ps2-preset", () => FindFocusable(GetTree().Root, "Presets set resolution and texture filtering")?.GrabFocus(), expect: "Presets set resolution and texture filtering");
+        Step("ps2-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
+        Step("ps2-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
+        Step("ps2-patches", () => FindFocusable(GetTree().Root, "Widescreen, no-interlacing and 60 fps")?.GrabFocus(), expect: "Patches & cheats");
+        Step("ps2-patches-page", () => Press(Pad.Accept), expect: "Look up patches");
+        Step("ps2-patches-back", () => Press(Pad.Back), expect: "Patches & cheats");
+        Step("ps2-back", () => Press(Pad.Back), expect: "Zephyr Line");
         Step("library-refocus-2", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
@@ -137,6 +147,9 @@ public partial class SmokeTest : Node
         Step("emulators-rpcs3", () => FindFocusable(GetTree().Root, "RPCS3 isn't installed yet")?.GrabFocus(), expect: "RPCS3 (PlayStation 3)");
         Step("emulators-rpcs3-pane", () => Press(Pad.Accept), expect: "Install RPCS3");
         Step("emulators-rpcs3-back", () => Press(Pad.Back), expect: "RPCS3 (PlayStation 3)");
+        Step("emulators-pcsx2", () => FindFocusable(GetTree().Root, "PCSX2 isn't installed yet")?.GrabFocus(), expect: "PCSX2 (PlayStation 2)");
+        Step("emulators-pcsx2-pane", () => Press(Pad.Accept), expect: "Install PCSX2");
+        Step("emulators-pcsx2-back", () => Press(Pad.Back), expect: "PCSX2 (PlayStation 2)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>

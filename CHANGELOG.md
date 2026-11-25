@@ -3,6 +3,13 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.9.0
+- New: **PlayStation 2 games, through PCSX2.** Install PCSX2 under **Emulators → PCSX2 (PlayStation 2)** (the official AppImage, checksum-verified), or Scanline finds the one you installed from Discover. Choose the BIOS you dumped from your own PS2 there too; Scanline never downloads it.
+- PS2 games show up from your library folders as .iso, .chd, .cso, .zso or .cue, with their real names from a built-in list (no internet needed). They get a **PS2** chip on their cartridge.
+- Everything else works as for the other systems: **frame generation** and the **CRT effect** (with the AppImage), performance presets and PCSX2 settings for all games or just one, **save backups**, **Add to Steam**, sizes under Settings → Storage, and your controller set up like a PS2 pad before each game (yours are kept if you map buttons in PCSX2).
+- **Patches & cheats** on each PS2 game's card: switch on PCSX2's community widescreen, no-interlacing and 60 fps patches, and add your own .pnach cheat files. The switches are PCSX2's own, so its Game Properties show the same thing.
+- Good to know: a game's own settings, patches and cheats need the disc's checksum, which Scanline can't read from a .chd by itself. **Start a .chd game once** and they unlock. PS2 games share their memory cards, as on a real PS2, so a save backup holds the whole card.
+
 ## 0.8.4
 - Fixed: **PS3 games started from their Steam shortcut didn't get the controller set up**, and GBA games started there drew the handheld frame in the default colour instead of your accent. Steam shortcuts run without the app, so Scanline now remembers the controller and accent the app last saw and uses them there too.
 - Fixed: closing a GBA game after a short play no longer shows the "closed after N seconds" error page. That page is for games that fail to start.

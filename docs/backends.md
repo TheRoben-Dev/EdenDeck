@@ -53,3 +53,14 @@ Main cross-backend risks: emulators that are OpenGL-only (the Vulkan overlay doe
 there), emulators without per-game config files (we'd generate a temporary config per
 launch), and differing controller-profile formats (each backend owns its mapping writer,
 and the app's own UI navigation stays fixed).
+
+## PCSX2 notes (as built, 0.9.0)
+
+- A PS2 game is known by its disc serial (from SYSTEM.CNF's `BOOT2` line), which is its title id.
+  PCSX2 also names per-game settings (`gamesettings/<SERIAL>_<CRC>.ini`), cheats and patches after
+  the boot ELF's CRC (its 32-bit words XORed). Scanline reads both from .iso, .cue/.bin, .cso and
+  .zso. A .chd needs codecs .NET lacks (LZMA, FLAC, Zstandard), so a DVD .chd is named from its
+  header's raw-data SHA-1 (the original .iso's SHA-1, matched against Redump), and its CRC is
+  learned from the log PCSX2 writes (`-logfile`) the first time it runs.
+- `.iso` is shared with RPCS3: the library tries every backend that takes an extension.
+- A new PCSX2.ini must carry `[UI] SettingsVersion = 1`, or PCSX2 treats it as broken and resets it.

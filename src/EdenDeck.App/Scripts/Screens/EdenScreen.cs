@@ -1,4 +1,5 @@
 using EdenDeck.Backends.Rpcs3;
+using EdenDeck.Backends.Pcsx2;
 using EdenDeck.Backends.Mgba;
 using EdenDeck.Backends.Eden.SystemFiles;
 using EdenDeck.Backends.Eden;
@@ -36,6 +37,9 @@ public partial class EdenScreen : TwoPaneScreen
                 ("RPCS3 (PlayStation 3)", Host.Rpcs3.Install.Current is { } r
                     ? $"RPCS3 {r.Version}: install, update, your PS3 system software and settings."
                     : "RPCS3 isn't installed yet: install it here to play PlayStation 3 games."),
+                ("PCSX2 (PlayStation 2)", Host.Pcsx2.Install.Current is { } p
+                    ? $"PCSX2 {p.Version}: install, update, your PS2 BIOS and settings."
+                    : "PCSX2 isn't installed yet: install it here to play PlayStation 2 games."),
                 ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
             ];
         }
@@ -47,6 +51,7 @@ public partial class EdenScreen : TwoPaneScreen
         "Eden (Switch)" when Host.Eden.Install.Current == null || App.EdenUpdate != null => "•",
         "Keys and firmware" when Host.Eden.SystemFilesImpl.Status().Any(s => !s.Present && s.Kind != "title.keys") => "•",
         "RPCS3 (PlayStation 3)" when Host.Rpcs3.Install.Current != null && !Host.Rpcs3.FirmwareInstalled => "•",
+        "PCSX2 (PlayStation 2)" when Host.Pcsx2.Install.Current != null && !Host.Pcsx2.BiosInstalled => "•",
         "Frame generation" when Host.Eden.FindLsfgVk().Kind != LsfgVk.Kind.V2 || !Host.Eden.LosslessDllAvailable() => "•",
         _ => null,
     };
@@ -69,6 +74,9 @@ public partial class EdenScreen : TwoPaneScreen
                 break;
             case "RPCS3 (PlayStation 3)":
                 BuildRpcs3(col, Add);
+                break;
+            case "PCSX2 (PlayStation 2)":
+                BuildPcsx2(col, Add);
                 break;
             case "Keys and firmware":
                 BuildKeys(col, Add);
@@ -330,6 +338,100 @@ public partial class EdenScreen : TwoPaneScreen
                 App.Busy($"Downloading RPCS3 {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
                 {
                     App.Success($"RPCS3 {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
+                    Rebuild();
+                }));
+        });
+    }
+
+    private void BuildPcsx2(VBoxContainer col, Action<Control> Add)
+    {
+        var pcsx2 = Host.Pcsx2;
+        var install = pcsx2.Installs;
+        if (install.Current is { } cur)
+        {
+            col.AddChild(UiTheme.Label(pcsx2.IsFlatpak ? "PCSX2 (Flatpak)" : $"PCSX2 {cur.Version}", 24));
+            col.AddChild(Note(pcsx2.IsFlatpak ? "Your Flatpak install · updates come through Discover or flatpak update."
+                : (cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
+            if (pcsx2.IsFlatpak)
+            {
+                col.AddChild(UiTheme.Label("Frame generation and the CRT effect can't reach into the Flatpak's sandbox. Install the AppImage to use them.",
+                    UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("PCSX2 isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install it here (recommended: frame generation and the CRT effect work with it), or install PCSX2 from Discover (Flatpak) and Scanline finds it."));
+        }
+        Add(new ActionButton(install.Current is { ManagedByEdenDeck: true } ? "Update PCSX2" : "Install PCSX2", CheckAndInstallPcsx2,
+            "Downloads the official PCSX2 AppImage (the latest stable release on PCSX2's GitHub), checksum-verified."));
+        if (install.Current is { ManagedByEdenDeck: true } && install.FlatpakInstalled())
+        {
+            Add(new ActionButton("Use the Flatpak instead", () => App.Guard(() =>
+            {
+                install.UseExternal(install.DetectExternal().First(e => e.ExecutablePath == Pcsx2InstallManager.FlatpakExe));
+                Rebuild();
+            }), "Switches to the PCSX2 you installed from Discover (no frame generation or CRT effect)."));
+        }
+        if (install.Previous is { } prev)
+        {
+            Add(new ActionButton($"Roll back to {prev.Version}", () => App.Guard(() =>
+            {
+                install.Rollback();
+                Rebuild();
+            }), "Switches back to the PCSX2 you used before."));
+        }
+
+        col.AddChild(Section("PS2 BIOS"));
+        foreach (var st in pcsx2.Status())
+        {
+            col.AddChild(UiTheme.Label($"{(st.Present ? "✓" : "✗")}  {st.Detail}", UiTheme.SmallSize + 2, st.Present ? UiTheme.Good : UiTheme.Warn, wrap: true));
+        }
+        Add(new ActionButton(pcsx2.BiosInstalled ? "Choose another BIOS file" : "Use your own PS2 BIOS", () =>
+            App.Push(new FilePicker("Choose your PS2 BIOS (such as SCPH-70012.bin)", pickFolder: false, path => App.Guard(() =>
+            {
+                var name = pcsx2.ImportBios(path);
+                App.Success($"PCSX2 will use {name}.");
+                Rebuild();
+            }), null, ".bin")), "Copies the BIOS you dumped from your own PS2 into PCSX2 and selects it. Scanline never downloads it."));
+        if (install.Current != null)
+        {
+            Add(new ActionButton("Open PCSX2", App.OpenPcsx2,
+                "Opens PCSX2's own window: map controllers under Settings → Controllers, or anything else Scanline doesn't cover. Close it to come back."));
+        }
+        col.AddChild(Note("Games: add the folder with your PS2 discs (.iso, .chd, .cso, .zso or .cue) under Settings → Library."));
+
+        col.AddChild(Section("Settings for all PS2 games"));
+        col.AddChild(Note("Games can override these on their own card. Saved straight to PCSX2's config."));
+        var settings = pcsx2.Settings;
+        var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "PCSX2's settings", col);
+        foreach (var o in settings.Options)
+        {
+            var opt = o;
+            Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
+                App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
+        }
+
+        col.AddChild(Section("Controls"));
+        col.AddChild(Note("Scanline sets up your controller in PCSX2 before each game, like a PS2 pad: Cross on the bottom face button, Circle on the right, L1/R1 on the bumpers, L2/R2 on the triggers, Select/Start on View/Menu, with rumble. If you map buttons in PCSX2 yourself, Scanline keeps yours."));
+        col.AddChild(Note(Ps2Names.Credit));
+    }
+
+    private void CheckAndInstallPcsx2()
+    {
+        var install = Host.Pcsx2.Install;
+        App.Busy("Checking PCSX2…", (_, ct) => install.CheckForUpdateAsync("stable", ct), release =>
+        {
+            if (release == null)
+            {
+                App.Toast(install.Current is { ManagedByEdenDeck: true } ? "Already up to date." : "No Linux build in PCSX2's releases right now.");
+                return;
+            }
+            var size = release.Size > 0 ? $" ({release.Size / 1048576} MB)" : "";
+            App.Confirm($"Install PCSX2 {release.Version}{size}?", "Install", () =>
+                App.Busy($"Downloading PCSX2 {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
+                {
+                    App.Success($"PCSX2 {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
                     Rebuild();
                 }));
         });
