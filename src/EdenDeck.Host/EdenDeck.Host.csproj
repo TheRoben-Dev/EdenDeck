@@ -10,6 +10,7 @@
     <ProjectReference Include="..\EdenDeck.Backends.Rpcs3\EdenDeck.Backends.Rpcs3.csproj" />
     <ProjectReference Include="..\EdenDeck.Backends.Pcsx2\EdenDeck.Backends.Pcsx2.csproj" />
     <ProjectReference Include="..\EdenDeck.Backends.Duckstation\EdenDeck.Backends.Duckstation.csproj" />
+    <ProjectReference Include="..\EdenDeck.Backends.Xemu\EdenDeck.Backends.Xemu.csproj" />
     <InternalsVisibleTo Include="EdenDeck.Core.Tests" />
     <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
   </ItemGroup>

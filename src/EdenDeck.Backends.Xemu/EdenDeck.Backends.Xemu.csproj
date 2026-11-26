@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EdenDeck.Backends.Xemu</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data/xbox-names.tsv.gz" LogicalName="xbox-names.tsv.gz" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <ProjectReference Include="..\EdenDeck.Backends.Pcsx2\EdenDeck.Backends.Pcsx2.csproj" />
+    <InternalsVisibleTo Include="EdenDeck.Backends.Xemu.Tests" />
+  </ItemGroup>
+</Project>

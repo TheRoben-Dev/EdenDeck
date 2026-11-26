@@ -1,5 +1,6 @@
 using EdenDeck.Backends.Rpcs3;
 using EdenDeck.Backends.Duckstation;
+using EdenDeck.Backends.Xemu;
 using EdenDeck.Backends.Pcsx2;
 using EdenDeck.Backends.Mgba;
 using EdenDeck.Backends.Eden.SystemFiles;
@@ -44,6 +45,9 @@ public partial class EdenScreen : TwoPaneScreen
                 ("DuckStation (PlayStation)", Host.Duckstation.Install.Current is { } d
                     ? $"DuckStation {d.Version}: install, update, your PS1 BIOS and settings."
                     : "DuckStation isn't installed yet: install it here to play PlayStation games."),
+                ("xemu (Xbox)", Host.Xemu.Install.Current is { } x
+                    ? $"xemu {x.Version}: install, update, your Xbox system files, hard disk and settings."
+                    : "xemu isn't installed yet: install it here to play original Xbox games."),
                 ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
             ];
         }
@@ -57,6 +61,7 @@ public partial class EdenScreen : TwoPaneScreen
         "RPCS3 (PlayStation 3)" when Host.Rpcs3.Install.Current != null && !Host.Rpcs3.FirmwareInstalled => "•",
         "PCSX2 (PlayStation 2)" when Host.Pcsx2.Install.Current != null && !Host.Pcsx2.BiosInstalled => "•",
         "DuckStation (PlayStation)" when Host.Duckstation.Install.Current != null && !Host.Duckstation.BiosInstalled => "•",
+        "xemu (Xbox)" when Host.Xemu.Install.Current != null && !Host.Xemu.SystemFilesReady => "•",
         "Frame generation" when Host.Eden.FindLsfgVk().Kind != LsfgVk.Kind.V2 || !Host.Eden.LosslessDllAvailable() => "•",
         _ => null,
     };
@@ -85,6 +90,9 @@ public partial class EdenScreen : TwoPaneScreen
                 break;
             case "DuckStation (PlayStation)":
                 BuildDuckstation(col, Add);
+                break;
+            case "xemu (Xbox)":
+                BuildXemu(col, Add);
                 break;
             case "Keys and firmware":
                 BuildKeys(col, Add);
@@ -534,6 +542,124 @@ public partial class EdenScreen : TwoPaneScreen
                 App.Busy($"Downloading DuckStation {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
                 {
                     App.Success($"DuckStation {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
+                    Rebuild();
+                }));
+        });
+    }
+
+    private void BuildXemu(VBoxContainer col, Action<Control> Add)
+    {
+        var xemu = Host.Xemu;
+        var install = xemu.Installs;
+        if (install.Current is { } cur)
+        {
+            col.AddChild(UiTheme.Label(xemu.IsFlatpak ? "xemu (Flatpak)" : $"xemu {cur.Version}", 24));
+            col.AddChild(Note(xemu.IsFlatpak ? "Your Flatpak install · updates come from Discover."
+                : (cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
+            if (xemu.IsFlatpak)
+            {
+                col.AddChild(UiTheme.Label("Frame generation and the CRT effect can't reach into the Flatpak's sandbox. Install the AppImage to use them.",
+                    UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("xemu isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install it here (recommended: frame generation and the CRT effect work with it). An xemu AppImage or Flatpak you already have is found too."));
+        }
+        Add(new ActionButton(install.Current is { ManagedByEdenDeck: true } ? "Update xemu" : "Install xemu", CheckAndInstallXemu,
+            "Downloads the official xemu AppImage, unchanged, from xemu's own GitHub release."));
+        if (install.Current is { ManagedByEdenDeck: true } && install.FlatpakInstalled())
+        {
+            Add(new ActionButton("Use the Flatpak instead", () => App.Guard(() =>
+            {
+                install.UseExternal(install.DetectExternal().First(e => e.ExecutablePath == XemuInstallManager.FlatpakExe));
+                Rebuild();
+            }), "Switches to the xemu you installed from Discover (no frame generation or CRT effect)."));
+        }
+        if (install.Previous is { } prev)
+        {
+            Add(new ActionButton($"Roll back to {prev.Version}", () => App.Guard(() =>
+            {
+                install.Rollback();
+                Rebuild();
+            }), "Switches back to the xemu you used before."));
+        }
+
+        col.AddChild(Section("Xbox system files"));
+        foreach (var st in xemu.Status())
+        {
+            col.AddChild(UiTheme.Label($"{(st.Present ? "✓" : "✗")}  {st.Kind}   {st.Detail}", UiTheme.SmallSize + 2, st.Present ? UiTheme.Good : UiTheme.Warn, wrap: true));
+        }
+        void Pick(string label, string title, string help, Func<string, string> import, string done, params string[] exts) =>
+            Add(new ActionButton(label, () => App.Push(new FilePicker(title, pickFolder: false, path => App.Guard(() =>
+            {
+                var name = import(path);
+                App.Success(string.Format(done, name));
+                Rebuild();
+            }), null, exts)), help));
+        Pick("Use your own MCPX boot ROM", "Choose your MCPX boot ROM (512 bytes, such as mcpx_1.0.bin)",
+            "Copies the boot ROM you dumped from your own Xbox into xemu's folder and selects it. Scanline never downloads it.", xemu.ImportBootRom, "xemu will use {0} as its boot ROM.", ".bin", ".rom");
+        Pick("Use your own flash BIOS", "Choose your Xbox flash BIOS (256 KB or 1 MB)",
+            "Copies the BIOS you dumped from your own Xbox into xemu's folder and selects it. Scanline never downloads it.", xemu.ImportFlash, "xemu will use {0} as its BIOS.", ".bin", ".rom");
+        Pick(xemu.HardDiskSet ? "Choose another hard disk" : "Use your Xbox hard disk image", "Choose your Xbox hard disk image (.qcow2)",
+            "Points xemu at a hard disk image where it is (it isn't copied). Every game saves to it.", xemu.UseHdd, "xemu will use {0} as its hard disk.", ".qcow2");
+        if (install.Current != null)
+        {
+            Add(new ActionButton("Open xemu", App.OpenXemu,
+                "Opens xemu's own window: map controllers under Machine → Input, or anything else Scanline doesn't cover. Close it to come back."));
+        }
+        col.AddChild(Note("Games: add the folder with your Xbox discs (.iso or .xiso, as XISO or full Redump dumps) under Settings → Library."));
+
+        col.AddChild(Section("Saves"));
+        col.AddChild(Note("Xbox games save to the console's hard disk, so xemu keeps every game's saves inside the one hard disk image. Scanline backs up the whole disk instead of single games, and keeps the last " + XemuBackend.KeepDiskBackups + " copies."));
+        var backups = xemu.DiskBackups();
+        if (backups.Count > 0)
+        {
+            col.AddChild(Note($"Last backup: {backups[0].LastWriteTime:yyyy-MM-dd HH:mm} · {backups[0].Length / 1048576} MB · {xemu.DiskBackupDir}"));
+        }
+        if (xemu.HardDiskSet)
+        {
+            Add(new ActionButton("Back up the hard disk", () =>
+                App.Busy("Copying the hard disk…", (_, _) => Task.Run(() => xemu.BackupHardDisk()), copy =>
+                {
+                    App.Success(copy != null ? $"Hard disk backed up ({copy.Length / 1048576} MB)." : "There's no hard disk to back up.");
+                    Rebuild();
+                }), "Copies the hard disk image, with every game's saves, into Scanline's backups. Close xemu first."));
+        }
+
+        col.AddChild(Section("Settings for all Xbox games"));
+        col.AddChild(Note("Games can override these on their own card. Saved straight to xemu's config; a game's own settings are laid over it just for that game."));
+        var settings = xemu.Settings;
+        var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "xemu's settings", col);
+        foreach (var o in settings.Options)
+        {
+            var opt = o;
+            Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
+                App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
+        }
+
+        col.AddChild(Section("Controls"));
+        col.AddChild(Note("xemu puts your controller on the Xbox's first port before each game, like an Xbox controller: A on the bottom face button, B on the right, Black and White on the bumpers, the triggers as triggers, Back/Start on View/Menu, with rumble. Map buttons differently in xemu under Machine → Input."));
+        col.AddChild(Note("xemu has no patches or cheats of its own, so Xbox games have no Patches & cheats page."));
+        col.AddChild(Note(XboxNames.Credit));
+    }
+
+    private void CheckAndInstallXemu()
+    {
+        var install = Host.Xemu.Install;
+        App.Busy("Checking xemu…", (_, ct) => install.CheckForUpdateAsync("stable", ct), release =>
+        {
+            if (release == null)
+            {
+                App.Toast(install.Current is { ManagedByEdenDeck: true } ? "Already up to date." : "No Linux build in xemu's releases right now.");
+                return;
+            }
+            var size = release.Size > 0 ? $" ({release.Size / 1048576} MB)" : "";
+            App.Confirm($"Install xemu {release.Version}{size}?", "Install", () =>
+                App.Busy($"Downloading xemu {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
+                {
+                    App.Success($"xemu {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
                     Rebuild();
                 }));
         });

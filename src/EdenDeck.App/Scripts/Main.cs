@@ -1223,6 +1223,33 @@ public partial class Main : Control
         }, emulator: "DuckStation");
     }
 
+    /// <summary>xemu's own window (its settings, controller mapping). Scanline waits until it's closed.</summary>
+    public void OpenXemu()
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        LaunchPlan plan;
+        try
+        {
+            plan = Host.Xemu.PlanUi();
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            Error(e.Message);
+            return;
+        }
+        RunEden("xemu", plan, ["Change anything in xemu's window (controllers are under Machine → Input), then close it to come back."], () =>
+        {
+            foreach (var screen in _stack)
+            {
+                screen.Rebuild();
+            }
+            Success("Back from xemu.");
+        }, emulator: "xemu");
+    }
+
     /// <summary>RPCS3 installs the player's own PS3UPDAT.PUP; Scanline waits until RPCS3 is closed.</summary>
     public void InstallPs3Firmware(string pup)
     {

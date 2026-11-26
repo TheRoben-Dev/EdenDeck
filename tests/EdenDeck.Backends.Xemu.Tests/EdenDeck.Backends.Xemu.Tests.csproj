@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <ProjectReference Include="..\..\src\EdenDeck.Backends.Pcsx2\EdenDeck.Backends.Pcsx2.csproj" />
+    <ProjectReference Include="..\..\src\EdenDeck.Backends.Xemu\EdenDeck.Backends.Xemu.csproj" />
+    <ProjectReference Include="..\..\src\EdenDeck.Backends.Duckstation\EdenDeck.Backends.Duckstation.csproj" />
+    <!-- Its PS2 disc-image helper, to check an Xbox reader ignores PS2 discs. -->
+    <ProjectReference Include="..\EdenDeck.Backends.Pcsx2.Tests\EdenDeck.Backends.Pcsx2.Tests.csproj" />
+  </ItemGroup>
+</Project>

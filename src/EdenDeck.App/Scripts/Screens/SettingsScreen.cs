@@ -583,6 +583,25 @@ public partial class SettingsScreen : TwoPaneScreen
                 col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
             }
         }
+
+        var xemu = Host.Xemu;
+        var xbox = Try(() => Host.Library.Where(g => g.Base.BackendId == xemu.Id).Select(g => xemu.Usage(g.Base)).OrderByDescending(u => u.Files).ToList(), [], "Xbox game sizes", col);
+        if (xbox.Count > 0)
+        {
+            col.AddChild(Section("Xbox games"));
+            var disk = Try(() => xemu.HardDiskBytes, 0L, "the Xbox hard disk", col);
+            var diskBackups = Try(() => xemu.DiskBackups().Sum(f => f.Length), 0L, "hard disk backups", col);
+            col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+            {
+                $"Games {StorageReport.Format(xbox.Sum(g => g.Files))}",
+                $"Hard disk (every game's saves) {StorageReport.Format(disk)}",
+                diskBackups > 0 ? $"Hard disk backups {StorageReport.Format(diskBackups)}" : null,
+            }.Where(x => x != null)), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            foreach (var u in xbox.Take(20))
+            {
+                col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Files)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            }
+        }
     }
 
     private void Rescan() =>

@@ -3,6 +3,12 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.11.0
+- New: **original Xbox games, through xemu.** Install xemu under **Emulators → xemu (Xbox)** (the official AppImage, straight from xemu's own page), or Scanline finds one you already have. Choose your own Xbox **MCPX boot ROM**, **flash BIOS** and **hard disk image** there too; Scanline never downloads them.
+- Xbox games show up from your library folders as .iso or .xiso (XISO or full Redump dumps), with their real names from a built-in list (no internet needed) or the name inside the game. They get an **Xbox** chip on their cartridge.
+- Everything else works as for the other systems: **frame generation** and the **CRT effect** (Scanline switches xemu to its Vulkan renderer for them when you haven't picked one), resolution presets and xemu settings for all games or just one, **Add to Steam**, sizes under Settings → Storage, and your controller on the Xbox's first port before each game. xemu's welcome window is skipped so games start straight away.
+- Good to know: Xbox games save to the console's hard disk, so xemu keeps **every game's saves in one hard disk image**. Instead of per-game save backups, Scanline backs up the whole disk (from the game's card or the Emulators page, keeping the last 3). xemu has no patches or cheats of its own, so Xbox games have no Patches & cheats page.
+
 ## 0.10.0
 - New: **PlayStation games, through DuckStation.** Install DuckStation under **Emulators → DuckStation (PlayStation)** (the official AppImage, straight from DuckStation's own page), or Scanline finds one you already have. Add the BIOS you dumped from your own PS1 there too (a PS2 BIOS works as well); Scanline never downloads it.
 - PS1 games show up from your library folders as .cue/.bin, .chd, .iso or .pbp, with their real names from a built-in list (no internet needed). They get a **PS1** chip on their cartridge. A .chd is recognised by its Redump name or by sitting in a folder called psx or ps1.
