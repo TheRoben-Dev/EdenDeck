@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zircon Tide");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zylo Drift");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -171,7 +171,7 @@ public partial class SmokeTest : Node
         Step("emulators-duckstation-pane", () => Press(Pad.Accept), expect: "Install DuckStation");
         Step("emulators-duckstation-back", () => Press(Pad.Back), expect: "DuckStation (PlayStation)");
         Step("emulators-xemu", () => FindFocusable(GetTree().Root, "xemu isn't installed yet")?.GrabFocus(), expect: "xemu (Xbox)");
-        Step("emulators-xemu-pane", () => Press(Pad.Accept), expect: "Use your own MCPX boot ROM");
+        Step("emulators-xemu-pane", () => Press(Pad.Accept), expect: "Install xemu");
         Step("emulators-xemu-back", () => Press(Pad.Back), expect: "xemu (Xbox)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
