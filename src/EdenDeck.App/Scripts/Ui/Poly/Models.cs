@@ -15,6 +15,19 @@ public static class Models
 {
     private const string Dir = "res://Licensed/";
 
+    /// <summary>
+    /// The packs' textures are painted dark and grimy for horror and night scenes; in the
+    /// backdrop's fog and dim ambient they read as silhouettes. Part of each surface ignores the
+    /// lighting so the colours stay readable, while faces still shade.
+    /// </summary>
+    private const float Lift = 0.5f;
+
+    /// <summary>Brightens the albedo on top (black plastic becomes a readable dark grey).</summary>
+    private const float Gain = 1.35f;
+
+    /// <summary>The models are cut to about one unit; shown a bit larger than the generated props.</summary>
+    public const float Scale = 1.15f;
+
     private static bool? _available;
 
     /// <summary>True when the licensed models were baked into this build.</summary>
@@ -31,6 +44,7 @@ public static class Models
         var scene = GD.Load<PackedScene>($"{Dir}{name}.glb").Instantiate<Node3D>();
         parent.AddChild(scene);
         Texture2D? glow = ResourceLoader.Exists($"{Dir}{name}_glow.png") ? GD.Load<Texture2D>($"{Dir}{name}_glow.png") : null;
+        scene.Scale = Vector3.One * Scale;
         var m = new Model(scene, scene.FindChild(name, true, false) as Node3D ?? scene);
         // The glTF importer turns each part node into a MeshInstance3D of the same name.
         foreach (var mi in Meshes(scene))
@@ -39,7 +53,9 @@ public static class Models
             for (var i = 0; i < mi.GetSurfaceOverrideMaterialCount(); i++)
             {
                 var src = mi.Mesh.SurfaceGetMaterial(i) as BaseMaterial3D;
-                var mat = l.Mat(src?.AlbedoColor ?? Colors.White, src?.AlbedoTexture);
+                var c = (src?.AlbedoColor ?? Colors.White) * Gain;
+                var mat = l.Mat(new Color(c.R, c.G, c.B, 1), src?.AlbedoTexture);
+                mat.Param("unlit", Lift);
                 if (glow != null)
                 {
                     mat.Param("glow_tex", glow);

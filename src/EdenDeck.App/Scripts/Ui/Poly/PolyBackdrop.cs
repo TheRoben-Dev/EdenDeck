@@ -14,12 +14,13 @@ public partial class PolyBackdrop : PolyStage
     // Screen anchor (0..1), distance from the camera, and height in UI pixels.
     private static readonly (Vector2 At, float Depth, float Px)[] Slots =
     [
-        (new Vector2(0.06f, 0.86f), 7f, 120),
-        (new Vector2(0.95f, 0.84f), 7f, 120),
-        (new Vector2(0.95f, 0.26f), 9f, 100),
-        (new Vector2(0.04f, 0.40f), 9f, 96),
-        (new Vector2(0.78f, 0.93f), 8f, 84),
-        (new Vector2(0.24f, 0.94f), 8.5f, 84),
+        // Kept clear of the screen edges and big enough to make out on a Steam Deck.
+        (new Vector2(0.08f, 0.80f), 7f, 150),
+        (new Vector2(0.93f, 0.79f), 7f, 150),
+        (new Vector2(0.94f, 0.30f), 9f, 125),
+        (new Vector2(0.06f, 0.42f), 9f, 120),
+        (new Vector2(0.76f, 0.88f), 8f, 110),
+        (new Vector2(0.26f, 0.88f), 8.5f, 110),
     ];
 
     private readonly List<Prop> _props = new();
@@ -37,7 +38,8 @@ public partial class PolyBackdrop : PolyStage
     /// <param name="showcase">Clearer view for still artwork: fog starts further out, so the floor and the far shapes show.</param>
     public PolyBackdrop(ThemeSpec spec, bool showcase = false) : base(transparent: false)
     {
-        Resolution = 0.34f;
+        // A third of the screen turned the props' painted textures into noise at Deck size.
+        Resolution = 0.45f;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         Look.Fog = spec.Bg;
         if (showcase)
