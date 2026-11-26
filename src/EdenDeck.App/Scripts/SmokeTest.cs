@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zyphra Tale");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zylo Drift");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
