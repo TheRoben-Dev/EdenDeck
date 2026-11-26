@@ -247,6 +247,26 @@ public partial class GamePage : Screen
             Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new DuckstationPatchesPage(_game, Rebuild)),
                 "Widescreen and 60 fps patches and cheats from DuckStation's community database, and your own cheat files."));
         }
+        if (backend is EdenDeck.Backends.Xemu.XemuBackend xemu)
+        {
+            // Xbox saves are on the console's hard disk, shared by every game: backed up as one disk.
+            var last = Try(() => xemu.DiskBackups().FirstOrDefault(), null, "hard disk backups", col);
+            if (Try(() => xemu.HardDiskSet, false, "the hard disk", col))
+            {
+                Add(new ActionButton("Saves  ·  on the Xbox hard disk" + (last == null ? ", not backed up" : $", backed up {last.LastWriteTime:d MMM}"), () =>
+                    App.Busy("Copying the hard disk…", (_, _) => Task.Run(() => xemu.BackupHardDisk()), copy =>
+                    {
+                        App.Success(copy != null ? $"Hard disk backed up ({copy.Length / 1048576} MB), with every Xbox game's saves." : "There's no hard disk to back up.");
+                        Rebuild();
+                    }), "Xbox games save to the console's hard disk, so xemu keeps every game's saves in one hard disk image. This backs up the whole disk (the last " + EdenDeck.Backends.Xemu.XemuBackend.KeepDiskBackups + " copies are kept)."));
+            }
+            else
+            {
+                col.AddChild(UiTheme.Label("Saves: Xbox games save to the console's hard disk. Choose your hard disk image under Emulators → xemu (Xbox) so this game can save.",
+                    UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+            col.AddChild(UiTheme.Label("xemu has no patches or cheats of its own, so there's no Patches & cheats page for Xbox games.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
         if (backend.SaveData is { } saveData && !string.IsNullOrEmpty(b.TitleId))
         {
             var lastBackup = Try(() => saveData.Backups(b).FirstOrDefault(), null, "save backups", col);
@@ -295,6 +315,10 @@ public partial class GamePage : Screen
         else if (backend.Id == EdenDeck.Backends.Duckstation.DuckstationBackend.BackendId)
         {
             BuildDuckstationLaunchSetup(col, Add);
+        }
+        else if (backend.Id == EdenDeck.Backends.Xemu.XemuBackend.BackendId)
+        {
+            BuildXemuLaunchSetup(col, Add);
         }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));
@@ -519,6 +543,24 @@ public partial class GamePage : Screen
         col.AddChild(UiTheme.Label("Frame generation and the CRT effect need DuckStation's Vulkan renderer, which it picks by itself on a Steam Deck (Renderer: Automatic or Vulkan below).",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         col.AddChild(UiTheme.Label("Scanline sets up your controller in DuckStation before each game, like a DualShock: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, both sticks and rumble. If you map buttons in DuckStation yourself (Open DuckStation, then Settings → Controllers), yours are kept. Hold View + Start for 2 seconds to quit.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    }
+
+    /// <summary>xemu: frame generation and the CRT layer, as for Switch games (both need the AppImage and xemu's Vulkan renderer).</summary>
+    private void BuildXemuLaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        if (Host.Xemu.IsFlatpak)
+        {
+            col.AddChild(UiTheme.Label("You're using an xemu Flatpak, which frame generation and the CRT effect can't reach. Install the xemu AppImage under Emulators → xemu (Xbox) to use them.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        AddFrameGenRows(col, Add);
+        Add(CrtRow("xemu", moving: true));
+        AddLayerNote(col);
+        col.AddChild(UiTheme.Label("Frame generation and the CRT effect need xemu's Vulkan renderer. Scanline switches to it for this game when you haven't picked a renderer (Renderer below).",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("xemu puts your controller on the Xbox's first port before each game, like an Xbox controller, with rumble. Map buttons differently in xemu (Open xemu, then Machine → Input). Hold View + Start for 2 seconds to quit.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 

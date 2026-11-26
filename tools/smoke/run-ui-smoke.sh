@@ -119,6 +119,29 @@ iso[20 * S:20 * S + len(exe)] = exe
 open(sys.argv[1], "wb").write(iso)
 PY
 touch -d '10 minutes ago' "$HOME/Games/PS1/"*.iso
+# An Xbox XISO for the xemu backend: the XDVDFS volume at sector 32, a root directory with
+# default.xbe, and that XBE's certificate (title id 5A590001, its name).
+mkdir -p "$HOME/Games/Xbox"
+python3 - "$HOME/Games/Xbox/Zylo Drift.iso" <<'PY'
+import struct, sys
+S = 2048
+xbe = bytearray(0x1000)
+xbe[0:4] = b"XBEH"
+struct.pack_into("<I", xbe, 0x104, 0x10000)
+struct.pack_into("<I", xbe, 0x118, 0x10400)
+struct.pack_into("<I", xbe, 0x408, 0x5A590001)
+name = "Zylo Drift".encode("utf-16-le"); xbe[0x40C:0x40C + len(name)] = name
+iso = bytearray(36 * S + len(xbe))
+iso[32 * S:32 * S + 20] = b"MICROSOFT*XBOX*MEDIA"
+struct.pack_into("<II", iso, 32 * S + 20, 33, S)
+d = 33 * S
+iso[d:d + S] = b"\xff" * S
+entry = struct.pack("<HHIIBB", 0, 0, 36, len(xbe), 0x20, 11) + b"default.xbe"
+iso[d:d + len(entry)] = entry
+iso[36 * S:] = xbe
+open(sys.argv[1], "wb").write(iso)
+PY
+touch -d '10 minutes ago' "$HOME/Games/Xbox/"*.iso
 
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
@@ -127,6 +150,7 @@ dotnet "$CLI" folders add "$HOME/Games/GBA" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS3" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS2" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS1" >/dev/null
+dotnet "$CLI" folders add "$HOME/Games/Xbox" >/dev/null
 dotnet "$CLI" scan
 # One game with an icon already read (normally from the game's control data with the player's
 # keys): its cartridge shows it pixelated on the label.

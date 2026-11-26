@@ -88,6 +88,7 @@ public sealed class AppHost
     public EdenDeck.Backends.Rpcs3.Rpcs3Backend Rpcs3 { get; }
     public EdenDeck.Backends.Pcsx2.Pcsx2Backend Pcsx2 { get; }
     public EdenDeck.Backends.Duckstation.DuckstationBackend Duckstation { get; }
+    public EdenDeck.Backends.Xemu.XemuBackend Xemu { get; }
     public IReadOnlyList<IEmulatorBackend> Backends { get; }
     public ProfileStore Profiles { get; }
     public LibraryService LibraryService { get; }
@@ -112,7 +113,8 @@ public sealed class AppHost
         Rpcs3 = new EdenDeck.Backends.Rpcs3.Rpcs3Backend(Paths, http);
         Pcsx2 = new EdenDeck.Backends.Pcsx2.Pcsx2Backend(Paths, http);
         Duckstation = new EdenDeck.Backends.Duckstation.DuckstationBackend(Paths, http);
-        Backends = [Eden, Mgba, Rpcs3, Pcsx2, Duckstation];
+        Xemu = new EdenDeck.Backends.Xemu.XemuBackend(Paths, http);
+        Backends = [Eden, Mgba, Rpcs3, Pcsx2, Duckstation, Xemu];
         Profiles = new ProfileStore(Paths.ProfilesFile);
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();

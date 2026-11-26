@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zircon Tide");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zylo Drift");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -145,6 +145,13 @@ public partial class SmokeTest : Node
         Step("ps1-patches-page", () => Press(Pad.Accept), expect: "Look up patches and cheats");
         Step("ps1-patches-back", () => Press(Pad.Back), expect: "Patches & cheats");
         Step("ps1-back", () => Press(Pad.Back), expect: "Zircon Tide");
+        // An Xbox game (xemu): presets, frame generation and the CRT row.
+        Step("xbox-tile", () => FindFocusable(GetTree().Root, "Zylo Drift")?.GrabFocus(), expect: "Zylo Drift");
+        Step("xbox-page", () => Press(Pad.Accept), expect: "Play");
+        Step("xbox-preset", () => FindFocusable(GetTree().Root, "Presets set the resolution for this game")?.GrabFocus(), expect: "Presets set the resolution for this game");
+        Step("xbox-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
+        Step("xbox-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
+        Step("xbox-back", () => Press(Pad.Back), expect: "Zylo Drift");
         Step("library-refocus-2", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
@@ -163,6 +170,9 @@ public partial class SmokeTest : Node
         Step("emulators-duckstation", () => FindFocusable(GetTree().Root, "DuckStation isn't installed yet")?.GrabFocus(), expect: "DuckStation (PlayStation)");
         Step("emulators-duckstation-pane", () => Press(Pad.Accept), expect: "Install DuckStation");
         Step("emulators-duckstation-back", () => Press(Pad.Back), expect: "DuckStation (PlayStation)");
+        Step("emulators-xemu", () => FindFocusable(GetTree().Root, "xemu isn't installed yet")?.GrabFocus(), expect: "xemu (Xbox)");
+        Step("emulators-xemu-pane", () => Press(Pad.Accept), expect: "Install xemu");
+        Step("emulators-xemu-back", () => Press(Pad.Back), expect: "xemu (Xbox)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>
