@@ -1,5 +1,6 @@
 using EdenDeck.Backends.Rpcs3;
 using EdenDeck.Backends.Duckstation;
+using EdenDeck.Backends.MelonDs;
 using EdenDeck.Backends.Xemu;
 using EdenDeck.Backends.Pcsx2;
 using EdenDeck.Backends.Mgba;
@@ -48,6 +49,9 @@ public partial class EdenScreen : TwoPaneScreen
                 ("xemu (Xbox)", Host.Xemu.Install.Current is { } x
                     ? $"xemu {x.Version}: install, update, your Xbox system files, hard disk and settings."
                     : "xemu isn't installed yet: install it here to play original Xbox games."),
+                ("melonDS (Nintendo DS)", Host.MelonDs.Install.Current is { } n
+                    ? $"melonDS {n.Version}: install, update, your own DS BIOS and settings."
+                    : "melonDS isn't installed yet: install it here to play Nintendo DS games."),
                 ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
             ];
         }
@@ -93,6 +97,9 @@ public partial class EdenScreen : TwoPaneScreen
                 break;
             case "xemu (Xbox)":
                 BuildXemu(col, Add);
+                break;
+            case "melonDS (Nintendo DS)":
+                BuildMelonDs(col, Add);
                 break;
             case "Keys and firmware":
                 BuildKeys(col, Add);
@@ -660,6 +667,97 @@ public partial class EdenScreen : TwoPaneScreen
                 App.Busy($"Downloading xemu {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
                 {
                     App.Success($"xemu {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
+                    Rebuild();
+                }));
+        });
+    }
+
+    private void BuildMelonDs(VBoxContainer col, Action<Control> Add)
+    {
+        var ds = Host.MelonDs;
+        var install = ds.Installs;
+        if (install.Current is { } cur)
+        {
+            col.AddChild(UiTheme.Label(ds.IsFlatpak ? "melonDS (Flatpak)" : $"melonDS {cur.Version}", 24));
+            col.AddChild(Note(ds.IsFlatpak ? "Your Flatpak install · updates come from Discover."
+                : (cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("melonDS isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install it here. A melonDS AppImage or Flatpak you already have is found too."));
+        }
+        Add(new ActionButton(install.Current is { ManagedByEdenDeck: true } ? "Update melonDS" : "Install melonDS", CheckAndInstallMelonDs,
+            "Downloads the official melonDS AppImage, unchanged, from melonDS's own GitHub release."));
+        if (install.Current is { ManagedByEdenDeck: true } && install.FlatpakInstalled())
+        {
+            Add(new ActionButton("Use the Flatpak instead", () => App.Guard(() =>
+            {
+                install.UseExternal(install.DetectExternal().First(e => e.ExecutablePath == MelonDsInstallManager.FlatpakExe));
+                Rebuild();
+            }), "Switches to the melonDS you installed from Discover."));
+        }
+        if (install.Previous is { } prev)
+        {
+            Add(new ActionButton($"Roll back to {prev.Version}", () => App.Guard(() =>
+            {
+                install.Rollback();
+                Rebuild();
+            }), "Switches back to the melonDS you used before."));
+        }
+
+        col.AddChild(Section("DS BIOS and firmware (optional)"));
+        col.AddChild(Note("melonDS plays most games with its own free BIOS built in. With all three files from your own DS it uses those instead, which a few games need (and it can show the DS's start-up screen)."));
+        foreach (var st in ds.Status())
+        {
+            col.AddChild(UiTheme.Label($"{(st.Present ? "✓" : "·")}  {st.Kind}   {st.Detail}", UiTheme.SmallSize + 2, st.Present ? UiTheme.Good : UiTheme.Dim, wrap: true));
+        }
+        Add(new ActionButton("Add your own BIOS or firmware file", () =>
+            App.Push(new FilePicker("Choose bios9.bin, bios7.bin or firmware.bin from your DS", pickFolder: false, path => App.Guard(() =>
+            {
+                var kind = ds.ImportSystemFile(path);
+                App.Success(ds.UsesOwnBios ? $"{kind.Kind} added. melonDS now uses your own BIOS and firmware." : $"{kind.Kind} added. Add the other files too and melonDS switches to them.");
+                Rebuild();
+            }), null, ".bin", ".rom")), "Copies a BIOS or firmware file you dumped from your own DS into melonDS's folder. Scanline tells which one it is by its size and never downloads them."));
+        if (install.Current != null)
+        {
+            Add(new ActionButton("Open melonDS", App.OpenMelonDs,
+                "Opens melonDS's own window: map controllers under Config → Input and hotkeys, cheats, or anything else Scanline doesn't cover. Close it to come back."));
+        }
+        col.AddChild(Note("Games: add the folder with your DS games (.nds) under Settings → Library."));
+
+        col.AddChild(Section("Settings for all DS games"));
+        col.AddChild(Note("Games can override these on their own card. Saved straight to melonDS's config; a game's own settings are laid over it just for that game."));
+        var settings = ds.Settings;
+        var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "melonDS's settings", col);
+        foreach (var o in settings.Options)
+        {
+            var opt = o;
+            Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
+                App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
+        }
+
+        col.AddChild(Section("Controls"));
+        col.AddChild(Note("Scanline sets up your controller in melonDS before each game, like a DS: A on the right face button, B on the bottom, X on top, Y on the left, L/R on the bumpers, Select/Start on View/Menu, d-pad and left stick to move. Click the right stick to swap the screens and the left stick to blow into the microphone. Touch the bottom screen with the Steam Deck's touchscreen. If you map buttons in melonDS yourself, Scanline keeps yours."));
+        col.AddChild(Note("melonDS draws with OpenGL or in software, so frame generation, the CRT effect and Scanline's in-game menu can't reach it. DS games run at 60 fps or their own 30, as on the console."));
+        col.AddChild(Note(DsNames.Credit));
+    }
+
+    private void CheckAndInstallMelonDs()
+    {
+        var install = Host.MelonDs.Install;
+        App.Busy("Checking melonDS…", (_, ct) => install.CheckForUpdateAsync("stable", ct), release =>
+        {
+            if (release == null)
+            {
+                App.Toast(install.Current is { ManagedByEdenDeck: true } ? "Already up to date." : "No Linux build in melonDS's releases right now.");
+                return;
+            }
+            var size = release.Size > 0 ? $" ({release.Size / 1048576} MB)" : "";
+            App.Confirm($"Install melonDS {release.Version}{size}?", "Install", () =>
+                App.Busy($"Downloading melonDS {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
+                {
+                    App.Success($"melonDS {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
                     Rebuild();
                 }));
         });

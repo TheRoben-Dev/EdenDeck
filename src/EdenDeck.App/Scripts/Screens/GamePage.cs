@@ -247,6 +247,12 @@ public partial class GamePage : Screen
             Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new DuckstationPatchesPage(_game, Rebuild)),
                 "Widescreen and 60 fps patches and cheats from DuckStation's community database, and your own cheat files."));
         }
+        if (backend is EdenDeck.Backends.MelonDs.MelonDsBackend melon)
+        {
+            var on = Try(() => melon.Cheats.EnabledCount(_game.Base), 0, "cheats", col);
+            Add(new ActionButton("Cheats" + (on == 0 ? "" : $"  ·  {on} on"), () => App.Push(new MelonDsCheatsPage(_game, Rebuild)),
+                "Action Replay codes from libretro's cheat database, and your own codes in melonDS's cheat file."));
+        }
         if (backend is EdenDeck.Backends.Xemu.XemuBackend xemu)
         {
             // Xbox saves are on the console's hard disk, shared by every game: backed up as one disk.
@@ -319,6 +325,14 @@ public partial class GamePage : Screen
         else if (backend.Id == EdenDeck.Backends.Xemu.XemuBackend.BackendId)
         {
             BuildXemuLaunchSetup(col, Add);
+        }
+        else if (backend.Id == EdenDeck.Backends.MelonDs.MelonDsBackend.BackendId)
+        {
+            col.AddChild(Section("Launch setup"));
+            col.AddChild(UiTheme.Label("melonDS draws with OpenGL or in software, so frame generation, the CRT effect and Scanline's in-game menu can't reach it. Pick the screen layout below (side by side fills a Steam Deck best).",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            col.AddChild(UiTheme.Label("Buttons are set up like a DS: A on the right face button, B on the bottom. Click the right stick to swap the screens, the left stick to blow into the microphone, and touch the bottom screen with the touchscreen. Hold View + Start for 2 seconds to quit.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));

@@ -1,3 +1,4 @@
+using EdenDeck.Core.Config;
 using EdenDeck.Backends.Pcsx2;
 using EdenDeck.Core;
 using EdenDeck.Core.Backends;
@@ -193,7 +194,7 @@ public sealed class XemuBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
     /// starting), no update pop-up (Scanline updates xemu), and the controller on port 1 instead of
     /// the keyboard.
     /// </summary>
-    internal static void Ready(XemuToml toml, bool gamepad)
+    internal static void Ready(TomlFile toml, bool gamepad)
     {
         toml.SetBool("general.show_welcome", false);
         toml.SetBool("general.updates.check", false);

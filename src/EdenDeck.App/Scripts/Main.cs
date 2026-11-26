@@ -1250,6 +1250,33 @@ public partial class Main : Control
         }, emulator: "xemu");
     }
 
+    /// <summary>melonDS's own window (its settings, input mapping, cheats). Scanline waits until it's closed.</summary>
+    public void OpenMelonDs()
+    {
+        if (Host == null || GameRunning)
+        {
+            return;
+        }
+        LaunchPlan plan;
+        try
+        {
+            plan = Host.MelonDs.PlanUi();
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            Error(e.Message);
+            return;
+        }
+        RunEden("melonDS", plan, ["Change anything in melonDS's window (controllers are under Config → Input and hotkeys), then close it to come back."], () =>
+        {
+            foreach (var screen in _stack)
+            {
+                screen.Rebuild();
+            }
+            Success("Back from melonDS.");
+        }, emulator: "melonDS");
+    }
+
     /// <summary>RPCS3 installs the player's own PS3UPDAT.PUP; Scanline waits until RPCS3 is closed.</summary>
     public void InstallPs3Firmware(string pup)
     {

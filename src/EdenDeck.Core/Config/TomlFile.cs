@@ -1,15 +1,15 @@
 using System.Globalization;
 using System.Text;
 
-namespace EdenDeck.Backends.Xemu;
+namespace EdenDeck.Core.Config;
 
 /// <summary>
-/// xemu.toml, as xemu writes it: tables (<c>[display.window]</c>) of <c>key = value</c> lines, with
+/// A TOML config as xemu and melonDS write it: tables (<c>[display.window]</c>) of <c>key = value</c> lines, with
 /// strings in quotes. Keys are read and written by their dotted path ("display.window.vsync").
 /// Lines Scanline doesn't touch, arrays of tables (<c>[[input.gamepad_mappings]]</c>) included, are
 /// kept as they are.
 /// </summary>
-public sealed class XemuToml
+public sealed class TomlFile
 {
     private sealed class Line
     {
@@ -22,11 +22,11 @@ public sealed class XemuToml
 
     private readonly List<Line> _lines = [];
 
-    public static XemuToml Load(string path) => File.Exists(path) ? Parse(File.ReadAllText(path)) : new XemuToml();
+    public static TomlFile Load(string path) => File.Exists(path) ? Parse(File.ReadAllText(path)) : new TomlFile();
 
-    public static XemuToml Parse(string text)
+    public static TomlFile Parse(string text)
     {
-        var toml = new XemuToml();
+        var toml = new TomlFile();
         var table = "";
         var inArray = false;
         foreach (var raw in text.Replace("\r\n", "\n").TrimEnd('\n').Split('\n'))

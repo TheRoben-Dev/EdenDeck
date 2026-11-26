@@ -1,3 +1,4 @@
+using EdenDeck.Core.Config;
 using System.Text.Json;
 using EdenDeck.Core.Backends;
 using EdenDeck.Core.Settings;
@@ -98,7 +99,7 @@ public sealed class XemuSettings(Func<XemuPaths> paths, string dataDir) : ISetti
 
     public IReadOnlyDictionary<string, string> ReadGlobal() => Read(paths().Load());
 
-    private Dictionary<string, string> Read(XemuToml toml)
+    private Dictionary<string, string> Read(TomlFile toml)
     {
         var result = new Dictionary<string, string>();
         foreach (var o in Options)
@@ -120,7 +121,7 @@ public sealed class XemuSettings(Func<XemuPaths> paths, string dataDir) : ISetti
     }
 
     /// <summary>Writes values into a config (null removes, back to xemu's default).</summary>
-    public void Apply(XemuToml toml, IReadOnlyDictionary<string, string?> values)
+    public void Apply(TomlFile toml, IReadOnlyDictionary<string, string?> values)
     {
         foreach (var (id, value) in values)
         {

@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zylo Drift");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zyphra Tale");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -152,6 +152,14 @@ public partial class SmokeTest : Node
         Step("xbox-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
         Step("xbox-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
         Step("xbox-back", () => Press(Pad.Back), expect: "Zylo Drift");
+        // A DS game (melonDS): presets and cheats.
+        Step("nds-tile", () => FindFocusable(GetTree().Root, "Zyphra Tale")?.GrabFocus(), expect: "Zyphra Tale");
+        Step("nds-page", () => Press(Pad.Accept), expect: "Play");
+        Step("nds-preset", () => FindFocusable(GetTree().Root, "Presets set the 3D renderer")?.GrabFocus(), expect: "Presets set the 3D renderer");
+        Step("nds-cheats", () => FindFocusable(GetTree().Root, "Action Replay codes from libretro")?.GrabFocus(), expect: "Cheats");
+        Step("nds-cheats-page", () => Press(Pad.Accept), expect: "Back");
+        Step("nds-cheats-back", () => Press(Pad.Back), expect: "Cheats");
+        Step("nds-back", () => Press(Pad.Back), expect: "Zyphra Tale");
         Step("library-refocus-2", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
@@ -173,6 +181,9 @@ public partial class SmokeTest : Node
         Step("emulators-xemu", () => FindFocusable(GetTree().Root, "xemu isn't installed yet")?.GrabFocus(), expect: "xemu (Xbox)");
         Step("emulators-xemu-pane", () => Press(Pad.Accept), expect: "Install xemu");
         Step("emulators-xemu-back", () => Press(Pad.Back), expect: "xemu (Xbox)");
+        Step("emulators-melonds", () => FindFocusable(GetTree().Root, "melonDS isn't installed yet")?.GrabFocus(), expect: "melonDS (Nintendo DS)");
+        Step("emulators-melonds-pane", () => Press(Pad.Accept), expect: "Install melonDS");
+        Step("emulators-melonds-back", () => Press(Pad.Back), expect: "melonDS (Nintendo DS)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>

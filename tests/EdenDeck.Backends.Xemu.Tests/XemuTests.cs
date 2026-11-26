@@ -1,3 +1,4 @@
+using EdenDeck.Core.Config;
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -147,7 +148,7 @@ public sealed class XemuTests : IDisposable
     [Fact]
     public void TomlEditsKeepTheRestOfTheFile()
     {
-        var t = XemuToml.Parse("""
+        var t = TomlFile.Parse("""
             # xemu
             [general]
             show_welcome = true
@@ -166,13 +167,13 @@ public sealed class XemuTests : IDisposable
         Assert.Contains("show_welcome = false", text);
         Assert.Null(t.Get("input.bindings.port1"));
         Assert.Contains("port1 = 'other'", text);  // inside [[array]], untouched
-        var again = XemuToml.Parse(text);
+        var again = TomlFile.Parse(text);
         Assert.Equal("2", again.Get("display.quality.surface_scale"));
         Assert.False(again.GetBool("general.updates.check", true));
     }
 
     [Fact]
-    public void SettingsGoToXemuTomlAndPerGameToScanline()
+    public void SettingsGoToTomlFileAndPerGameToScanline()
     {
         var b = Backend();
         b.Settings.WriteGlobal(new Dictionary<string, string?> { ["display.quality.surface_scale"] = "2", ["display.window.vsync"] = "false" });
@@ -276,7 +277,7 @@ public sealed class XemuTests : IDisposable
         {
             step();
         }
-        var run = XemuToml.Load(b.RunConfig);
+        var run = TomlFile.Load(b.RunConfig);
         Assert.Equal("3", run.Get("display.quality.surface_scale"));
         Assert.Equal("VULKAN", run.Get("display.renderer"));
         Assert.Null(b.Paths.Load().Get("display.quality.surface_scale"));  // the player's own config is untouched
