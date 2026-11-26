@@ -567,6 +567,22 @@ public partial class SettingsScreen : TwoPaneScreen
                 col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
             }
         }
+
+        var ds = Host.Duckstation;
+        var ps1 = Try(() => Host.Library.Where(g => g.Base.BackendId == ds.Id).Select(g => ds.Usage(g.Base)).OrderByDescending(u => u.Total).ToList(), [], "PS1 game sizes", col);
+        if (ps1.Count > 0)
+        {
+            col.AddChild(Section("PS1 games"));
+            col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+            {
+                $"Games {StorageReport.Format(ps1.Sum(g => g.Files))}",
+                $"Save states {StorageReport.Format(ps1.Sum(g => g.States))}",
+            }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            foreach (var u in ps1.Take(20))
+            {
+                col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            }
+        }
     }
 
     private void Rescan() =>

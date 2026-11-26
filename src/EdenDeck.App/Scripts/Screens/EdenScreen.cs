@@ -1,4 +1,5 @@
 using EdenDeck.Backends.Rpcs3;
+using EdenDeck.Backends.Duckstation;
 using EdenDeck.Backends.Pcsx2;
 using EdenDeck.Backends.Mgba;
 using EdenDeck.Backends.Eden.SystemFiles;
@@ -40,6 +41,9 @@ public partial class EdenScreen : TwoPaneScreen
                 ("PCSX2 (PlayStation 2)", Host.Pcsx2.Install.Current is { } p
                     ? $"PCSX2 {p.Version}: install, update, your PS2 BIOS and settings."
                     : "PCSX2 isn't installed yet: install it here to play PlayStation 2 games."),
+                ("DuckStation (PlayStation)", Host.Duckstation.Install.Current is { } d
+                    ? $"DuckStation {d.Version}: install, update, your PS1 BIOS and settings."
+                    : "DuckStation isn't installed yet: install it here to play PlayStation games."),
                 ("Advanced", "Another Eden AppImage, settings format and where Eden keeps its files."),
             ];
         }
@@ -52,6 +56,7 @@ public partial class EdenScreen : TwoPaneScreen
         "Keys and firmware" when Host.Eden.SystemFilesImpl.Status().Any(s => !s.Present && s.Kind != "title.keys") => "•",
         "RPCS3 (PlayStation 3)" when Host.Rpcs3.Install.Current != null && !Host.Rpcs3.FirmwareInstalled => "•",
         "PCSX2 (PlayStation 2)" when Host.Pcsx2.Install.Current != null && !Host.Pcsx2.BiosInstalled => "•",
+        "DuckStation (PlayStation)" when Host.Duckstation.Install.Current != null && !Host.Duckstation.BiosInstalled => "•",
         "Frame generation" when Host.Eden.FindLsfgVk().Kind != LsfgVk.Kind.V2 || !Host.Eden.LosslessDllAvailable() => "•",
         _ => null,
     };
@@ -77,6 +82,9 @@ public partial class EdenScreen : TwoPaneScreen
                 break;
             case "PCSX2 (PlayStation 2)":
                 BuildPcsx2(col, Add);
+                break;
+            case "DuckStation (PlayStation)":
+                BuildDuckstation(col, Add);
                 break;
             case "Keys and firmware":
                 BuildKeys(col, Add);
@@ -432,6 +440,100 @@ public partial class EdenScreen : TwoPaneScreen
                 App.Busy($"Downloading PCSX2 {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
                 {
                     App.Success($"PCSX2 {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
+                    Rebuild();
+                }));
+        });
+    }
+
+    private void BuildDuckstation(VBoxContainer col, Action<Control> Add)
+    {
+        var ds = Host.Duckstation;
+        var install = ds.Installs;
+        if (install.Current is { } cur)
+        {
+            col.AddChild(UiTheme.Label(ds.IsFlatpak ? "DuckStation (Flatpak)" : $"DuckStation {cur.Version}", 24));
+            col.AddChild(Note(ds.IsFlatpak ? "Your Flatpak install · DuckStation no longer updates its Flatpak; install the AppImage here."
+                : (cur.ManagedByEdenDeck ? "Installed by Scanline · " : "Your own copy · ") + cur.ExecutablePath));
+            if (ds.IsFlatpak)
+            {
+                col.AddChild(UiTheme.Label("Frame generation and the CRT effect can't reach into the Flatpak's sandbox. Install the AppImage to use them.",
+                    UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            }
+        }
+        else
+        {
+            col.AddChild(UiTheme.Label("DuckStation isn't installed yet.", 24, UiTheme.Warn));
+            col.AddChild(Note("Install it here (recommended: frame generation and the CRT effect work with it). A DuckStation AppImage you already have is found too."));
+        }
+        Add(new ActionButton(install.Current is { ManagedByEdenDeck: true } ? "Update DuckStation" : "Install DuckStation", CheckAndInstallDuckstation,
+            "Downloads the official DuckStation AppImage, unchanged, from DuckStation's own GitHub release (its stable build)."));
+        if (install.Current is { ManagedByEdenDeck: true } && install.FlatpakInstalled())
+        {
+            Add(new ActionButton("Use the Flatpak instead", () => App.Guard(() =>
+            {
+                install.UseExternal(install.DetectExternal().First(e => e.ExecutablePath == DuckstationInstallManager.FlatpakExe));
+                Rebuild();
+            }), "Switches to your DuckStation Flatpak (no frame generation or CRT effect)."));
+        }
+        if (install.Previous is { } prev)
+        {
+            Add(new ActionButton($"Roll back to {prev.Version}", () => App.Guard(() =>
+            {
+                install.Rollback();
+                Rebuild();
+            }), "Switches back to the DuckStation you used before."));
+        }
+
+        col.AddChild(Section("PS1 BIOS"));
+        foreach (var st in ds.Status())
+        {
+            col.AddChild(UiTheme.Label($"{(st.Present ? "✓" : "✗")}  {st.Detail}", UiTheme.SmallSize + 2, st.Present ? UiTheme.Good : UiTheme.Warn, wrap: true));
+        }
+        Add(new ActionButton(ds.BiosInstalled ? "Add another BIOS file" : "Use your own PS1 BIOS", () =>
+            App.Push(new FilePicker("Choose your PS1 BIOS (such as SCPH-1001.bin)", pickFolder: false, path => App.Guard(() =>
+            {
+                var name = ds.ImportBios(path);
+                App.Success($"{name} added. DuckStation picks the BIOS matching each game's region.");
+                Rebuild();
+            }), null, ".bin")), "Copies the BIOS you dumped from your own PS1 (or PS2) into DuckStation. Add one per region (US, Europe, Japan) for best results. Scanline never downloads it."));
+        if (install.Current != null)
+        {
+            Add(new ActionButton("Open DuckStation", App.OpenDuckstation,
+                "Opens DuckStation's own window: map controllers under Settings → Controllers, or anything else Scanline doesn't cover. Close it to come back."));
+        }
+        col.AddChild(Note("Games: add the folder with your PS1 discs (.cue/.bin, .chd, .iso or .pbp) under Settings → Library. A .chd is recognised by its Redump name or a folder called psx or ps1."));
+
+        col.AddChild(Section("Settings for all PS1 games"));
+        col.AddChild(Note("Games can override these on their own card. Saved straight to DuckStation's config."));
+        var settings = ds.Settings;
+        var global = Try(() => settings.ReadGlobal(), new Dictionary<string, string>(), "DuckStation's settings", col);
+        foreach (var o in settings.Options)
+        {
+            var opt = o;
+            Add(OptionRows.Global(o, global.GetValueOrDefault(o.Id), v =>
+                App.Guard(() => settings.WriteGlobal(new Dictionary<string, string?> { [opt.Id] = v }))));
+        }
+
+        col.AddChild(Section("Controls"));
+        col.AddChild(Note("Scanline sets up your controller in DuckStation before each game, like a DualShock: Cross on the bottom face button, Circle on the right, L1/R1 on the bumpers, L2/R2 on the triggers, Select/Start on View/Menu, both sticks and rumble. If you map buttons in DuckStation yourself, Scanline keeps yours."));
+        col.AddChild(Note(Ps1Names.Credit));
+    }
+
+    private void CheckAndInstallDuckstation()
+    {
+        var install = Host.Duckstation.Install;
+        App.Busy("Checking DuckStation…", (_, ct) => install.CheckForUpdateAsync("stable", ct), release =>
+        {
+            if (release == null)
+            {
+                App.Toast(install.Current is { ManagedByEdenDeck: true } ? "Already up to date." : "No Linux build in DuckStation's releases right now.");
+                return;
+            }
+            var size = release.Size > 0 ? $" ({release.Size / 1048576} MB)" : "";
+            App.Confirm($"Install DuckStation {release.Version}{size}?", "Install", () =>
+                App.Busy($"Downloading DuckStation {release.Version}…", (p, ct) => install.InstallAsync(release, p, ct), installed =>
+                {
+                    App.Success($"DuckStation {installed.Version} installed{(release.Sha256 != null ? ", checksum verified" : "")}.");
                     Rebuild();
                 }));
         });

@@ -3,6 +3,13 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.10.0
+- New: **PlayStation games, through DuckStation.** Install DuckStation under **Emulators → DuckStation (PlayStation)** (the official AppImage, straight from DuckStation's own page), or Scanline finds one you already have. Add the BIOS you dumped from your own PS1 there too (a PS2 BIOS works as well); Scanline never downloads it.
+- PS1 games show up from your library folders as .cue/.bin, .chd, .iso or .pbp, with their real names from a built-in list (no internet needed). They get a **PS1** chip on their cartridge. A .chd is recognised by its Redump name or by sitting in a folder called psx or ps1.
+- Everything else works as for the other systems: **frame generation** and the **CRT effect**, performance presets (with **steady 3D** that fixes the PS1's wobbling polygons) and DuckStation settings for all games or just one, **save backups**, **Add to Steam**, sizes under Settings → Storage, and your controller set up like a DualShock before each game (yours are kept if you map buttons in DuckStation).
+- **Patches & cheats** on each PS1 game's card: widescreen and 60 fps patches and cheats from DuckStation's community database, plus your own .cht cheat files. The switches are DuckStation's own, so its Game Properties show the same thing.
+- PS1 games get their own memory card each, as DuckStation sets up, so a save backup holds just that game's card and save states.
+
 ## 0.9.0
 - New: **PlayStation 2 games, through PCSX2.** Install PCSX2 under **Emulators → PCSX2 (PlayStation 2)** (the official AppImage, checksum-verified), or Scanline finds the one you installed from Discover. Choose the BIOS you dumped from your own PS2 there too; Scanline never downloads it.
 - PS2 games show up from your library folders as .iso, .chd, .cso, .zso or .cue, with their real names from a built-in list (no internet needed). They get a **PS2** chip on their cartridge.

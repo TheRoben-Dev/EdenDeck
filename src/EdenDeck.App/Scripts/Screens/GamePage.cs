@@ -236,6 +236,17 @@ public partial class GamePage : Screen
             Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new Pcsx2PatchesPage(_game, Rebuild)),
                 "Widescreen, no-interlacing and 60 fps patches from PCSX2's community, and your own cheat files."));
         }
+        if (backend is EdenDeck.Backends.Duckstation.DuckstationBackend ds && !string.IsNullOrEmpty(_game.Base.TitleId))
+        {
+            var on = Try(() => ds.Cheats.EnabledCount(_game.Base.TitleId), (Patches: 0, Cheats: 0), "patches", col);
+            var summary = string.Join(", ", new[]
+            {
+                on.Patches == 0 ? null : $"{on.Patches} patch{(on.Patches == 1 ? "" : "es")} on",
+                on.Cheats == 0 ? null : $"{on.Cheats} cheat{(on.Cheats == 1 ? "" : "s")} on",
+            }.Where(x => x != null));
+            Add(new ActionButton("Patches & cheats" + (summary == "" ? "" : "  ·  " + summary), () => App.Push(new DuckstationPatchesPage(_game, Rebuild)),
+                "Widescreen and 60 fps patches and cheats from DuckStation's community database, and your own cheat files."));
+        }
         if (backend.SaveData is { } saveData && !string.IsNullOrEmpty(b.TitleId))
         {
             var lastBackup = Try(() => saveData.Backups(b).FirstOrDefault(), null, "save backups", col);
@@ -281,12 +292,18 @@ public partial class GamePage : Screen
         {
             BuildPcsx2LaunchSetup(col, Add);
         }
+        else if (backend.Id == EdenDeck.Backends.Duckstation.DuckstationBackend.BackendId)
+        {
+            BuildDuckstationLaunchSetup(col, Add);
+        }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));
         if (string.IsNullOrEmpty(b.TitleId))
         {
             col.AddChild(UiTheme.Label(backend.Id == EdenDeck.Backends.Pcsx2.Pcsx2Backend.BackendId
                 ? "Start this game once first. Scanline learns which disc it is from PCSX2, and then its own settings work here."
+                : backend.Id == EdenDeck.Backends.Duckstation.DuckstationBackend.BackendId
+                ? "Start this game once first. Scanline learns which disc it is from DuckStation, and then its own settings, patches and cheats work here. Until then it uses the settings for all PS1 games (Emulators → PlayStation)."
                 : "Per-game settings need a title ID, which this file doesn't have.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
         else if (backend is EdenDeck.Backends.Pcsx2.Pcsx2Backend ps2 && ps2.CrcOf(b) == null)
@@ -484,6 +501,24 @@ public partial class GamePage : Screen
         col.AddChild(UiTheme.Label("Frame generation and the CRT effect need PCSX2's Vulkan renderer, which it picks by itself on a Steam Deck (Renderer: Automatic or Vulkan below).",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         col.AddChild(UiTheme.Label("Scanline sets up your controller in PCSX2 before each game, like a PS2 pad: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, with rumble. If you map buttons in PCSX2 yourself (Open PCSX2, then Settings → Controllers), yours are kept. Hold View + Start for 2 seconds to quit.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    }
+
+    /// <summary>DuckStation: frame generation and the CRT layer, as for Switch games (both need the AppImage and DuckStation's Vulkan renderer).</summary>
+    private void BuildDuckstationLaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        if (Host.Duckstation.IsFlatpak)
+        {
+            col.AddChild(UiTheme.Label("You're using a DuckStation Flatpak, which frame generation and the CRT effect can't reach. Install the DuckStation AppImage under Emulators → PlayStation to use them.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        AddFrameGenRows(col, Add);
+        Add(CrtRow("DuckStation", moving: true));
+        AddLayerNote(col);
+        col.AddChild(UiTheme.Label("Frame generation and the CRT effect need DuckStation's Vulkan renderer, which it picks by itself on a Steam Deck (Renderer: Automatic or Vulkan below).",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Scanline sets up your controller in DuckStation before each game, like a DualShock: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, both sticks and rumble. If you map buttons in DuckStation yourself (Open DuckStation, then Settings → Controllers), yours are kept. Hold View + Start for 2 seconds to quit.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 

@@ -50,6 +50,14 @@ public partial class SavesPage : Screen
             col.AddChild(UiTheme.Label("PS2 games save to memory cards that every PS2 game shares, as on a real PS2. A backup holds the whole card plus this game's save states, so restoring one puts back the whole card. Deleting removes only this game's save states.",
                 UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
+        if (_game.Base.BackendId == EdenDeck.Backends.Duckstation.DuckstationBackend.BackendId)
+        {
+            var shared = Try(() => Host.Duckstation.Saves.UsesSharedCard(), false, "memory cards", col);
+            col.AddChild(UiTheme.Label(shared
+                    ? "DuckStation is set to a memory card every PS1 game shares, as on a real PS1. A backup holds that whole card plus this game's own cards and save states, so restoring one puts back the whole card. Deleting leaves the shared card alone."
+                    : "DuckStation gives each PS1 game its own memory card. A backup holds this game's cards and save states.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
         if (saves.Count > 0)
         {
             Add(new ActionButton("Back up now", () =>

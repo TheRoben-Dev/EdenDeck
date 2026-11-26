@@ -62,7 +62,7 @@ public static class Ps2Disc
     }
 
     /// <summary>The data file of a .cue's first track, when that's a MODE1/MODE2 data track.</summary>
-    internal static string? CueTrack(string cue)
+    public static string? CueTrack(string cue)
     {
         string? file = null;
         foreach (var raw in File.ReadLines(cue).Take(200))
@@ -107,6 +107,20 @@ public static class Ps2Disc
             crc = ElfCrc(elf);
         }
         return new Ps2DiscInfo(serial, version, crc);
+    }
+
+    /// <summary>
+    /// A file on the disc by its path from the root ("SYSTEM.CNF", or ["DIR", "FILE.EXE"]), up to
+    /// <paramref name="maxSize"/> bytes, or null when it isn't there or isn't an ISO 9660 disc.
+    /// </summary>
+    public static byte[]? ReadFile(IDiscImage image, IReadOnlyList<string> path, int maxSize)
+    {
+        var pvd = image.Read(16, 1);
+        if (pvd == null || Encoding.ASCII.GetString(pvd, 1, 5) != "CD001")
+        {
+            return null;
+        }
+        return ReadFile(image, (BitConverter.ToUInt32(pvd, 156 + 2), BitConverter.ToUInt32(pvd, 156 + 10)), path, maxSize);
     }
 
     /// <summary>BOOT2 (a PS2 disc) and VER from SYSTEM.CNF. A PS1 disc (BOOT) gives no boot path.</summary>
