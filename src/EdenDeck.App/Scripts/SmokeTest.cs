@@ -271,7 +271,15 @@ public partial class SmokeTest : Node
             Press("ui_left");
         }, wait: 0.5, expect: "Pick a theme, then choose Restart");
         // The 32-bit 3D theme: 3D carts over the same grid, a prop scene behind, era rendering.
-        Step("poly-settings", () => SetTheme("polygon"), wait: 1.5);
+        Step("poly-settings", () =>
+        {
+            // CI and release builds with the private model repo must actually carry the bought models.
+            if (System.Environment.GetEnvironmentVariable("SCANLINE_EXPECT_MODELS") == "1" && !Ui.Poly.Models.Available)
+            {
+                throw new InvalidOperationException("the licensed 3D models are missing from this build");
+            }
+            SetTheme("polygon");
+        }, wait: 1.5);
         // A tap on empty space bops the prop there (bottom-right slot) and touches no UI.
         Step("poly-tap-prop", () =>
         {

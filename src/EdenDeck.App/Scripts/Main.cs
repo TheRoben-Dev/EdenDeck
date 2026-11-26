@@ -220,7 +220,13 @@ public partial class Main : Control
         var smoke = Array.IndexOf(args, "--smoke");
         var art = Array.IndexOf(args, "--render-steam-art");
         var sounds = Array.IndexOf(args, "--render-sounds");
-        if (sounds >= 0 && sounds + 1 < args.Length)
+        var props = Array.IndexOf(args, "--render-props");
+        if (props >= 0 && props + 1 < args.Length)
+        {
+            // Development tool: every 3D-theme prop, idle and after a tap, on one sheet.
+            AddChild(new Ui.Poly.PropSheet(args[props + 1]));
+        }
+        else if (sounds >= 0 && sounds + 1 < args.Length)
         {
             // Development tool: every theme's sounds as .wav files, to listen to without the app.
             Feedback.WriteAll(args[sounds + 1]);

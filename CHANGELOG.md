@@ -3,6 +3,10 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.13.0
+- **The 32-bit 3D theme has new, hand-made models.** The TV, video tapes, console, phone, the claw machine (in the mascot's place) and the star crest are now detailed low-poly models with their own moving parts. Tap them: the TV warms up through static to its picture, the tapes flip, the console's lid pops open, the phone rings and dials, the claw grabs a plush (and drops it, of course), and the crest spins up.
+- **Seven new props** in the rotation: a typewriter, a beige PC that reboots, a toy car that pops wheelies, a delivery drone that barrel-rolls, a desk lamp you can switch, a glowing arcade cabinet and a mirror ball. A different handful shows each day, as before.
+
 ## 0.12.1
 - **Frame generation, the CRT effect and the in-game menu now work for DS games.** Turn frame generation or the CRT effect on in a DS game's Launch setup, and Scanline runs melonDS's OpenGL on Vulkan (through Mesa's Zink driver) for that game, so they can reach it. Frame generation only doubles DS games that run at 30 fps, as for every system. Needs the melonDS AppImage, not the Flatpak. If a game looks wrong or slow that way, turn both off to go back to plain OpenGL.
 
