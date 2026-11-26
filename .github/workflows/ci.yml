@@ -124,7 +124,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build g++ libvulkan-dev vulkan-tools mesa-vulkan-drivers \
-            vulkan-validationlayers xvfb glslang-tools python3-pil
+            vulkan-validationlayers xvfb glslang-tools python3-pil mesa-utils
 
       - name: Configure and build
         run: |
@@ -177,6 +177,25 @@ jobs:
           if grep -E 'VUID|Validation Error' crt-*.log; then echo "validation errors"; exit 1; fi
           grep -q 'crt: ready' crt-on.log
           python3 layer/scripts/check-crt-dump.py $RUNNER_TEMP/off.ppm $RUNNER_TEMP/on.ppm $RUNNER_TEMP/ctl.ppm
+
+      - name: OpenGL through Zink reaches the layer (how DS games get frame gen and CRT)
+        env:
+          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
+          VK_ADD_LAYER_PATH: ${{ github.workspace }}/layer/build
+          VK_INSTANCE_LAYERS: VK_LAYER_SCANLINE_overlay
+          MESA_LOADER_DRIVER_OVERRIDE: zink
+          __GLX_VENDOR_LIBRARY_NAME: mesa
+          # lavapipe is a CPU device, which Zink only takes in software mode.
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          SCANLINE_CRT: "3"
+        run: |
+          xvfb-run -a -s "-screen 0 1280x800x24" glxinfo -B | tee glxinfo.log
+          grep -q 'renderer string: zink' glxinfo.log
+          timeout 20 xvfb-run -a -s "-screen 0 1280x800x24" glxgears > gears.log 2>&1 || true
+          cat gears.log | head -20
+          grep -q 'vkCreateSwapchainKHR ok' gears.log
+          grep -q 'crt: ready' gears.log
+          grep -q 'present: .*total=' gears.log
 
       - name: Kill switch keeps the layer passive
         env:

@@ -134,9 +134,14 @@ and the app's own UI navigation stays fixed).
   its own settings is started with `XDG_CONFIG_HOME=<melonDS dir>/scanline-run` (Flatpak:
   `--env=`), where a copy of melonDS.toml with the game's settings sits. melonDS writes that copy back
   on exit, so changes made in its window during such a run aren't kept.
-- melonDS renders in software or OpenGL (and shows the picture through Qt), so lsfg-vk frame
-  generation and Scanline's Vulkan layer can't reach it. The app says so on the Emulators page and
-  each DS game's card, and warns in the launch notes when a profile asks for them.
+- melonDS renders in software or OpenGL and shows the picture through Qt's OpenGL context, which
+  Vulkan layers can't see. When a game's profile asks for frame generation or the CRT effect (AppImage
+  only), the run gets `MESA_LOADER_DRIVER_OVERRIDE=zink` and `__GLX_VENDOR_LIBRARY_NAME=mesa`, and the
+  run copy of melonDS.toml gets `Screen.UseGL = true` (the software screen draws with QPainter, no
+  GL). Mesa's Zink then presents through a Vulkan swapchain (kopper), so lsfg-vk and Scanline's layer
+  hook it as usual. Verified here with glxgears on Zink + lavapipe: the layer creates the swapchain,
+  counts presents and draws the CRT effect. Without those features melonDS runs plain OpenGL. The
+  Flatpak gets a warning instead, as our layers can't reach into the sandbox.
 - Controller: melonDS maps nothing for a gamepad by default. Scanline writes `Instance0.Joystick.*`
   (raw SDL indices; a hat direction is `0x100 | hat << 4 | dir`, an axis `0x10000 | axis << 24 |
   dir << 20`, both can share one value) like a DS, plus right stick click = swap screens and left

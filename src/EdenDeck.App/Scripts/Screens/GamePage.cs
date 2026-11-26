@@ -328,11 +328,7 @@ public partial class GamePage : Screen
         }
         else if (backend.Id == EdenDeck.Backends.MelonDs.MelonDsBackend.BackendId)
         {
-            col.AddChild(Section("Launch setup"));
-            col.AddChild(UiTheme.Label("melonDS draws with OpenGL or in software, so frame generation, the CRT effect and Scanline's in-game menu can't reach it. Pick the screen layout below (side by side fills a Steam Deck best).",
-                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-            col.AddChild(UiTheme.Label("Buttons are set up like a DS: A on the right face button, B on the bottom. Click the right stick to swap the screens, the left stick to blow into the microphone, and touch the bottom screen with the touchscreen. Hold View + Start for 2 seconds to quit.",
-                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            BuildMelonDsLaunchSetup(col, Add);
         }
 
         col.AddChild(Section($"{backend.DisplayName} settings for this game"));
@@ -557,6 +553,24 @@ public partial class GamePage : Screen
         col.AddChild(UiTheme.Label("Frame generation and the CRT effect need DuckStation's Vulkan renderer, which it picks by itself on a Steam Deck (Renderer: Automatic or Vulkan below).",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         col.AddChild(UiTheme.Label("Scanline sets up your controller in DuckStation before each game, like a DualShock: Cross on the bottom face button, Circle on the right, L2/R2 on the triggers, both sticks and rumble. If you map buttons in DuckStation yourself (Open DuckStation, then Settings → Controllers), yours are kept. Hold View + Start for 2 seconds to quit.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    }
+
+    /// <summary>melonDS: frame generation and the CRT layer, through Zink (melonDS's OpenGL on Vulkan).</summary>
+    private void BuildMelonDsLaunchSetup(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(Section("Launch setup"));
+        if (Host.MelonDs.IsFlatpak)
+        {
+            col.AddChild(UiTheme.Label("You're using a melonDS Flatpak, which frame generation and the CRT effect can't reach. Install the melonDS AppImage under Emulators → melonDS (Nintendo DS) to use them.",
+                UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+        }
+        AddFrameGenRows(col, Add);
+        Add(CrtRow("melonDS", moving: true));
+        AddLayerNote(col);
+        col.AddChild(UiTheme.Label("melonDS draws with OpenGL. With frame generation or the CRT effect on, Scanline runs that OpenGL on Vulkan through Mesa's Zink driver for this game, which also brings Scanline's in-game menu. If a game looks wrong or slow that way, turn both off to go back to plain OpenGL. Pick the screen layout below (side by side fills a Steam Deck best).",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        col.AddChild(UiTheme.Label("Buttons are set up like a DS: A on the right face button, B on the bottom. Click the right stick to swap the screens, the left stick to blow into the microphone, and touch the bottom screen with the touchscreen. Hold View + Start for 2 seconds to quit.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
