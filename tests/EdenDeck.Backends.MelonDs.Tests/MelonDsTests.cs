@@ -125,10 +125,10 @@ public sealed class MelonDsTests : IDisposable
     public void PlanStartsTheGameFullScreenWithTheControllerMapped()
     {
         var (b, game) = Installed();
-        var plan = b.Plan(game, new GameProfile { Crt = 1 }, new LaunchOptions { Gamepads = ["Steam Deck"] });
+        var plan = b.Plan(game, new GameProfile(), new LaunchOptions { Gamepads = ["Steam Deck"] });
         Assert.Equal(["-f", game.Path], plan.Arguments);
         Assert.False(plan.Environment.ContainsKey("XDG_CONFIG_HOME"));
-        Assert.Contains(plan.Notes, n => n.Contains("can't reach melonDS"));
+        Assert.False(plan.Environment.ContainsKey("MESA_LOADER_DRIVER_OVERRIDE"));
         foreach (var step in plan.Prepare)
         {
             step();
@@ -145,6 +145,21 @@ public sealed class MelonDsTests : IDisposable
             step();
         }
         Assert.Equal("3", b.Paths.Load().Get("Instance0.Joystick.A"));
+    }
+
+    [Fact]
+    public void TheCrtEffectRunsMelonDsOpenGlThroughZink()
+    {
+        var (b, game) = Installed();
+        var plan = b.Plan(game, new GameProfile { Crt = 1 }, new LaunchOptions());
+        Assert.Equal("zink", plan.Environment["MESA_LOADER_DRIVER_OVERRIDE"]);
+        Assert.Equal(b.Paths.RunRoot, plan.Environment["XDG_CONFIG_HOME"]);
+        foreach (var step in plan.Prepare)
+        {
+            step();
+        }
+        Assert.Equal("true", TomlFile.Load(b.Paths.RunConfigFile).Get(MelonDsBackend.UseGL));
+        Assert.Null(b.Paths.Load().Get(MelonDsBackend.UseGL));
     }
 
     [Fact]

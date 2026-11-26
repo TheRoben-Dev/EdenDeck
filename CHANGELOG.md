@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.12.1
+- **Frame generation, the CRT effect and the in-game menu now work for DS games.** Turn frame generation or the CRT effect on in a DS game's Launch setup, and Scanline runs melonDS's OpenGL on Vulkan (through Mesa's Zink driver) for that game, so they can reach it. Frame generation only doubles DS games that run at 30 fps, as for every system. Needs the melonDS AppImage, not the Flatpak. If a game looks wrong or slow that way, turn both off to go back to plain OpenGL.
+
 ## 0.12.0
 - New: **Nintendo DS games, through melonDS.** Install melonDS under **Emulators → melonDS (Nintendo DS)** (the official AppImage, straight from melonDS's own page), or Scanline finds one you already have. No BIOS is needed: melonDS has a free one built in. You can still add the BIOS and firmware from your own DS there; Scanline never downloads them.
 - DS games show up from your library folders as .nds, with their real names from a built-in list (no internet needed), an **NDS** chip, and **the game's own icon** pixelated on the cartridge label and in its Steam art.

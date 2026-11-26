@@ -155,6 +155,8 @@ public partial class SmokeTest : Node
         // A DS game (melonDS): presets and cheats.
         Step("nds-tile", () => FindFocusable(GetTree().Root, "Zyphra Tale")?.GrabFocus(), expect: "Zyphra Tale");
         Step("nds-page", () => Press(Pad.Accept), expect: "Play");
+        Step("nds-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
+        Step("nds-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
         Step("nds-preset", () => FindFocusable(GetTree().Root, "Presets set the 3D renderer")?.GrabFocus(), expect: "Presets set the 3D renderer");
         Step("nds-cheats", () => FindFocusable(GetTree().Root, "Action Replay codes from libretro")?.GrabFocus(), expect: "Cheats");
         Step("nds-cheats-page", () => Press(Pad.Accept), expect: "Back");

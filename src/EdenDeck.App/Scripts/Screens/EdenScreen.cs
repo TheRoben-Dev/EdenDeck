@@ -739,7 +739,7 @@ public partial class EdenScreen : TwoPaneScreen
 
         col.AddChild(Section("Controls"));
         col.AddChild(Note("Scanline sets up your controller in melonDS before each game, like a DS: A on the right face button, B on the bottom, X on top, Y on the left, L/R on the bumpers, Select/Start on View/Menu, d-pad and left stick to move. Click the right stick to swap the screens and the left stick to blow into the microphone. Touch the bottom screen with the Steam Deck's touchscreen. If you map buttons in melonDS yourself, Scanline keeps yours."));
-        col.AddChild(Note("melonDS draws with OpenGL or in software, so frame generation, the CRT effect and Scanline's in-game menu can't reach it. DS games run at 60 fps or their own 30, as on the console."));
+        col.AddChild(Note("melonDS draws with OpenGL. When a game has frame generation or the CRT effect on, Scanline runs melonDS's OpenGL on Vulkan through Mesa's Zink driver, so those and Scanline's in-game menu work (AppImage only, not the Flatpak). DS games run at 60 fps or their own 30; frame generation only doubles the 30 fps ones."));
         col.AddChild(Note(DsNames.Credit));
     }
 

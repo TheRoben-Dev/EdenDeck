@@ -13,13 +13,18 @@ namespace EdenDeck.Backends.MelonDs;
 /// The Nintendo DS through unmodified melonDS. Games are .nds files, known by the game code in
 /// their header ("NTR-AMCE"). Launch is <c>melonDS -f &lt;rom&gt;</c>. melonDS has no per-game
 /// settings, so a game's own settings are laid over a copy of melonDS.toml that it reads for that
-/// run (through XDG_CONFIG_HOME). melonDS draws with OpenGL or in software, so frame generation and
-/// Scanline's Vulkan layer (CRT effect, quick menu) can't reach it. The DS BIOS and firmware are
+/// run (through XDG_CONFIG_HOME). melonDS draws with OpenGL; when frame generation or the CRT effect
+/// is on, that OpenGL runs on Vulkan through Mesa's Zink driver (and melonDS's OpenGL screen is
+/// forced on), so lsfg-vk and Scanline's Vulkan layer can hook its swapchain like any other
+/// emulator's. Not inside the Flatpak sandbox, which our layers can't reach. The DS BIOS and firmware are
 /// optional (melonDS has free replacements built in) and always the player's own.
 /// </summary>
 public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlanner, ISystemFiles
 {
     public const string BackendId = "melonds";
+
+    /// <summary>melonDS's "use OpenGL for the screen" switch.</summary>
+    public const string UseGL = "Screen.UseGL";
 
     private readonly Func<string, string?> _env;
 
@@ -135,9 +140,11 @@ public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchP
         var notes = new List<string> { IsFlatpak ? "melonDS (Flatpak)" : $"melonDS {cur.Version}" };
         var env = new Dictionary<string, string>();
         var prepare = new List<Action>();
-        if (FrameGenPolicy.Decide(profile.FrameGen, profile.NativeFps).Enabled || profile.Crt > 0)
+        var vulkanWanted = FrameGenPolicy.Decide(profile.FrameGen, profile.NativeFps).Enabled || profile.Crt > 0;
+        var zink = vulkanWanted && !IsFlatpak;
+        if (vulkanWanted && IsFlatpak)
         {
-            notes.Add("warning: frame generation and the CRT effect can't reach melonDS, which draws with OpenGL or in software.");
+            notes.Add("warning: frame generation and the CRT effect can't reach into the melonDS Flatpak. Install the melonDS AppImage under Emulators → melonDS to use them.");
         }
 
         var overrides = string.IsNullOrEmpty(game.TitleId)
@@ -147,11 +154,21 @@ public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchP
         {
             notes.Add("settings just for this game");
         }
+        if (zink)
+        {
+            // The layers only see Vulkan presents, so the OpenGL screen must be on (the software
+            // screen draws with QPainter) and run through Zink.
+            env["MESA_LOADER_DRIVER_OVERRIDE"] = "zink";
+            env["__GLX_VENDOR_LIBRARY_NAME"] = "mesa";
+            notes.Add("OpenGL through Zink (Vulkan) for frame generation and the CRT effect");
+            options.Vulkan?.Apply(profile, options, env, prepare, notes);
+        }
+        var runCopy = overrides.Count > 0 || zink;
         if (IsFlatpak)
         {
             exe = "flatpak";
             args.AddRange(["run"]);
-            if (overrides.Count > 0)
+            if (runCopy)
             {
                 args.Add("--env=XDG_CONFIG_HOME=" + paths.RunRoot);
             }
@@ -160,7 +177,7 @@ public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchP
         else
         {
             exe = cur.ExecutablePath;
-            if (overrides.Count > 0)
+            if (runCopy)
             {
                 env["XDG_CONFIG_HOME"] = paths.RunRoot;
             }
@@ -190,9 +207,13 @@ public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchP
                 t.SetBool("Instance0.EnableCheats", true);
             }
             t.Save(paths.ConfigFile);
-            if (overrides.Count > 0)
+            if (runCopy)
             {
                 settings.Apply(t, overrides);
+                if (zink)
+                {
+                    t.SetBool(UseGL, true);
+                }
                 t.Save(paths.RunConfigFile);
             }
         });
