@@ -225,6 +225,7 @@ public partial class LibraryScreen : Screen
         "Game Boy" => "GB",
         "PlayStation 3" => "PS3",
         "PlayStation 2" => "PS2",
+        "PlayStation" => "PS1",
         var other => other,
     };
 

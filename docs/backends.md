@@ -44,7 +44,7 @@ from several releases.
 |---|---|---|---|
 | PS3 | RPCS3 | Good | AppImage with official update feed, `--no-gui` launch, YAML config with per-game custom configs. User imports their own PS3 firmware (PUP). Games are folders or ISOs; DLC/updates install as PKG. Vulkan, so the overlay layer applies. |
 | PS2 | PCSX2 | Good | AppImage/Flatpak, `-batch -fullscreen` launch, INI config with per-game settings. User BIOS required. Vulkan renderer available. |
-| PS1 | DuckStation | Good | AppImage, CLI boot with fullscreen/batch flags, INI config with per-game settings. User BIOS required. Licence and distribution terms have changed over time, so check before integrating. |
+| PS1 | DuckStation | Good | AppImage, CLI boot with fullscreen/batch flags, INI config with per-game settings. User BIOS required. Licence CC BY-NC-ND 4.0: official builds may be passed on unchanged, so Scanline only downloads the official AppImage and never alters it. |
 | Xbox | xemu | Medium | AppImage/Flatpak, TOML config. Needs user-supplied MCPX boot ROM, flash BIOS and HDD image. Limited per-game config. OpenGL/Vulkan depending on version. |
 | NDS | melonDS | Medium | AppImage/Flatpak, INI/TOML config. Optional user BIOS/firmware (has a built-in fallback). OpenGL, so our Vulkan overlay won't apply; use the emulator's OSD or a separate window. Dual-screen layout needs per-handheld presets. |
 | GBA | mGBA | Good | AppImage/Flatpak, simple CLI and INI config. BIOS optional. Mostly OpenGL, same overlay caveat. |
@@ -64,3 +64,25 @@ and the app's own UI navigation stays fixed).
   learned from the log PCSX2 writes (`-logfile`) the first time it runs.
 - `.iso` is shared with RPCS3: the library tries every backend that takes an extension.
 - A new PCSX2.ini must carry `[UI] SettingsVersion = 1`, or PCSX2 treats it as broken and resets it.
+
+## DuckStation notes (as built, 0.10.0)
+
+- DuckStation's licence is CC BY-NC-ND 4.0. Scanline downloads the official AppImage unchanged from
+  the `latest` release on stenzek/duckstation and writes only the player's own settings, locally.
+  That release keeps one tag, so the version shown is the build number named in the release, or the
+  AppImage's build date.
+- A PS1 game is known by its serial, which DuckStation derives from SYSTEM.CNF's `BOOT` line (the
+  executable's name without dots, `_` as `-`). Per-game settings are `gamesettings/<SERIAL>.ini`, so
+  no checksum is needed. A disc with `BOOT2` is a PS2 disc and is left to PCSX2. Scanline reads the
+  serial from .iso, .cue/.bin and .pbp (PARAM.SFO's `DISC_ID`). A .chd is named by its file name when
+  that's a Redump name, or claimed when it sits in a psx/ps1 folder; its serial is then learned from
+  DuckStation's own log (`Game: <title> | <serial> | HASH-…`). DuckStation has no log-file flag, so
+  Scanline switches `[Logging] LogToFile` on for the run and puts it back afterwards.
+- Data root: `$XDG_CONFIG_HOME/duckstation` when set, else `~/.local/share/duckstation`.
+  The setup wizard is skipped with `[Main] SetupWizardIncomplete = false`.
+- Patches and cheats come from DuckStation's community database (duckstation/chtdb), which it also
+  ships inside itself. They're enabled with `[Patches] Enable` / `[Cheats] Enable` (+ `EnableCheats`)
+  in the game's own ini. A patch with `OverrideAspectRatio` is switched on by DuckStation itself while
+  widescreen rendering is on with that picture shape.
+- Memory cards are per game by default (`memcards/<Title>_1.mcd`); a shared card is backed up but
+  never deleted.

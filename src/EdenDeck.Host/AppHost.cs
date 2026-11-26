@@ -87,6 +87,7 @@ public sealed class AppHost
     public EdenDeck.Backends.Mgba.MgbaBackend Mgba { get; }
     public EdenDeck.Backends.Rpcs3.Rpcs3Backend Rpcs3 { get; }
     public EdenDeck.Backends.Pcsx2.Pcsx2Backend Pcsx2 { get; }
+    public EdenDeck.Backends.Duckstation.DuckstationBackend Duckstation { get; }
     public IReadOnlyList<IEmulatorBackend> Backends { get; }
     public ProfileStore Profiles { get; }
     public LibraryService LibraryService { get; }
@@ -110,7 +111,8 @@ public sealed class AppHost
         Mgba = new EdenDeck.Backends.Mgba.MgbaBackend(Paths, http);
         Rpcs3 = new EdenDeck.Backends.Rpcs3.Rpcs3Backend(Paths, http);
         Pcsx2 = new EdenDeck.Backends.Pcsx2.Pcsx2Backend(Paths, http);
-        Backends = [Eden, Mgba, Rpcs3, Pcsx2];
+        Duckstation = new EdenDeck.Backends.Duckstation.DuckstationBackend(Paths, http);
+        Backends = [Eden, Mgba, Rpcs3, Pcsx2, Duckstation];
         Profiles = new ProfileStore(Paths.ProfilesFile);
         LibraryService = new LibraryService(Backends);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
@@ -148,7 +150,7 @@ public sealed class AppHost
 
     /// <summary>
     /// A game first seen without a title id (named by its file) and identified later, such as a PS2
-    /// .chd once PCSX2 has run it, gets a new id; its card settings move along with it.
+    /// or PS1 .chd once its emulator has run it, gets a new id; its card settings move along with it.
     /// </summary>
     private void CarryOverProfiles()
     {

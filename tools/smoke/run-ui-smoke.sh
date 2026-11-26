@@ -94,6 +94,31 @@ iso[20 * S:20 * S + len(elf)] = elf
 open(sys.argv[1], "wb").write(iso)
 PY
 touch -d '10 minutes ago' "$HOME/Games/PS2/"*.iso
+# A PS1 disc image for the DuckStation backend: SYSTEM.CNF with BOOT (not BOOT2) and its executable.
+mkdir -p "$HOME/Games/PS1"
+python3 - "$HOME/Games/PS1/Zircon Tide (USA).iso" <<'PY'
+import struct, sys
+S = 2048
+cnf = b"BOOT = cdrom:\\SLUS_299.91;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n"
+exe = b"PS-X EXE" + bytes(2040)
+def rec(extent, size, is_dir, name):
+    n = len(name); l = 33 + n + (1 if n % 2 == 0 else 0)
+    r = bytearray(l); r[0] = l
+    r[2:10] = struct.pack("<I", extent) + struct.pack(">I", extent)
+    r[10:18] = struct.pack("<I", size) + struct.pack(">I", size)
+    r[25] = 2 if is_dir else 0; r[32] = n; r[33:33 + n] = name
+    return bytes(r)
+iso = bytearray(22 * S)
+iso[16 * S] = 1; iso[16 * S + 1:16 * S + 7] = b"CD001\1"
+iso[16 * S + 156:16 * S + 190] = rec(18, S, True, b"\0")
+iso[17 * S] = 255; iso[17 * S + 1:17 * S + 6] = b"CD001"
+root = rec(18, S, True, b"\0") + rec(18, S, True, b"\1") + rec(19, len(cnf), False, b"SYSTEM.CNF;1") + rec(20, len(exe), False, b"SLUS_299.91;1")
+iso[18 * S:18 * S + len(root)] = root
+iso[19 * S:19 * S + len(cnf)] = cnf
+iso[20 * S:20 * S + len(exe)] = exe
+open(sys.argv[1], "wb").write(iso)
+PY
+touch -d '10 minutes ago' "$HOME/Games/PS1/"*.iso
 
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
@@ -101,6 +126,7 @@ dotnet "$CLI" folders add "$HOME/Games/Switch" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/GBA" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS3" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS2" >/dev/null
+dotnet "$CLI" folders add "$HOME/Games/PS1" >/dev/null
 dotnet "$CLI" scan
 # One game with an icon already read (normally from the game's control data with the player's
 # keys): its cartridge shows it pixelated on the label.

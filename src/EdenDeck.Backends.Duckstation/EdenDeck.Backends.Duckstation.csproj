@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EdenDeck.Backends.Duckstation</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data/ps1-names.tsv.gz" LogicalName="ps1-names.tsv.gz" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <ProjectReference Include="..\EdenDeck.Backends.Pcsx2\EdenDeck.Backends.Pcsx2.csproj" />
+    <InternalsVisibleTo Include="EdenDeck.Backends.Duckstation.Tests" />
+  </ItemGroup>
+</Project>

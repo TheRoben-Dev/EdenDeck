@@ -135,6 +135,16 @@ public partial class SmokeTest : Node
         Step("ps2-patches-page", () => Press(Pad.Accept), expect: "Look up patches");
         Step("ps2-patches-back", () => Press(Pad.Back), expect: "Patches & cheats");
         Step("ps2-back", () => Press(Pad.Back), expect: "Zephyr Line");
+        // A PS1 game (DuckStation): presets, frame generation, the CRT row, and patches & cheats.
+        Step("ps1-tile", () => FindFocusable(GetTree().Root, "Zircon Tide")?.GrabFocus(), expect: "Zircon Tide");
+        Step("ps1-page", () => Press(Pad.Accept), expect: "Play");
+        Step("ps1-preset", () => FindFocusable(GetTree().Root, "Presets set resolution and steady 3D")?.GrabFocus(), expect: "Presets set resolution and steady 3D");
+        Step("ps1-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
+        Step("ps1-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
+        Step("ps1-patches", () => FindFocusable(GetTree().Root, "patches and cheats from DuckStation's community")?.GrabFocus(), expect: "Patches & cheats");
+        Step("ps1-patches-page", () => Press(Pad.Accept), expect: "Look up patches and cheats");
+        Step("ps1-patches-back", () => Press(Pad.Back), expect: "Patches & cheats");
+        Step("ps1-back", () => Press(Pad.Back), expect: "Zircon Tide");
         Step("library-refocus-2", () => FindFocusable(GetTree().Root, "Castle Defenders")?.GrabFocus(), expect: "Castle Defenders");
         Step("running", () => Press(Pad.Tertiary));  // quick play: fake Eden in CI
         // The fake Eden exits at once: Scanline reports the early exit instead of silently returning.
@@ -150,6 +160,9 @@ public partial class SmokeTest : Node
         Step("emulators-pcsx2", () => FindFocusable(GetTree().Root, "PCSX2 isn't installed yet")?.GrabFocus(), expect: "PCSX2 (PlayStation 2)");
         Step("emulators-pcsx2-pane", () => Press(Pad.Accept), expect: "Install PCSX2");
         Step("emulators-pcsx2-back", () => Press(Pad.Back), expect: "PCSX2 (PlayStation 2)");
+        Step("emulators-duckstation", () => FindFocusable(GetTree().Root, "DuckStation isn't installed yet")?.GrabFocus(), expect: "DuckStation (PlayStation)");
+        Step("emulators-duckstation-pane", () => Press(Pad.Accept), expect: "Install DuckStation");
+        Step("emulators-duckstation-back", () => Press(Pad.Back), expect: "DuckStation (PlayStation)");
         Step("settings", () => Press(Pad.TabNext), expect: "Controller");
         // Two panes: moving down the categories swaps the right pane in place.
         Step("settings-library", () =>
