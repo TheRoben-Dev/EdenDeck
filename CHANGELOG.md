@@ -3,6 +3,13 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.12.0
+- New: **Nintendo DS games, through melonDS.** Install melonDS under **Emulators → melonDS (Nintendo DS)** (the official AppImage, straight from melonDS's own page), or Scanline finds one you already have. No BIOS is needed: melonDS has a free one built in. You can still add the BIOS and firmware from your own DS there; Scanline never downloads them.
+- DS games show up from your library folders as .nds, with their real names from a built-in list (no internet needed), an **NDS** chip, and **the game's own icon** pixelated on the cartridge label and in its Steam art.
+- Everything else works as for the other systems: performance presets (renderer, resolution and fast mode) and melonDS settings for all games or just one, including the **screen layout** (side by side fills a Steam Deck best), **save backups** (the save and save states), **Add to Steam**, sizes under Settings → Storage, and your controller set up like a DS before each game. Click the right stick to swap the screens and the left stick to blow into the microphone. Touch the bottom screen with the touchscreen.
+- **Cheats** on each DS game's card: Action Replay codes from libretro's cheat database, plus your own codes from melonDS's cheat window. The switches are melonDS's own.
+- Good to know: melonDS draws with OpenGL or in software, so **frame generation, the CRT effect and the in-game menu aren't available for DS games**. The app says so where it matters.
+
 ## 0.11.0
 - New: **original Xbox games, through xemu.** Install xemu under **Emulators → xemu (Xbox)** (the official AppImage, straight from xemu's own page), or Scanline finds one you already have. Choose your own Xbox **MCPX boot ROM**, **flash BIOS** and **hard disk image** there too; Scanline never downloads them.
 - Xbox games show up from your library folders as .iso or .xiso (XISO or full Redump dumps), with their real names from a built-in list (no internet needed) or the name inside the game. They get an **Xbox** chip on their cartridge.

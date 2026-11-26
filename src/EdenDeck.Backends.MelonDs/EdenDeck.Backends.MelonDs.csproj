@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EdenDeck.Backends.MelonDs</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data/ds-names.tsv.gz" LogicalName="ds-names.tsv.gz" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdenDeck.Core\EdenDeck.Core.csproj" />
+    <ProjectReference Include="..\EdenDeck.Backends.Mgba\EdenDeck.Backends.Mgba.csproj" />
+    <InternalsVisibleTo Include="EdenDeck.Backends.MelonDs.Tests" />
+  </ItemGroup>
+</Project>

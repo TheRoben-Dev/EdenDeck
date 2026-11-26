@@ -116,3 +116,36 @@ and the app's own UI navigation stays fixed).
 - Saves live inside the hard disk image, shared by every game, so `SaveData` is null and the app
   backs up the whole disk instead (`<data>/saves/XBOX-HDD/`, last 3 kept). xemu has no patch or cheat
   system; the app says so on the Emulators page and each Xbox game's card.
+
+## melonDS notes (as built, 0.12.0)
+
+- melonDS is GPLv3. Scanline downloads the official AppImage unchanged from melonDS-emu/melonDS's
+  latest release. The release ships it inside a zip (`melonDS-<ver>-appimage-<arch>.zip`); Scanline
+  keeps only the AppImage. The Flatpak is `net.kuribo64.melonDS`.
+- A DS game is a .nds file, known by its header's game code as `NTR-AMCE` (the DS product code, so it
+  can't clash with a GBA game's four-letter code); homebrew without a real code gets `NTR-H` and the
+  header's CRC-32. The header's CRC-16 (0x15E) must match, which keeps other files out. Names come
+  from No-Intro by game code, else the file name. The banner's 32x32 icon (4bpp tiles + BGR555
+  palette) is drawn into a PNG for the cartridge label and Steam art.
+- Config: `melonDS.toml` in `$XDG_CONFIG_HOME/melonDS` (else `~/.config/melonDS`; the Flatpak's is
+  under `~/.var/app/net.kuribo64.melonDS/config`), edited line by line with `TomlFile` (shared with
+  xemu). Window and input settings live under `Instance0` / `Instance0.Window0`.
+- Launch: `melonDS [-f] <rom>`. melonDS has no per-game settings or config-path flag, so a game with
+  its own settings is started with `XDG_CONFIG_HOME=<melonDS dir>/scanline-run` (Flatpak:
+  `--env=`), where a copy of melonDS.toml with the game's settings sits. melonDS writes that copy back
+  on exit, so changes made in its window during such a run aren't kept.
+- melonDS renders in software or OpenGL (and shows the picture through Qt), so lsfg-vk frame
+  generation and Scanline's Vulkan layer can't reach it. The app says so on the Emulators page and
+  each DS game's card, and warns in the launch notes when a profile asks for them.
+- Controller: melonDS maps nothing for a gamepad by default. Scanline writes `Instance0.Joystick.*`
+  (raw SDL indices; a hat direction is `0x100 | hat << 4 | dir`, an axis `0x10000 | axis << 24 |
+  dir << 20`, both can share one value) like a DS, plus right stick click = swap screens and left
+  stick click = microphone, and only while the table is empty or still Scanline's (stamp file).
+- BIOS/firmware are optional (melonDS has FreeBIOS). All three own files (4 KB ARM9, 16 KB ARM7,
+  128-512 KB firmware) are needed together before `Emu.ExternalBIOSEnable` is switched on.
+- Saves: `<rom>.sav` and save states `<rom>.ml1`-`.ml8` next to the ROM (or the configured paths).
+- Cheats: libretro-database's `cht/Nintendo - Nintendo DS/<No-Intro name>.cht` (file name bundled per
+  game code, fetched on request), written into melonDS's own `<rom>.mch` under a "libretro database"
+  category (old-style `CAT name` header that every melonDS version reads). `Instance0.EnableCheats` is
+  switched on before a game with codes on.
+

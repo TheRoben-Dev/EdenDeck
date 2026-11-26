@@ -584,6 +584,22 @@ public partial class SettingsScreen : TwoPaneScreen
             }
         }
 
+        var melon = Host.MelonDs;
+        var nds = Try(() => Host.Library.Where(g => g.Base.BackendId == melon.Id).Select(g => melon.Usage(g.Base)).OrderByDescending(u => u.Total).ToList(), [], "DS game sizes", col);
+        if (nds.Count > 0)
+        {
+            col.AddChild(Section("DS games"));
+            col.AddChild(UiTheme.Label(string.Join("  ·  ", new[]
+            {
+                $"Games {StorageReport.Format(nds.Sum(g => g.Files))}",
+                $"Saves and save states {StorageReport.Format(nds.Sum(g => g.Saves))}",
+            }), UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            foreach (var u in nds.Take(20))
+            {
+                col.AddChild(UiTheme.Label($"{u.Game.Title}  ·  {StorageReport.Format(u.Total)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            }
+        }
+
         var xemu = Host.Xemu;
         var xbox = Try(() => Host.Library.Where(g => g.Base.BackendId == xemu.Id).Select(g => xemu.Usage(g.Base)).OrderByDescending(u => u.Files).ToList(), [], "Xbox game sizes", col);
         if (xbox.Count > 0)

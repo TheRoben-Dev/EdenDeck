@@ -1,3 +1,4 @@
+using EdenDeck.Core.Config;
 namespace EdenDeck.Backends.Xemu;
 
 /// <summary>
@@ -19,5 +20,5 @@ public sealed class XemuPaths(Func<string, string?> env, bool flatpak)
     /// <summary>Where Scanline copies the player's boot ROM and flash BIOS.</summary>
     public string SystemDir => Path.Combine(DataRoot, "scanline");
 
-    public XemuToml Load() => XemuToml.Load(ConfigFile);
+    public TomlFile Load() => TomlFile.Load(ConfigFile);
 }

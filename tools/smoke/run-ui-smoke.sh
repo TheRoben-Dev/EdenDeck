@@ -142,6 +142,27 @@ iso[36 * S:] = xbe
 open(sys.argv[1], "wb").write(iso)
 PY
 touch -d '10 minutes ago' "$HOME/Games/Xbox/"*.iso
+# A DS cartridge image for the melonDS backend: a header with a valid CRC-16 and a banner icon.
+mkdir -p "$HOME/Games/DS"
+python3 - "$HOME/Games/DS/Zyphra Tale.nds" <<'PY'
+import struct, sys
+def crc16(data):
+    crc = 0xFFFF
+    for b in data:
+        crc ^= b
+        for _ in range(8):
+            crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
+    return crc
+rom = bytearray(0x1000)
+rom[0:6] = b"ZYPHRA"; rom[0x0C:0x10] = b"ZZZZ"; rom[0x10:0x12] = b"01"
+struct.pack_into("<I", rom, 0x68, 0x200)
+struct.pack_into("<H", rom, 0x15E, crc16(rom[:0x15E]))
+struct.pack_into("<H", rom, 0x200, 1)
+rom[0x220:0x420] = b"\x12" * 512
+struct.pack_into("<HH", rom, 0x200 + 0x222, 0x03E0, 0x7C1F)
+open(sys.argv[1], "wb").write(rom)
+PY
+touch -d '10 minutes ago' "$HOME/Games/DS/"*.nds
 
 CLI="$ROOT/src/EdenDeck.Cli/bin/Release/net8.0/scanline.dll"
 [ -f "$CLI" ] || CLI="$ROOT/src/EdenDeck.Cli/bin/Debug/net8.0/scanline.dll"
@@ -151,6 +172,7 @@ dotnet "$CLI" folders add "$HOME/Games/PS3" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS2" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/PS1" >/dev/null
 dotnet "$CLI" folders add "$HOME/Games/Xbox" >/dev/null
+dotnet "$CLI" folders add "$HOME/Games/DS" >/dev/null
 dotnet "$CLI" scan
 # One game with an icon already read (normally from the game's control data with the player's
 # keys): its cartridge shows it pixelated on the label.
