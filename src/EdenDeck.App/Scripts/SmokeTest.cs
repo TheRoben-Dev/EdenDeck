@@ -31,7 +31,7 @@ public partial class SmokeTest : Node
         // Holding a direction auto-repeats after a short delay.
         Step("joy-dpad-hold", () => Joy(JoyButton.DpadRight, true), wait: 0.9, expect: "Sky Racers");
         Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadRight, false), expect: "Sky Racers");
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zephyr Line");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Zircon Tide");
         Step("joy-rb-tab", () => Tap(JoyButton.RightShoulder), expect: "Eden (Switch)");
         Step("joy-lb-tab", () => Tap(JoyButton.LeftShoulder), expect: "Castle Defenders");
         Step("key-tab", () => Key(Godot.Key.Tab), expect: "Eden (Switch)");
@@ -141,7 +141,7 @@ public partial class SmokeTest : Node
         Step("ps1-preset", () => FindFocusable(GetTree().Root, "Presets set resolution and steady 3D")?.GrabFocus(), expect: "Presets set resolution and steady 3D");
         Step("ps1-framegen", () => FindFocusable(GetTree().Root, "Doubles a 30 fps game")?.GrabFocus(), expect: "Doubles a 30 fps game");
         Step("ps1-crt", () => FindFocusable(GetTree().Root, "Makes the game look like an old TV")?.GrabFocus(), expect: "CRT effect");
-        Step("ps1-patches", () => FindFocusable(GetTree().Root, "patches and cheats from DuckStation's community")?.GrabFocus(), expect: "Patches & cheats");
+        Step("ps1-patches", () => FindFocusable(GetTree().Root, "Widescreen and 60 fps patches and cheats")?.GrabFocus(), expect: "Patches & cheats");
         Step("ps1-patches-page", () => Press(Pad.Accept), expect: "Look up patches and cheats");
         Step("ps1-patches-back", () => Press(Pad.Back), expect: "Patches & cheats");
         Step("ps1-back", () => Press(Pad.Back), expect: "Zircon Tide");
