@@ -15,19 +15,14 @@ public static partial class Props
 
     private static Func<Look, Prop>[] BoughtCatalogue()
     {
+        // Only bought models: the flat-coloured generated props looked out of place next to them.
+        // A generated prop stands in only where its model is missing from the build.
         var all = new List<Func<Look, Prop>>
         {
             Bought("tv", TvModel, Tv),
             Bought("tape", TapeModel, Tape),
-            JewelCase,
             Bought("console", ConsoleModel, DiscPlayer),
-            MemoryCard,
-            PetEgg,
-            Handheld,
             Bought("phone", PhoneModel, FlipPhone),
-            LavaLamp,
-            Floppy,
-            Crystal,
             Bought("claw", ClawMachine, Mascot),
             Bought("crest", CrestModel, PowerRing),
         };
@@ -49,6 +44,7 @@ public static partial class Props
     private static (Prop P, Model M) FromModel(Look l, string model, Prop p)
     {
         var m = Models.Load(l, model, p.Body);
+        p.Radius *= Models.Scale;
         return (p, m);
     }
 
@@ -56,7 +52,7 @@ public static partial class Props
     private static float Spring(float age, float amp, float freq = 18, float decay = 3) =>
         age > 4 ? 0 : amp * Mathf.Sin(age * freq) * Mathf.Exp(-age * decay);
 
-    /// <summary>CRT TV with rabbit ears. Idle: antennas sway. Tap: static, colour bars, then its own picture.</summary>
+    /// <summary>CRT TV with rabbit ears. Idle: antennas sway. Tap: static and colour bars, then back to its picture.</summary>
     public static Prop TvModel(Look l)
     {
         var (p, m) = FromModel(l, "tv", new Prop { Name = "tv", Radius = 0.8f, BaseRot = new Vector3(0, 18, 0), Style = Prop.Bop.Wiggle });
@@ -92,19 +88,13 @@ public static partial class Props
                 screen.Param("emission", C("202020"));
                 screen.Param("uv_offset", new Vector2(0, a < 1.8f ? (a - 1.3f) * 2 : 0));
             }
-            else if (a < 5.5f)
-            {
-                screen.Param("tex", picture);
-                screen.Param("uv_offset", Vector2.Zero);
-                screen.Param("emission", C("282828"));
-            }
             else
             {
-                // Off: a dark glass picture of what was on.
+                // Idle: its own picture, glowing.
                 screen.Param("tex", picture);
                 screen.Param("use_tex", true);
-                screen.Param("albedo", C("303838"));
-                screen.Param("emission", Colors.Black);
+                screen.Param("albedo", Colors.White);
+                screen.Param("emission", C("202020"));
                 screen.Param("uv_offset", Vector2.Zero);
             }
         };
@@ -250,7 +240,7 @@ public static partial class Props
             lastX = x;
             var a = pr.TapAge;
             var wheelie = a < 1.1f ? Mathf.Sin(a / 1.1f * Mathf.Pi) : 0;
-            m.Scene.Position = new Vector3(x, wheelie * 0.1f, 0);
+            m.Scene.Position = new Vector3(x, wheelie * 0.13f, 0);
             m.Scene.RotationDegrees = new Vector3(0, 0, 28 * wheelie);
             foreach (var w in wheels)
             {

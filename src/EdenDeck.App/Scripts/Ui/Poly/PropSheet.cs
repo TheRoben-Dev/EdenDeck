@@ -25,8 +25,13 @@ public partial class PropSheet(string path) : Node
         view.AddChild(env);
         var cam = new Camera3D { Fov = 32, Current = true };
         view.AddChild(cam);
-        cam.LookAtFromPosition(new Vector3(0, 0.6f, 3.4f), Vector3.Zero, Vector3.Up);
-        var look = new Ps1.Look { SnapRes = new Vector2(Cell, Cell), FogNear = 50, FogFar = 60 };
+        cam.LookAtFromPosition(new Vector3(0, 0.8f, 4.4f), Vector3.Zero, Vector3.Up);
+        // Like the library backdrop: its props stand 7-9 units out, in fog from 4 to 24 units.
+        var look = new Ps1.Look
+        {
+            SnapRes = new Vector2(Cell, Cell), Fog = new Color("1b1d2a"), FogNear = 0.5f, FogFar = 20.5f,
+            Ambient = new Color("1b1d2a").Lerp(new Color(0.42f, 0.42f, 0.5f), 0.8f),
+        };
 
         var all = Props.All;
         var sheet = Image.CreateEmpty(Cell * (Moments.Length + 1), Cell * all.Length, false, Image.Format.Rgba8);
