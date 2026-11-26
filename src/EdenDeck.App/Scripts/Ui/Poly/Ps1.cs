@@ -29,6 +29,9 @@ public static class Ps1
         uniform float fog_near = 9.0;
         uniform float fog_far = 30.0;
         uniform float unlit = 0.0;
+        // Optional glow mask (bought models): lit-up signs and screens, added on top of the lighting.
+        uniform sampler2D glow_tex : source_color, filter_nearest, repeat_enable;
+        uniform float glow = 0.0;
         varying vec3 v_light;
         varying float v_fog;
         varying vec3 v_affine;
@@ -55,10 +58,12 @@ public static class Ps1
     /// <summary>Fragment body shared by both variants: leaves the lit, fogged colour in <c>c</c>.</summary>
     private const string Shade = """
             vec4 c = albedo * COLOR;
+            vec2 uv = v_affine.xy / v_affine.z;
             if (use_tex) {
-                c *= texture(tex, v_affine.xy / v_affine.z);
+                c *= texture(tex, uv);
             }
-            c.rgb = mix(c.rgb * v_light + emission, fog_color.rgb, v_fog);
+            vec3 lit = glow > 0.0 ? c.rgb * texture(glow_tex, uv).rgb * glow : vec3(0.0);
+            c.rgb = mix(c.rgb * v_light + emission + lit, fog_color.rgb, v_fog);
         """;
 
     private static Shader? _opaque;

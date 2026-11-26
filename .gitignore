@@ -5,3 +5,7 @@ __pycache__/
 bin/
 obj/
 .godot/
+
+# Licensed 3D models, copied in from the private scanline-assets repo at release build time.
+# Their licence forbids redistributing the files: never commit them here.
+src/EdenDeck.App/Licensed/

@@ -76,6 +76,11 @@ jobs:
           dotnet build EdenDeck.sln -c Release
           dotnet build src/EdenDeck.App -c Debug   # what the editor runs from source
 
+      - name: Licensed 3D models (private repo)
+        env:
+          SCANLINE_ASSETS_TOKEN: ${{ secrets.SCANLINE_ASSETS_TOKEN }}
+        run: tools/release/fetch-licensed-models.sh
+
       - name: Import project
         working-directory: src/EdenDeck.App
         run: timeout 300 "$GODOT" --headless --import

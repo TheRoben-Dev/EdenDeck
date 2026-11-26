@@ -106,6 +106,12 @@ jobs:
           dotnet build EdenDeck.sln -c Release
           dotnet test EdenDeck.sln -c Release --no-build
 
+      - name: Licensed 3D models (private repo)
+        if: steps.version.outputs.skip != 'true'
+        env:
+          SCANLINE_ASSETS_TOKEN: ${{ secrets.SCANLINE_ASSETS_TOKEN }}
+        run: tools/release/fetch-licensed-models.sh
+
       - name: Export app
         if: steps.version.outputs.skip != 'true'
         working-directory: src/EdenDeck.App

@@ -78,12 +78,17 @@ public sealed class Prop
 }
 
 /// <summary>The prop catalogue. Sizes are about one unit tall.</summary>
-public static class Props
+public static partial class Props
 {
-    public static readonly Func<Look, Prop>[] All =
+    private static readonly Func<Look, Prop>[] Generated =
     [
         Tv, Tape, JewelCase, DiscPlayer, MemoryCard, PetEgg, Handheld, FlipPhone, LavaLamp, Floppy, Crystal, Mascot, PowerRing,
     ];
+
+    private static Func<Look, Prop>[]? _all;
+
+    /// <summary>Generated props, with bought models swapped in and added when the build has them.</summary>
+    public static Func<Look, Prop>[] All => _all ??= Models.Available ? BoughtCatalogue() : Generated;
 
     private static Color C(string hex) => new(hex);
 
