@@ -15,8 +15,8 @@ public static partial class Props
 
     private static Func<Look, Prop>[] BoughtCatalogue()
     {
-        // Only bought models: the flat-coloured generated props looked out of place next to them.
-        // A generated prop stands in only where its model is missing from the build.
+        // Every slot has a bought model; a generated prop stands in only where its model is
+        // missing from the build.
         var all = new List<Func<Look, Prop>>
         {
             Bought("tv", TvModel, Tv),
@@ -25,6 +25,13 @@ public static partial class Props
             Bought("phone", PhoneModel, FlipPhone),
             Bought("claw", ClawMachine, Mascot),
             Bought("crest", CrestModel, PowerRing),
+            Bought("chest", ItemChest, JewelCase),
+            Bought("ribbon", InkRibbon, MemoryCard),
+            Bought("blocks", ToyBlocks, PetEgg),
+            Bought("walkie", Walkie, Handheld),
+            Bought("lantern", Lantern, LavaLamp),
+            Bought("cassette", Cassette, Floppy),
+            Bought("pedestal", KeyPedestal, Crystal),
         };
         // Extra props with no generated version join only when their model is there.
         foreach (var (model, make) in new (string, Func<Look, Prop>)[]
@@ -407,6 +414,136 @@ public static partial class Props
             var busy = a < 4.8f;
             stick.RotationDegrees = busy ? new Vector3(Mathf.Sin(a * 7) * 15, 0, (x - reachX * 0.5f) * 60) : Vector3.Zero;
             m.Param(null, "glow", busy ? 0.9f + 0.6f * (Mathf.PosMod(a * 4, 1) < 0.5f ? 1 : 0) : 0.6f + 0.25f * Mathf.Sin(t * 1.7f));
+        };
+        return p;
+    }
+
+    /// <summary>Wooden item chest. Tap: the lid flips open with a burst of light, then falls shut.</summary>
+    public static Prop ItemChest(Look l)
+    {
+        var (p, m) = FromModel(l, "chest", new Prop { Name = "chest", Radius = 0.7f, BaseRot = new Vector3(14, -22, 0), Sway = 14, Style = Prop.Bop.Wiggle });
+        var lid = m.Part("lid");
+        p.Animate = (pr, t, dt) =>
+        {
+            pr.OpenTarget = pr.TapAge < 2.2f ? 1 : 0;
+            lid.RotationDegrees = new Vector3(-105 * Overshoot(pr.Open), 0, 0);
+            var glow = pr.TapAge < 2.2f ? Mathf.Clamp(pr.Open, 0, 1) * (0.7f + 0.3f * Mathf.Sin(t * 9)) : 0;
+            m.Param("body", "emission", new Color(0.9f, 0.7f, 0.3f) * 0.35f * glow);
+        };
+        return p;
+    }
+
+    /// <summary>Ink ribbon, the typewriter's save item. Sways, label to the camera; tap: hops, flips and flashes like a save.</summary>
+    public static Prop InkRibbon(Look l)
+    {
+        var (p, m) = FromModel(l, "ribbon", new Prop { Name = "ribbon", Radius = 0.45f, Sway = 25, BobAmp = 0.08f, Style = Prop.Bop.Wiggle });
+        m.Scene.RotationDegrees = new Vector3(70, 0, 0);  // face up to the camera
+        p.Animate = (pr, t, dt) =>
+            m.Param(null, "emission", pr.TapAge < 1f ? new Color(0.25f, 0.28f, 0.45f) * (1 - pr.TapAge) * (1 - pr.TapAge) : Colors.Black);
+        return p;
+    }
+
+    /// <summary>Alphabet blocks. Tap: the top block tumbles off the stack, then hops back up.</summary>
+    public static Prop ToyBlocks(Look l)
+    {
+        var (p, m) = FromModel(l, "blocks", new Prop { Name = "blocks", Radius = 0.6f, BaseRot = new Vector3(14, -25, 0), Sway = 18, Style = Prop.Bop.Wiggle });
+        var top = m.Part("top");
+        var rest = top.Position;
+        p.Animate = (pr, t, dt) =>
+        {
+            var a = pr.TapAge;
+            Vector3 off = Vector3.Zero, rot = Vector3.Zero;
+            if (a < 0.6f)
+            {
+                // Tumble off to the right, landing on its side.
+                var k = a / 0.6f;
+                off = new Vector3(0.32f * k, Mathf.Sin(k * Mathf.Pi) * 0.18f - 0.26f * k * k, 0);
+                rot = new Vector3(0, 0, -90 * k);
+            }
+            else if (a < 1.6f)
+            {
+                off = new Vector3(0.32f, -0.26f, 0);
+                rot = new Vector3(0, 0, -90);
+            }
+            else if (a < 2.2f)
+            {
+                // ...and hops back up.
+                var k = (a - 1.6f) / 0.6f;
+                off = new Vector3(0.32f * (1 - k), -0.26f * (1 - k) + Mathf.Sin(k * Mathf.Pi) * 0.3f, 0);
+                rot = new Vector3(0, 0, -90 * (1 - k) + 360 * k);
+            }
+            top.Position = rest + off;
+            top.RotationDegrees = rot;
+        };
+        return p;
+    }
+
+    /// <summary>Walkie-talkie. Idle: the antenna sways. Tap: it buzzes, the screen lights up and the antenna wobbles.</summary>
+    public static Prop Walkie(Look l)
+    {
+        var (p, m) = FromModel(l, "walkie", new Prop { Name = "walkie", Radius = 0.55f, BaseRot = new Vector3(-6, -20, 6), Sway = 20, Style = Prop.Bop.Wiggle });
+        var antenna = m.Part("antenna");
+        p.Animate = (pr, t, dt) =>
+        {
+            var a = pr.TapAge;
+            var buzz = a < 1.4f ? Mathf.Sin(a * 70) * 2.5f * (1 - a / 1.4f) : 0;
+            m.Scene.RotationDegrees = new Vector3(0, 0, buzz);
+            antenna.RotationDegrees = new Vector3(Mathf.Sin(t * 1.4f + pr.Phase) * 4 + Spring(a, 16, 16), 0, Mathf.Sin(t * 1.1f) * 3);
+            m.Param("screen", "emission", a < 3f ? new Color(0.25f, 0.45f, 0.2f) * (1 - a / 3f) + new Color(0.05f, 0.08f, 0.04f) : new Color(0.05f, 0.08f, 0.04f));
+        };
+        return p;
+    }
+
+    /// <summary>Old lantern. Idle: the flame flickers and the handle swings. Tap: it flares and sways.</summary>
+    public static Prop Lantern(Look l)
+    {
+        var (p, m) = FromModel(l, "lantern", new Prop { Name = "lantern", Radius = 0.55f, Sway = 10, BobAmp = 0.03f, Style = Prop.Bop.Wiggle });
+        var handle = m.Part("handle");
+        var rng = new RandomNumberGenerator { Seed = 7 };
+        var flick = 0.5f;
+        p.Animate = (pr, t, dt) =>
+        {
+            var a = pr.TapAge;
+            flick = Mathf.Lerp(flick, rng.Randf(), 0.35f);
+            var flare = a < 1.5f ? 1 - a / 1.5f : 0;
+            m.Param("flame", "emission", new Color(1f, 0.62f, 0.2f) * (0.35f + 0.25f * flick + 0.5f * flare));
+            handle.RotationDegrees = new Vector3(Mathf.Sin(t * 1.2f + pr.Phase) * 12 + Spring(a, 35, 6, 1.5f), 0, 0);
+            m.Scene.RotationDegrees = new Vector3(0, 0, Spring(a, 8, 7, 2));
+        };
+        return p;
+    }
+
+    /// <summary>Cassette tape. Tap: flips over (side B!) and back round to side A.</summary>
+    public static Prop Cassette(Look l)
+    {
+        var (p, m) = FromModel(l, "cassette", new Prop { Name = "cassette", Radius = 0.5f, BaseRot = new Vector3(55, -15, 0), Sway = 22, Style = Prop.Bop.Hop });
+        p.Animate = (pr, t, dt) =>
+            m.Scene.RotationDegrees = new Vector3(0, 0, pr.TapAge < 0.9f ? 360 * Overshoot(pr.TapAge / 0.9f) : 0);
+        return p;
+    }
+
+    /// <summary>
+    /// Glowing item pedestal with an ornate key floating over it (two models). Idle: the key turns
+    /// and bobs, the runes pulse. Tap: the key leaps up and spins, the runes flash.
+    /// </summary>
+    public static Prop KeyPedestal(Look l)
+    {
+        var (p, m) = FromModel(l, "pedestal", new Prop { Name = "pedestal", Radius = 0.6f, BaseRot = new Vector3(6, 0, 0), Sway = 10, Style = Prop.Bop.Wiggle });
+        var key = Models.Has("key") ? Models.Load(l, "key", p.Body) : null;
+        var spin = 0f;
+        p.Animate = (pr, t, dt) =>
+        {
+            var a = pr.TapAge;
+            var leap = a < 1.2f ? Mathf.Sin(a / 1.2f * Mathf.Pi) * 0.35f : 0;
+            spin += dt * (70 + (a < 1.2f ? 600 * (1 - a / 1.2f) : 0));
+            if (key != null)
+            {
+                key.Scene.Position = new Vector3(0, 0.78f + Mathf.Sin(t * 1.6f + pr.Phase) * 0.05f + leap, 0);
+                key.Scene.RotationDegrees = new Vector3(90, spin, 0);
+                key.Param(null, "emission", a < 0.8f ? new Color(0.9f, 0.75f, 0.3f) * (1 - a / 0.8f) : new Color(0.12f, 0.09f, 0.02f));
+            }
+            var pulse = 0.35f + 0.2f * Mathf.Sin(t * 2.3f) + (a < 1f ? 0.8f * (1 - a) : 0);
+            m.Param("runes", "emission", new Color(0.3f, 0.8f, 1f) * pulse);
         };
         return p;
     }
