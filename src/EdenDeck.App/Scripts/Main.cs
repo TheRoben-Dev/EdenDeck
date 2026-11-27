@@ -186,7 +186,7 @@ public partial class Main : Control
         if (host != null)
         {
             host.Accent = "#" + UiTheme.Accent.ToHtml(false);
-            host.Gamepads = () => Input.GetConnectedJoypads().Select(id => Input.GetJoyName(id)).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            host.Gamepads = () => Pad.AllPads().Select(p => (p.Name, p.Vendor, p.Product)).ToList();
         }
         _feedback = new Feedback(UiTheme.Name)
         {
@@ -1317,7 +1317,7 @@ public partial class Main : Control
         }, emulator: "RPCS3");
     }
 
-    /// <summary>Player 1 gets a controller mapping when Eden still has only the keyboard (Game Mode needs this).</summary>
+    /// <summary>Fallback when the system's pads can't be read: player 1 gets a mapping when Eden still has only the keyboard.</summary>
     private string? EnsureController()
     {
         if (Host == null)
@@ -1326,6 +1326,10 @@ public partial class Main : Control
         }
         try
         {
+            if (Host.PlayerPads().Count > 0)
+            {
+                return null;  // the launch plan assigns players (see EdenControllerDefaults.AssignPlayers)
+            }
             if (Pad.ActivePad() is { } pad && Host.Eden.EnsureControllerMapping(pad))
             {
                 return $"controller: mapped {pad.Name} as player 1 (Eden had only the keyboard)";

@@ -155,6 +155,11 @@ public sealed class XemuBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
         {
             notes.Add("controller: first gamepad on port 1");
         }
+        if (options.Players.Count > 0 && options.Players[0].SteamSlot != null && options.Players[0].GamepadIndex > 0)
+        {
+            // xemu binds Steam Input pads in the order Steam lists them and can't be pointed at one.
+            notes.Add($"warning: xemu gives port 1 to the first controller Steam lists, not {options.Players[0].Name}. To fix it, open Steam's Quick Access menu (the … button), go to the gear tab, choose Rearrange controller order and put your controller first.");
+        }
         var settings = SettingsImpl;
         var run = RunConfig;
         prepare.Add(() =>

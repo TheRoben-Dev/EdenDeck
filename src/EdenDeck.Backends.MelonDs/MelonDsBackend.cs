@@ -184,9 +184,10 @@ public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchP
         }
 
         var gamepad = options.Gamepads.Any(p => !string.IsNullOrWhiteSpace(p));
+        int? joystick = options.Players.Count > 0 ? options.Players[0].JoystickIndex : null;
         if (gamepad)
         {
-            notes.Add("controller: DS layout (A right, B bottom)");
+            notes.Add("controller: DS layout (A right, B bottom)" + (options.Players.Count > 0 ? $", {options.Players[0]}" : ""));
         }
         var cheatsOn = !string.IsNullOrEmpty(game.TitleId) && Cheats.EnabledCount(game) > 0;
         if (cheatsOn)
@@ -201,6 +202,10 @@ public sealed class MelonDsBackend : IEmulatorBackend, ILibraryScanner, ILaunchP
             if (gamepad)
             {
                 MelonDsPad.Ensure(t, stamp);
+            }
+            if (joystick is { } j)
+            {
+                t.SetInt("Instance0.JoystickID", j);  // player 1's pad (melonDS is single player)
             }
             if (cheatsOn)
             {

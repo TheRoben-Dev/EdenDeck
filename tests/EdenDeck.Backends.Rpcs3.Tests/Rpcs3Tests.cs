@@ -123,6 +123,28 @@ public sealed class Rpcs3Tests : IDisposable
     }
 
     [Fact]
+    public void PlayersGetTheControllersInTheDockInOrder()
+    {
+        var b = Backend();
+        var file = Rpcs3Pads.ProfileFile(b.Paths);
+        var xbox = new EdenDeck.Core.Input.Gamepad { Name = "Xbox Series X Controller", Guid = "03000000de280000ff11000001000000" };
+        var devices = Rpcs3Pads.DevicesFor([xbox, xbox with { NameNumber = 2 }]);
+        Assert.Equal(["Xbox Series X Controller 1", "Xbox Series X Controller 2"], devices);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, "Player 1 Input:\n  Handler: Keyboard\n  Device: Keyboard\nPlayer 3 Input:\n  Handler: Null\n  Device: Null\n");
+        Assert.True(Rpcs3Pads.EnsurePlayers(b.Paths, devices, b.PadStampFile));
+        var text = File.ReadAllText(file);
+        Assert.Equal(("SDL", "Xbox Series X Controller 1"), Rpcs3Pads.Player1(text));
+        Assert.Contains("Player 2 Input:\n  Handler: SDL\n  Device: \"Xbox Series X Controller 2\"\nPlayer 3 Input:", text);
+        Assert.False(Rpcs3Pads.EnsurePlayers(b.Paths, devices, b.PadStampFile));
+
+        // Undocked: the Deck's controls take player 1 back (Scanline's own setup follows).
+        Assert.True(Rpcs3Pads.EnsurePlayers(b.Paths, ["Steam Deck 1"], b.PadStampFile));
+        Assert.Equal("Steam Deck 1", Rpcs3Pads.Player1(File.ReadAllText(file)).Device);
+    }
+
+    [Fact]
     public void Player1GetsTheControllerUnlessThePlayerSetOneUp()
     {
         var b = Backend();

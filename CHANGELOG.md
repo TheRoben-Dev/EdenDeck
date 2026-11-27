@@ -3,6 +3,12 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.13.3
+- **A controller plugged into your Steam Deck's dock is player 1 now.** Steam lists the Deck's own controls first, so on a TV games could ignore the controller in your hands (BOTW was unplayable). Before each game Scanline now looks at what's connected and sets the emulator up itself: the controllers you plugged in or paired are player 1, 2, 3 and so on, in the order they connected, and the Deck's own controls are player 1 only when nothing else is connected. Unplug the controller and the Deck's controls take over again on the next launch.
+- This works for every system: Switch (up to 8 players), PS3 (up to 7), PS2 and PS1 (2 players), GBA and DS (1 player). Steam shortcuts do the same. Your button choices from Settings → Buttons follow player 1 to whichever controller it is, and player 2 gets the same buttons. A controller you set up yourself in the emulator is still left alone.
+- Switch: a game's own input profile follows player 1 too, and with the controller style set to Handheld, docked launches with a controller use a Pro Controller for that game (handheld style would keep it in handheld mode).
+- Xbox: xemu can't be told which Steam controller to use, so it still takes the first one Steam lists. When that's the Deck's own controls, Scanline says so as the game starts, with the fix: in Steam's Quick Access menu (the … button), open the gear tab and choose Rearrange controller order.
+
 ## 0.13.2
 - **Seven more hand-made props replace the old ones in the 3D theme.** Tap them: the treasure chest flips open with a glow, the ink ribbon wobbles, the top alphabet block tumbles off and hops back up, the walkie-talkie buzzes, the lantern's flame flickers as it swings, the cassette flips over, and the key above its glowing pedestal leaps and spins.
 

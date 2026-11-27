@@ -152,7 +152,13 @@ public sealed class Pcsx2Backend : IEmulatorBackend, ILibraryScanner, ILaunchPla
             }
         }
         var paths = Paths;
-        if (options.Gamepads.Any(p => !string.IsNullOrWhiteSpace(p)))
+        if (options.Players.Count > 0)
+        {
+            var sdl = options.Players.Take(Pcsx2Pads.MaxPads).Select(p => p.GamepadIndex).ToList();
+            prepare.Add(() => Pcsx2Pads.Ensure(paths, sdl));
+            notes.Add("controllers: " + string.Join(", ", options.Players.Take(Pcsx2Pads.MaxPads).Select((p, i) => $"player {i + 1} = {p} (SDL-{p.GamepadIndex})")));
+        }
+        else if (options.Gamepads.Any(p => !string.IsNullOrWhiteSpace(p)))
         {
             prepare.Add(() => Pcsx2Pads.Ensure(paths));
             notes.Add("controller: " + Pcsx2Pads.Device);

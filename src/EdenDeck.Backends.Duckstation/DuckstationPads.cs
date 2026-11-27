@@ -27,27 +27,22 @@ public static class DuckstationPads
         ("LargeMotor", "LargeMotor"), ("SmallMotor", "SmallMotor"),
     ];
 
+    private static bool OurType(string t) => t is PadType or "DigitalController";
+
     /// <summary>True when player 1 has no button mapping, or only keyboard keys.</summary>
-    public static bool Untouched(Pcsx2Ini ini)
-    {
-        var type = ini.Get("Pad1", "Type");
-        if (type != null && type is not (PadType or "DigitalController"))
-        {
-            return false;  // a mouse, a light gun, a jogcon...: the player chose it
-        }
-        var bound = Layout.Select(l => ini.Get("Pad1", l.Key)).Where(v => !string.IsNullOrWhiteSpace(v)).ToList();
-        return bound.All(v => v!.StartsWith("Keyboard/", StringComparison.Ordinal));
-    }
+    public static bool Untouched(Pcsx2Ini ini) => Pcsx2Pads.Free(ini, "Pad1", Layout, OurType);
 
     /// <summary>Maps player 1 to the first controller unless the player has their own mapping. True when it wrote.</summary>
-    public static bool Ensure(DuckstationPaths paths)
+    public static bool Ensure(DuckstationPaths paths) => Ensure(paths, [0]);
+
+    /// <summary>Maps Pad1, Pad2 to the players' controllers (SDL-N, player 1 first); see <see cref="Pcsx2Pads.EnsurePlayers"/>.</summary>
+    public static bool Ensure(DuckstationPaths paths, IReadOnlyList<int> sdlIndices)
     {
         var ini = paths.LoadConfigForWrite();
-        if (!Untouched(ini))
+        if (!Pcsx2Pads.EnsurePlayers(ini, sdlIndices, Layout, PadType, OurType))
         {
             return false;
         }
-        Write(ini);
         ini.Save(paths.ConfigFile);
         return true;
     }

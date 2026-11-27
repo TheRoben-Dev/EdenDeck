@@ -155,6 +155,21 @@ public sealed class MgbaTests : IDisposable
     }
 
     [Fact]
+    public void Player1IsThePadInTheDock()
+    {
+        var cfg = Path.Combine(_home, "dock.ini");
+        var stamp = Path.Combine(_home, "dock.stamp");
+        Assert.True(MgbaPad.Ensure(cfg, stamp, "Xbox Series X Controller"));
+        Assert.Equal("Xbox Series X Controller", EdenDeck.Core.Config.QtIni.Load(cfg, quoting: false).Get(MgbaPad.Section, "device0"));
+        Assert.False(MgbaPad.Ensure(cfg, stamp, "Xbox Series X Controller"));
+        // Changing pads keeps Scanline's button mapping (the device isn't part of it).
+        Assert.True(MgbaPad.Ensure(cfg, stamp, "Steam Deck"));
+        var ini = EdenDeck.Core.Config.QtIni.Load(cfg, quoting: false);
+        Assert.Equal("Steam Deck", ini.Get(MgbaPad.Section, "device0"));
+        Assert.Equal("1", ini.Get(MgbaPad.Section, "keyA"));
+    }
+
+    [Fact]
     public void ReadsGamesInsideZips()
     {
         var b = Backend();

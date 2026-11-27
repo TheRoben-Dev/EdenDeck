@@ -48,17 +48,29 @@ public static class MgbaPad
     ];
 
     /// <summary>Writes the default mapping unless the player has their own. Returns true when it wrote.</summary>
-    public static bool Ensure(string configFile, string stampFile)
+    public static bool Ensure(string configFile, string stampFile, string? device = null)
     {
         var ini = QtIni.Load(configFile, quoting: false);
+        var changed = false;
+        if (device != null && ini.Get(Section, "device0") != device)
+        {
+            // mGBA gives player 1 the pad with this SDL name, else the first one it finds.
+            ini.Set(Section, "device0", device);
+            changed = true;
+        }
         var current = Fingerprint(ini.Entries(Section));
         var ours = File.Exists(stampFile) ? File.ReadAllText(stampFile) : null;
         var wanted = Fingerprint(Defaults);
         if (current == wanted || current.Length > 0 && current != ours)
         {
-            return false;  // already in place, or the player's own mapping
+            if (changed)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(configFile)!);
+                ini.Save(configFile);
+            }
+            return changed;  // already in place, or the player's own mapping
         }
-        ini.RemoveWhere(Section, _ => true);
+        ini.RemoveWhere(Section, k => !IsDevice(k));
         foreach (var (k, v) in Defaults)
         {
             ini.Set(Section, k, v);
@@ -70,6 +82,8 @@ public static class MgbaPad
         return true;
     }
 
+    private static bool IsDevice(string key) => key.StartsWith("device", StringComparison.Ordinal);
+
     private static string Fingerprint(IEnumerable<KeyValuePair<string, string>> entries) =>
-        string.Join("\n", entries.OrderBy(e => e.Key, StringComparer.Ordinal).Select(e => e.Key + "=" + e.Value));
+        string.Join("\n", entries.Where(e => !IsDevice(e.Key)).OrderBy(e => e.Key, StringComparer.Ordinal).Select(e => e.Key + "=" + e.Value));
 }

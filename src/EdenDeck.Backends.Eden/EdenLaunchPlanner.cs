@@ -97,6 +97,37 @@ public sealed class EdenLaunchPlanner : ILaunchPlanner
             }
         }
 
+        // Players: a controller plugged into the dock is player 1 (then 2, 3, ... in the order they
+        // connected); the Deck's own controls only when nothing else is connected.
+        if (options.Players.Count > 0)
+        {
+            var players = options.Players;
+            var config = _backend.Paths.GlobalConfigFile;
+            var profile1 = string.IsNullOrEmpty(game.TitleId) ? null : EdenControls.GameProfile(_backend.Paths.PerGameConfigFile(game.TitleId));
+            var inputDir = _backend.Paths.InputProfileDir;
+            notes.Add("controllers: " + string.Join(", ", players.Select((p, i) => $"player {i + 1} = {p}")));
+            prepare.Add(() =>
+            {
+                foreach (var change in EdenControllerDefaults.AssignPlayers(config, players))
+                {
+                    notes.Add("controller: " + change);
+                }
+                if (profile1 != null)
+                {
+                    EdenControllerDefaults.RetargetProfile(Path.Combine(inputDir, profile1 + ".ini"), players[0]);
+                }
+            });
+
+            // On a TV with a pad in the dock, the Handheld style would put the game in handheld
+            // mode: use a Pro Controller for this launch and put the style back afterwards.
+            if (options.Docked == true && !players[0].BuiltIn && EdenControls.PlayerStyle(config) == ControllerStyle.Handheld)
+            {
+                notes.Add("controller style: Pro Controller for this launch (docked with a controller)");
+                prepare.Add(() => EdenControls.SetPlayerStyle(config, ControllerStyle.ProController));
+                cleanup.Add(() => EdenControls.SetPlayerStyle(config, ControllerStyle.Handheld));
+            }
+        }
+
         var args = new List<string>();
         if (options.Fullscreen)
         {
