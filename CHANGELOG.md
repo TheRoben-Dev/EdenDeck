@@ -3,6 +3,9 @@
 Written for players. The app shows this under Settings → Updates → Changelog, and shows
 "What's new" once after each update. Each release's GitHub notes start with its section.
 
+## 0.13.2
+- **Seven more hand-made props replace the old ones in the 3D theme.** Tap them: the treasure chest flips open with a glow, the ink ribbon wobbles, the top alphabet block tumbles off and hops back up, the walkie-talkie buzzes, the lantern's flame flickers as it swings, the cassette flips over, and the key above its glowing pedestal leaps and spins.
+
 ## 0.13.1
 - **The 3D theme's props are easier to see.** They're brighter, bigger, sit further in from the screen edges, and the background renders sharper, so their details no longer turn to noise on a Steam Deck. The TV now shows its picture all the time, and a tap still runs the static and colour bars.
 - The scene now uses only the new models. The old flat-coloured jewel case, memory card, pet egg, handheld, lava lamp, floppy and save crystal are gone.
