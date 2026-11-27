@@ -13,6 +13,7 @@
     <ProjectReference Include="..\EdenDeck.Backends.Xemu\EdenDeck.Backends.Xemu.csproj" />
     <ProjectReference Include="..\EdenDeck.Backends.MelonDs\EdenDeck.Backends.MelonDs.csproj" />
     <InternalsVisibleTo Include="EdenDeck.Core.Tests" />
+    <InternalsVisibleTo Include="EdenDeck.Backends.Eden.Tests" />
     <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
   </ItemGroup>
 </Project>

@@ -44,48 +44,109 @@ public static class Rpcs3Pads
         return (y.Get("Player 1 Input/Handler"), y.Get("Player 1 Input/Device"));
     }
 
+    /// <summary>RPCS3's device names for the players' pads, player 1 first.</summary>
+    public static IReadOnlyList<string> DevicesFor(IReadOnlyList<Core.Input.Gamepad> players) =>
+        players.Take(MaxPlayers).Select(p => $"{p.Name} {p.NameNumber}").ToList();
+
+    public const int MaxPlayers = 7;
+
     /// <summary>Points player 1 at <paramref name="pads"/>' first pad unless the player has their own setup. True when it wrote.</summary>
-    public static bool Ensure(Rpcs3Paths paths, IReadOnlyList<string> pads, string stampFile)
+    public static bool Ensure(Rpcs3Paths paths, IReadOnlyList<string> pads, string stampFile) =>
+        DeviceFor(pads) is { } device && EnsurePlayers(paths, [device], stampFile);
+
+    /// <summary>
+    /// Points player N at <paramref name="devices"/>[N-1] (player 1 first) unless that player has
+    /// their own setup. True when it wrote.
+    /// </summary>
+    public static bool EnsurePlayers(Rpcs3Paths paths, IReadOnlyList<string> devices, string stampFile)
     {
-        if (DeviceFor(pads) is not { } device)
+        if (devices.Count == 0)
         {
             return false;
         }
         var file = ProfileFile(paths);
         var text = File.Exists(file) ? File.ReadAllText(file) : "";
-        var (handler, current) = Player1(text);
-        if (handler == Handler && current == device)
+        var stamps = ReadStamps(stampFile);
+        var changed = false;
+        for (var i = 0; i < devices.Count && i < MaxPlayers; i++)
         {
-            return false;
+            var y = Rpcs3Yaml.Parse(text);
+            var block = $"Player {i + 1} Input";
+            var (handler, current) = (y.Get(block + "/Handler"), y.Get(block + "/Device"));
+            if (handler == Handler && current == devices[i])
+            {
+                stamps[i] = $"{Handler}|{devices[i]}";
+                continue;
+            }
+            var ours = stamps.GetValueOrDefault(i) == $"{handler}|{current}";
+            var untouched = handler is null or "Keyboard" or "Null";
+            if (!untouched && !ours)
+            {
+                continue;  // the player's own pad setup
+            }
+            text = Replace(text, devices[i], block + ":");
+            stamps[i] = $"{Handler}|{devices[i]}";
+            changed = true;
         }
-        var ours = File.Exists(stampFile) && File.ReadAllText(stampFile) == $"{handler}|{current}";
-        var untouched = handler is null or "Keyboard" or "Null";
-        if (!untouched && !ours)
+        if (changed)
         {
-            return false;  // the player's own pad setup
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            var tmp = file + ".tmp";
+            File.WriteAllText(tmp, text);
+            File.Move(tmp, file, overwrite: true);
         }
-        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-        var tmp = file + ".tmp";
-        File.WriteAllText(tmp, Replace(text, device));
-        File.Move(tmp, file, overwrite: true);
         Directory.CreateDirectory(Path.GetDirectoryName(stampFile)!);
-        File.WriteAllText(stampFile, $"{Handler}|{device}");
-        return true;
+        File.WriteAllText(stampFile, string.Join("\n", stamps.OrderBy(k => k.Key).Select(k => k.Key == 0 ? k.Value : $"{k.Key}|{k.Value}")));
+        return changed;
+    }
+
+    /// <summary>Stamp file: player 1's "handler|device" on the first line (the old format), "N|handler|device" for the others.</summary>
+    private static Dictionary<int, string> ReadStamps(string stampFile)
+    {
+        var d = new Dictionary<int, string>();
+        if (!File.Exists(stampFile))
+        {
+            return d;
+        }
+        foreach (var line in File.ReadAllText(stampFile).Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var bar = line.IndexOf('|');
+            if (bar > 0 && int.TryParse(line[..bar], out var n) && line.IndexOf('|', bar + 1) > 0)
+            {
+                d[n] = line[(bar + 1)..];
+            }
+            else
+            {
+                d[0] = line;
+            }
+        }
+        return d;
     }
 
     /// <summary>The profile with player 1's block swapped for an SDL one (its old key mapping dropped, so RPCS3's SDL defaults apply).</summary>
-    internal static string Replace(string text, string device)
+    internal static string Replace(string text, string device, string blockHeader = Block)
     {
         var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
         if (lines.Count > 0 && lines[^1] == "")
         {
             lines.RemoveAt(lines.Count - 1);
         }
-        var block = new[] { Block, $"  Handler: {Handler}", $"  Device: {Quote(device)}" };
-        var start = lines.FindIndex(l => l.TrimEnd() == Block);
+        var block = new[] { blockHeader, $"  Handler: {Handler}", $"  Device: {Quote(device)}" };
+        var start = lines.FindIndex(l => l.TrimEnd() == blockHeader);
         if (start < 0)
         {
-            lines.InsertRange(0, block);
+            // After the last player block before this one, so the players stay in order.
+            var after = lines.FindLastIndex(l => l.StartsWith("Player ", StringComparison.Ordinal) && string.CompareOrdinal(l.TrimEnd(), blockHeader) < 0);
+            var at = 0;
+            if (after >= 0)
+            {
+                at = after + 1;
+                while (at < lines.Count && (lines[at].Length == 0 || lines[at][0] == ' '))
+                {
+                    at++;
+                }
+            }
+            lines.InsertRange(at, block);
         }
         else
         {

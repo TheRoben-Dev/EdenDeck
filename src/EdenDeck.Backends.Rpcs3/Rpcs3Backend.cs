@@ -179,7 +179,14 @@ public sealed class Rpcs3Backend : IEmulatorBackend, ILibraryScanner, ILaunchPla
         }
         var pads = options.Gamepads;
         var paths = Paths;
-        if (Rpcs3Pads.DeviceFor(pads) is { } pad)
+        if (options.Players.Count > 0)
+        {
+            var devices = Rpcs3Pads.DevicesFor(options.Players);
+            var stamp = PadStampFile;
+            prepare.Add(() => Rpcs3Pads.EnsurePlayers(paths, devices, stamp));
+            notes.Add("controllers: " + string.Join(", ", devices.Select((d, i) => $"player {i + 1} = {d}")));
+        }
+        else if (Rpcs3Pads.DeviceFor(pads) is { } pad)
         {
             prepare.Add(() => Rpcs3Pads.Ensure(paths, pads, PadStampFile));
             notes.Add($"controller: {pad}");

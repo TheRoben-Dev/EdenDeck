@@ -62,16 +62,39 @@ public class SteamServiceTests
     public void SteamShortcutLaunchesUseTheControllerAndAccentTheAppSawLast()
     {
         using var env = new TestEnv();
-        var app = new AppHost(env.AppPaths()) { Accent = "#3dff8f", Gamepads = () => ["Steam Virtual Gamepad"] };
+        var app = new AppHost(env.AppPaths()) { Accent = "#3dff8f", Gamepads = () => [("Steam Virtual Gamepad", 0x28de, 0x11ff)], ScanPads = () => [] };
         var inApp = app.DefaultLaunchOptions();
         Assert.Equal(["Steam Virtual Gamepad"], inApp.Gamepads);
 
         // `scanline launch` from a Steam shortcut: no app, so nothing supplies these.
-        var shortcut = new AppHost(env.AppPaths()).DefaultLaunchOptions();
+        var shortcut = new AppHost(env.AppPaths()) { ScanPads = () => [] }.DefaultLaunchOptions();
         Assert.Equal("#3dff8f", shortcut.Accent);
         Assert.Equal(["Steam Virtual Gamepad"], shortcut.Gamepads);
 
         // The app with no controller connected doesn't invent one.
-        Assert.Empty(new AppHost(env.AppPaths()) { Gamepads = () => [] }.DefaultLaunchOptions().Gamepads);
+        Assert.Empty(new AppHost(env.AppPaths()) { Gamepads = () => [], ScanPads = () => [] }.DefaultLaunchOptions().Gamepads);
+    }
+
+    [Fact]
+    public void LaunchesGivePlayer1ToThePadInTheDock()
+    {
+        using var env = new TestEnv();
+        var deck = new EdenDeck.Core.Input.Gamepad { Name = "Steam Deck", Guid = "03000000de280000ff11000001000000", Vendor = 0x28de, Product = 0x1205, SteamSlot = 0, BuiltIn = true };
+        var xbox = new EdenDeck.Core.Input.Gamepad { Name = "Xbox Series X Controller", Guid = "03000000de280000ff11000001000000", Vendor = 0x045e, Product = 0x0b13, SteamSlot = 1, GuidPort = 1, GamepadIndex = 1, JoystickIndex = 1 };
+        var options = new AppHost(env.AppPaths()) { ScanPads = () => [deck, xbox] }.DefaultLaunchOptions();
+        Assert.Equal([xbox], options.Players);
+        Assert.Equal(["Xbox Series X Controller"], options.Gamepads);
+
+        var handheld = new AppHost(env.AppPaths()) { ScanPads = () => [deck] }.DefaultLaunchOptions();
+        Assert.Equal([deck], handheld.Players);
+    }
+
+    [Fact]
+    public void PadsSdlNamesFromItsDatabaseTakeTheAppsName()
+    {
+        var raw = new EdenDeck.Core.Input.Gamepad { Name = "Microsoft X-Box One S pad", Guid = "030000005e040000ea02000001000000", Vendor = 0x045e, Product = 0x02ea };
+        var renamed = AppHost.Rename([raw, raw with { JoystickIndex = 1 }], [("Xbox One S Controller", 0x045e, 0x02ea), ("Xbox One S Controller", 0x045e, 0x02ea)]);
+        Assert.Equal(["Xbox One S Controller", "Xbox One S Controller"], renamed.Select(p => p.Name));
+        Assert.Equal([1, 2], renamed.Select(p => p.NameNumber));
     }
 }

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using EdenDeck.Backends.Eden;
 using EdenDeck.Core;
 using EdenDeck.Core.Backends;
+using EdenDeck.Core.Input;
 using EdenDeck.Core.Launch;
 using EdenDeck.Core.Library;
 using EdenDeck.Core.Profiles;
@@ -207,19 +208,24 @@ public sealed class AppHost
         return null;
     }
 
-    public LaunchOptions DefaultLaunchOptions() => new()
+    public LaunchOptions DefaultLaunchOptions()
     {
-        LayerDirectory = Settings.LayerDirectory ?? AutoLayerDirectory(),
-        LayerStatsPath = Path.Combine(Paths.Runtime, "stats.json"),
-        LayerKillSwitch = Settings.LayerKillSwitch,
-        Fullscreen = true,
-        CrtMotion = !Settings.ReduceMotion,
-        Docked = Settings.ConsoleModeFollowsScreen ? ScreenDetect.External() : null,
-        Vulkan = new EdenDeck.Backends.Eden.EdenVulkanExtras(Eden, Paths.Runtime),
-        HandheldFrame = Settings.HandheldFrame,
-        Accent = RememberedAccent(),
-        Gamepads = RememberedGamepads(),
-    };
+        var (players, names) = RememberedGamepads();
+        return new LaunchOptions
+        {
+            LayerDirectory = Settings.LayerDirectory ?? AutoLayerDirectory(),
+            LayerStatsPath = Path.Combine(Paths.Runtime, "stats.json"),
+            LayerKillSwitch = Settings.LayerKillSwitch,
+            Fullscreen = true,
+            CrtMotion = !Settings.ReduceMotion,
+            Docked = Settings.ConsoleModeFollowsScreen ? ScreenDetect.External() : null,
+            Vulkan = new EdenDeck.Backends.Eden.EdenVulkanExtras(Eden, Paths.Runtime),
+            HandheldFrame = Settings.HandheldFrame,
+            Accent = RememberedAccent(),
+            Players = players,
+            Gamepads = names,
+        };
+    }
 
     /// <summary>The app's accent, remembered for launches without the app (Steam shortcuts).</summary>
     private string? RememberedAccent()
@@ -235,23 +241,72 @@ public sealed class AppHost
         return accent;
     }
 
-    /// <summary>The connected controllers, or the ones the app saw last when it isn't running.</summary>
-    private IReadOnlyList<string> RememberedGamepads()
+    /// <summary>
+    /// The players' controllers, read from the system at launch (works for Steam shortcuts too).
+    /// A pad SDL names from its own database gets the name the app sees, so RPCS3/mGBA find it.
+    /// </summary>
+    public IReadOnlyList<Gamepad> PlayerPads()
     {
-        if (Gamepads == null)
+        var pads = ScanPads();
+        if (Gamepads?.Invoke() is { Count: > 0 } seen)
         {
-            return Settings.LastGamepads;  // no app: a Steam shortcut, where Steam Input's pad is the one the app saw
+            pads = Rename(pads, seen);
         }
-        var pads = Gamepads();
-        if (pads.Count > 0 && !pads.SequenceEqual(Settings.LastGamepads))
-        {
-            SaveSettings(Settings with { LastGamepads = pads.ToList() });
-        }
-        return pads;
+        return GamepadScan.Players(pads);
     }
 
-    /// <summary>The connected controllers' SDL names (first = in use), supplied by the app.</summary>
-    public Func<IReadOnlyList<string>>? Gamepads { get; set; }
+    /// <summary>Reads the connected pads (sysfs); replaceable for tests.</summary>
+    public Func<IReadOnlyList<Gamepad>> ScanPads { get; set; } = () => GamepadScan.Scan();
+
+    internal static IReadOnlyList<Gamepad> Rename(IReadOnlyList<Gamepad> pads, IReadOnlyList<(string Name, int Vendor, int Product)> seen)
+    {
+        var left = seen.ToList();
+        var renamed = pads.Select(p =>
+        {
+            if (p.SteamSlot != null)
+            {
+                return p;  // SDL uses Steam's name for these, which the scan already has
+            }
+            var i = left.FindIndex(s => s.Vendor == p.Vendor && s.Product == p.Product && !string.IsNullOrWhiteSpace(s.Name));
+            if (i < 0)
+            {
+                return p;
+            }
+            var name = left[i].Name;
+            left.RemoveAt(i);
+            return p with { Name = name };
+        }).ToList();
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        return renamed.Select(p =>
+        {
+            var n = counts.GetValueOrDefault(p.Name) + 1;
+            counts[p.Name] = n;
+            return p with { NameNumber = n };
+        }).ToList();
+    }
+
+    /// <summary>The players' controllers, or (no sysfs) the names the app sees / saw last.</summary>
+    private (IReadOnlyList<Gamepad> Players, IReadOnlyList<string> Names) RememberedGamepads()
+    {
+        var players = PlayerPads();
+        if (players.Count > 0)
+        {
+            return (players, players.Select(p => p.Name).ToList());
+        }
+        if (Gamepads == null)
+        {
+            return ([], Settings.LastGamepads);  // no app: a Steam shortcut
+        }
+        var names = Gamepads().Select(p => p.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+        if (names.Count > 0 && !names.SequenceEqual(Settings.LastGamepads))
+        {
+            SaveSettings(Settings with { LastGamepads = names });
+        }
+        return ([], names);
+    }
+
+    /// <summary>The connected controllers as the app sees them (SDL name and USB ids), supplied by the app.</summary>
+    public Func<IReadOnlyList<(string Name, int Vendor, int Product)>>? Gamepads { get; set; }
 
     /// <summary>The app's current accent colour (#rrggbb), set by the app; used for in-game decoration.</summary>
     public string? Accent { get; set; }

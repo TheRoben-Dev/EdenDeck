@@ -221,6 +221,21 @@ public sealed class DuckstationTests : IDisposable
         """;
 
     [Fact]
+    public void PlayersFollowTheControllersInTheDock()
+    {
+        var p = Backend().Paths;
+        Assert.True(DuckstationPads.Ensure(p, [1, 2]));
+        var ini = Pcsx2Ini.Load(p.ConfigFile);
+        Assert.Equal("SDL-1/A", ini.Get("Pad1", "Cross"));
+        Assert.Equal("AnalogController", ini.Get("Pad2", "Type"));
+        Assert.Equal("SDL-2/A", ini.Get("Pad2", "Cross"));
+        Assert.True(DuckstationPads.Ensure(p, [0]));
+        ini = Pcsx2Ini.Load(p.ConfigFile);
+        Assert.Equal("SDL-0/A", ini.Get("Pad1", "Cross"));
+        Assert.Equal("None", ini.Get("Pad2", "Type"));
+    }
+
+    [Fact]
     public void ParsesChtCodes()
     {
         var codes = DuckstationCheats.Parse(Patches);

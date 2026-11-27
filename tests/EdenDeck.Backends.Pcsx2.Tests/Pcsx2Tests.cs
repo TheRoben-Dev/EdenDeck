@@ -366,6 +366,31 @@ public sealed class Pcsx2Tests : IDisposable
         Assert.Equal("SDL-1/FaceEast", Pcsx2Ini.Load(b.Paths.ConfigFile).Get("Pad1", "Cross"));
     }
 
+    [Fact]
+    public void PlayersFollowTheControllersInTheDock()
+    {
+        var b = Backend();
+        // Docked: the pad in the dock is SDL-1 (the Deck's own controls are SDL-0).
+        Assert.True(Pcsx2Pads.Ensure(b.Paths, [1]));
+        Assert.Equal("SDL-1/FaceSouth", Pcsx2Ini.Load(b.Paths.ConfigFile).Get("Pad1", "Cross"));
+        Assert.False(Pcsx2Pads.Ensure(b.Paths, [1]));
+
+        // A second controller is player 2; when it's gone, Pad2 is unplugged again.
+        Assert.True(Pcsx2Pads.Ensure(b.Paths, [1, 2]));
+        var ini = Pcsx2Ini.Load(b.Paths.ConfigFile);
+        Assert.Equal("DualShock2", ini.Get("Pad2", "Type"));
+        Assert.Equal("SDL-2/FaceEast", ini.Get("Pad2", "Circle"));
+        Assert.True(Pcsx2Pads.Ensure(b.Paths, [0]));
+        ini = Pcsx2Ini.Load(b.Paths.ConfigFile);
+        Assert.Equal("SDL-0/FaceSouth", ini.Get("Pad1", "Cross"));
+        Assert.Equal("None", ini.Get("Pad2", "Type"));
+
+        // The player's own Pad1 setup in PCSX2 stays.
+        ini.Set("Pad1", "Cross", "SDL-0/FaceEast");
+        ini.Save(b.Paths.ConfigFile);
+        Assert.False(Pcsx2Pads.Ensure(b.Paths, [1]));
+    }
+
     private const string Pnach = """
         gametitle=Grand Theft Auto - San Andreas SLUS_209.46
 

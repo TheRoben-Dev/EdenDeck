@@ -148,6 +148,18 @@ public sealed class MelonDsTests : IDisposable
     }
 
     [Fact]
+    public void Player1sControllerIsTheOneInTheDock()
+    {
+        var (b, game) = Installed();
+        var xbox = new EdenDeck.Core.Input.Gamepad { Name = "Xbox Series X Controller", Guid = "03000000de280000ff11000001000000", JoystickIndex = 1 };
+        foreach (var step in b.Plan(game, new GameProfile(), new LaunchOptions { Gamepads = [xbox.Name], Players = [xbox] }).Prepare)
+        {
+            step();
+        }
+        Assert.Equal("1", b.Paths.Load().Get("Instance0.JoystickID"));
+    }
+
+    [Fact]
     public void TheCrtEffectRunsMelonDsOpenGlThroughZink()
     {
         var (b, game) = Installed();

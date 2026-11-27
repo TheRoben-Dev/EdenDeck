@@ -127,7 +127,13 @@ public sealed class MgbaBackend : IEmulatorBackend, ILibraryScanner, ILaunchPlan
             notes.Add($"patch: {Path.GetFileName(patch)}");
         }
         var configFile = ConfigFile;
-        var prepare = new List<Action> { () => MgbaPad.Ensure(configFile, PadStampFile) };
+        var device = options.Players.Count > 0 ? options.Players[0].JoystickName : null;
+        if (device != null)
+        {
+            notes.Add($"controller: {options.Players[0]}");
+        }
+        var stampFile = PadStampFile;
+        var prepare = new List<Action> { () => MgbaPad.Ensure(configFile, stampFile, device) };
         if (Mods.LaunchCheatFile(game.TitleId) is { } cheats)
         {
             args.AddRange(["-c", cheats]);

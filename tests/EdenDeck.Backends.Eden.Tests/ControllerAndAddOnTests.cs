@@ -59,6 +59,73 @@ public sealed class ControllerAndAddOnTests : IDisposable
         Assert.False(EdenControllerDefaults.EnsurePlayer1(cfg, SteamPad with { Guid = "0300000000000000aaaa000001000000" }));
     }
 
+    private static EdenDeck.Core.Input.Gamepad Virtual(string name, int slot, bool builtIn = false) => new()
+    {
+        Name = name, Guid = "03000000de280000ff11000001000000", Vendor = builtIn ? 0x28de : 0x045e, Product = builtIn ? 0x1205 : 0x0b13,
+        RawVendor = 0x28de, RawProduct = 0x11ff, SteamSlot = slot, BuiltIn = builtIn, GuidPort = slot, GamepadIndex = slot, JoystickIndex = slot,
+    };
+
+    [Fact]
+    public void DockedControllerTakesPlayer1AndKeepsTheButtonChoices()
+    {
+        // Player 1 was set up on the Deck's controls (Steam pad, port 0) with A/B swapped in Settings → Buttons.
+        var cfg = Path.Combine(_dir, "qt-config.ini");
+        File.WriteAllText(cfg, "[Controls]\nplayer_0_button_a=\"engine:keyboard,code:67,toggle:0\"\n");
+        Assert.True(EdenControllerDefaults.EnsurePlayer1(cfg, SteamPad));
+        EdenButtonMap.Set(cfg, SteamPad, "button_a", "south");
+        var swapped = QtIni.Load(cfg).Get("Controls", "player_0_button_a");
+
+        var xbox = Virtual("Xbox Series X Controller", 1);
+        var changes = EdenControllerDefaults.AssignPlayers(cfg, [xbox]);
+        Assert.Equal(["player 1: Xbox Series X Controller"], changes);
+        var ini = QtIni.Load(cfg);
+        Assert.Equal(swapped!.Replace("port:0", "port:1"), ini.Get("Controls", "player_0_button_a"));
+        Assert.Equal("engine:sdl,port:1,guid:03000000de280000ff11000001000000,axis_x:0,axis_y:1,offset_x:0,offset_y:0,invert_x:+,invert_y:+,deadzone:0.15,range:1", ini.Get("Controls", "player_0_lstick"));
+
+        // Nothing changes on the next launch; undocked, the Deck's controls (port 0) are player 1 again.
+        Assert.Empty(EdenControllerDefaults.AssignPlayers(cfg, [xbox]));
+        Assert.Equal(["player 1: Steam Deck"], EdenControllerDefaults.AssignPlayers(cfg, [Virtual("Steam Deck", 0, builtIn: true)]));
+        Assert.Contains("port:0,", QtIni.Load(cfg).Get("Controls", "player_0_button_b"));
+    }
+
+    [Fact]
+    public void SecondControllerIsPlayer2WithPlayer1sButtons()
+    {
+        var cfg = Path.Combine(_dir, "qt-config.ini");
+        File.WriteAllText(cfg, "[Controls]\n");
+        var one = Virtual("Xbox Series X Controller", 1);
+        var two = Virtual("DualSense Wireless Controller", 2);
+        Assert.Equal(["player 1: Xbox Series X Controller", "player 2: DualSense Wireless Controller"], EdenControllerDefaults.AssignPlayers(cfg, [one, two]));
+        var ini = QtIni.Load(cfg);
+        Assert.Equal("engine:sdl,port:1,guid:03000000de280000ff11000001000000,button:1", ini.Get("Controls", "player_0_button_a"));
+        Assert.Equal("engine:sdl,port:2,guid:03000000de280000ff11000001000000,button:1", ini.Get("Controls", "player_1_button_a"));
+        Assert.Equal("true", ini.Get("Controls", "player_1_connected"));
+
+        // The second pad goes away: player 2 is disconnected, player 1 stays.
+        Assert.Equal(["player 2: disconnected"], EdenControllerDefaults.AssignPlayers(cfg, [one]));
+        Assert.Equal("false", QtIni.Load(cfg).Get("Controls", "player_1_connected"));
+    }
+
+    [Fact]
+    public void PlayersMappedInEdenToOtherPadsAreLeftAlone()
+    {
+        var cfg = Path.Combine(_dir, "qt-config.ini");
+        const string own = "engine:sdl,port:0,guid:050000004c050000e60c000000810000,button:1";
+        File.WriteAllText(cfg, $"[Controls]\nplayer_0_button_a=\"{own}\"\n");
+        Assert.Empty(EdenControllerDefaults.AssignPlayers(cfg, [Virtual("Xbox Series X Controller", 1)]));
+        Assert.Equal(own, QtIni.Load(cfg).Get("Controls", "player_0_button_a"));
+    }
+
+    [Fact]
+    public void GameInputProfilesFollowPlayer1()
+    {
+        var profile = Path.Combine(_dir, "Zelda.ini");
+        File.WriteAllText(profile, "[Controls]\nbutton_a=\"engine:sdl,port:0,guid:03000000de280000ff11000001000000,button:0\"\ntype=0\n");
+        Assert.True(EdenControllerDefaults.RetargetProfile(profile, Virtual("Xbox Series X Controller", 1)));
+        Assert.Equal("engine:sdl,port:1,guid:03000000de280000ff11000001000000,button:0", QtIni.Load(profile).Get("Controls", "button_a"));
+        Assert.False(EdenControllerDefaults.RetargetProfile(profile, Virtual("Xbox Series X Controller", 1)));
+    }
+
     [Fact]
     public void UnknownPadLayoutsAreLeftAlone()
     {
